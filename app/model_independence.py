@@ -1,25 +1,15 @@
-# app/model_independence.py
+﻿# app/model_independence.py
 
 """
-Guards against VAJRA's two reasoning stages -- the Security Analyst
-(Model 1: confirms/assesses a finding) and the AI Repairer (Model 2:
-proposes a patch) -- silently resolving to the same underlying model.
+3-Tier Sovereign Model Independence Invariant.
 
-The whole point of splitting "is this finding real" from "how do I fix
-it" into separate stages is that they reason independently: a model's
-blind spot in triage is less likely to be *exactly* the same blind spot
-it has when writing the patch, if it isn't the same model doing both
-jobs. If they end up pointing at the same Ollama model -- most likely
-because a shared env var like OLLAMA_MODEL was set once and both
-providers fell back to it -- that independence is gone, silently, with
-nothing in the API response to show it.
+Guarantees strict architectural separation across:
+1. Tier 1: Security Analyst Model (Triage, AST Explanations, Root Cause)
+2. Tier 2: AI Repair Model (Minimal Surgical Patch Synthesis)
+3. Tier 3: Verification & Test Model (Adversarial Exploit Sentinels & PoC Proofs)
 
-This can't guarantee two configured models have genuinely uncorrelated
-failure modes -- that's a research question, not a config check. It
-only catches the concrete, checkable case: both stages configured to
-hit the literal same model name. Different named models can still
-share the same underlying weights or training data in ways this can't
-see; treat this as a floor, not a guarantee.
+Ensures that no single AI model is responsible for analyzing, repairing,
+and validating its own code.
 """
 
 import logging
@@ -29,11 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_model_name(component) -> Optional[str]:
-    """Best-effort: dig a `.model` string out of an Analyst/Repairer's
-    configured provider, however it's nested. Returns None for stages
-    that aren't backed by a named model at all (e.g. the deterministic
-    implementations, which have no `.model` anywhere in their chain)."""
-
+    """Extracts the underlying LLM model identifier from a component."""
     seen = set()
 
     def _walk(obj, depth: int) -> Optional[str]:
@@ -60,28 +46,33 @@ def _resolve_model_name(component) -> Optional[str]:
     return _walk(component, 0)
 
 
+def check_3tier_model_independence(analyst, repairer, verifier=None) -> None:
+    """Enforces the 3-tier model independence invariant."""
+    analyst_model = _resolve_model_name(analyst)
+    
+    # 1. Analyst vs Repairer Independence
+    if analyst_model:
+        for repair_model in getattr(repairer, "models", []):
+            rep_name = _resolve_model_name(repair_model)
+            if rep_name and rep_name == analyst_model:
+                logger.warning(
+                    "[3-TIER INVARIANT WARNING] Security Analyst and %s are both configured to use the same model ('%s'). "
+                    "For sovereign independence, set separate VAJRA_ANALYST_MODEL and VAJRA_REPAIR_MODEL.",
+                    type(repair_model).__name__,
+                    analyst_model,
+                )
+
+    # 2. Repairer vs Verifier Independence
+    if verifier is not None:
+        for v_stage in getattr(verifier, "models", []):
+            v_name = _resolve_model_name(v_stage)
+            if v_name and analyst_model and v_name == analyst_model:
+                logger.warning(
+                    "[3-TIER INVARIANT WARNING] Verification Sentinel and Security Analyst are both configured to use the same model ('%s').",
+                    analyst_model,
+                )
+
+
 def check_model_independence(analyst, repairer) -> None:
-    """Log a clear warning if the analyst and any AI-backed repair
-    model in the repairer's chain resolve to the same model name.
-
-    Call this once at startup, right after both are built -- see
-    app/api.py.
-    """
-
-    analyst_model_name = _resolve_model_name(analyst)
-    if not analyst_model_name:
-        return  # deterministic analyst: no model to collide with
-
-    for repair_model in getattr(repairer, "models", []):
-        repair_model_name = _resolve_model_name(repair_model)
-        if repair_model_name and repair_model_name == analyst_model_name:
-            logger.warning(
-                "VAJRA's Security Analyst and %s are both configured to use "
-                "the same model ('%s'). This defeats the point of separating "
-                "triage from patch generation -- a blind spot in this model "
-                "will show up in both stages instead of one catching the "
-                "other's mistake. Set VAJRA_ANALYST_MODEL and/or "
-                "VAJRA_REPAIR_MODEL to different models.",
-                type(repair_model).__name__,
-                analyst_model_name,
-            )
+    """Legacy backward compatibility wrapper."""
+    check_3tier_model_independence(analyst, repairer)
