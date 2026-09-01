@@ -16,6 +16,9 @@ from pydantic import BaseModel
 
 from app.analysis.analyst import build_default_analyst
 from app.analysis.workspace_scan import scan_workspace, summarize_findings
+from app.analysis.git_archaeologist import GitArchaeologist
+from app.analysis.dependency_reachability import DependencyReachabilityAnalyzer
+from app.verification.exploit_harness import ExploitHarness
 from app.dashboard.chat_ui import CHAT_HTML
 from app.dashboard.renderer import render_dashboard_html
 from app.decision.engine import decide
@@ -522,6 +525,10 @@ def scan_repository(workspace_id: str):
         for att in attempt_reports:
             db.record_attempt(att, workspace_id)
 
+        # Run AST Dependency Reachability
+        dep_findings = DependencyReachabilityAnalyzer().analyze_workspace_dependencies(str(workspace_path))
+        dep_dicts = [d.__dict__ for d in dep_findings]
+
         return {
             "workspace_id": workspace_id,
             "summary": initial_summary,
@@ -532,6 +539,7 @@ def scan_repository(workspace_id: str):
             "patches": [p.to_dict() for p in patches],
             "verifications": [v.to_dict() for v in verifications],
             "applications": [a.to_dict() for a in applications],
+            "dependencies": dep_dicts,
             "repair_attempts": attempts,
             "post_repair": {
                 "summary": final_summary,
