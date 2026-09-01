@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/install.sh
 # Universal 1-Line Bootstrapper & Installer for macOS & Linux
-# Usage: curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA-test/main/scripts/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash
 
 set -e
 
@@ -64,7 +64,7 @@ mkdir -p "$VAJRA_HOME" "$VAJRA_BIN"
 echo -e "[3/5] Setting up isolated application environment in ${BLUE}${VAJRA_HOME}${RESET}..."
 
 # Download or update source code
-REPO_URL="https://github.com/Aravkataria/VAJRA-test/archive/refs/heads/main.zip"
+REPO_URL="https://github.com/Aravkataria/VAJRA/archive/refs/heads/main.zip"
 TEMP_ZIP="$VAJRA_HOME/source.zip"
 
 echo -e "      Downloading latest VAJRA source..."
@@ -80,8 +80,8 @@ fi
 rm -rf "$VAJRA_APP"
 mkdir -p "$VAJRA_APP"
 unzip -q "$TEMP_ZIP" -d "$VAJRA_HOME"
-mv "$VAJRA_HOME/VAJRA-test-main"/* "$VAJRA_APP"/ 2>/dev/null || mv "$VAJRA_HOME"/VAJRA-test-*/* "$VAJRA_APP"/
-rm -rf "$TEMP_ZIP" "$VAJRA_HOME"/VAJRA-test-*
+mv "$VAJRA_HOME/VAJRA-main"/* "$VAJRA_APP"/ 2>/dev/null || mv "$VAJRA_HOME"/VAJRA-*/* "$VAJRA_APP"/
+rm -rf "$TEMP_ZIP" "$VAJRA_HOME"/VAJRA-*
 
 # 4. Provision Python Virtual Environment
 echo -e "[4/5] Provisioning isolated Python virtual environment..."

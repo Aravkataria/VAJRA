@@ -4,16 +4,16 @@
 
 > **Status:** Active research & production-ready security platform — featuring a dual-shell architecture (100% Serverless Web Edition & Native Cross-Platform Desktop/CLI), 6-stage independent verification proof matrix, universal bootstrapper, and self-updating engine.
 
-[![Live Web Edition](https://img.shields.io/badge/Web_App-Live_on_GitHub_Pages-black?style=flat&logo=github)](https://Aravkataria.github.io/VAJRA-test/)
-[![Cross-Platform](https://img.shields.io/badge/Platform-macOS_|_Windows_|_Linux-blue?style=flat)](https://github.com/Aravkataria/VAJRA-test)
+[![Live Web Edition](https://img.shields.io/badge/Web_App-Live_on_GitHub_Pages-black?style=flat&logo=github)](https://Aravkataria.github.io/VAJRA/)
+[![Cross-Platform](https://img.shields.io/badge/Platform-macOS_|_Windows_|_Linux-blue?style=flat)](https://github.com/Aravkataria/VAJRA)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/Tests-38_Passed_|_100%25-brightgreen.svg)](tests/)
 
-[![Launch Web App](https://img.shields.io/badge/Launch_Web_Edition-100%25_Serverless-black?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://Aravkataria.github.io/VAJRA-test/)
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-VAJRA--Setup.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Aravkataria/VAJRA-test/releases/latest/download/VAJRA-Setup.exe)
-[![Download for macOS](https://img.shields.io/badge/Download_for_macOS-VAJRA--Setup.command-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Aravkataria/VAJRA-test/releases/latest/download/VAJRA-Setup.command)
-[![Download for Linux](https://img.shields.io/badge/Download_for_Linux-install.sh-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/Aravkataria/VAJRA-test/releases/latest/download/install.sh)
+[![Launch Web App](https://img.shields.io/badge/Launch_Web_Edition-100%25_Serverless-black?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://Aravkataria.github.io/VAJRA/)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-VAJRA--Setup.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe)
+[![Download for macOS](https://img.shields.io/badge/Download_for_macOS-VAJRA--Setup.command-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.command)
+[![Download for Linux](https://img.shields.io/badge/Download_for_Linux-install.sh-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/Aravkataria/VAJRA/releases/latest/download/install.sh)
 
 ---
 
@@ -23,10 +23,10 @@ Choose your platform to install or run VAJRA with a single click:
 
 | Platform | Direct Download / Action | Instant Command (Terminal) |
 | :--- | :--- | :--- |
-| **🌐 Web Browser** | [👉 **Launch Live Web App**](https://Aravkataria.github.io/VAJRA-test/) *(Zero Install)* | *Runs directly on GitHub Pages* |
-| **🪟 Windows** | [📥 **Download VAJRA-Setup.exe**](https://github.com/Aravkataria/VAJRA-test/releases/latest/download/VAJRA-Setup.exe) | `irm https://raw.githubusercontent.com/Aravkataria/VAJRA-test/main/scripts/install.ps1 \| iex` |
-| **🍏 macOS** | [📥 **Download VAJRA-Setup.command**](https://github.com/Aravkataria/VAJRA-test/releases/latest/download/VAJRA-Setup.command) | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA-test/main/scripts/install.sh \| bash` |
-| **🐧 Linux** | [📥 **Download install.sh**](https://github.com/Aravkataria/VAJRA-test/releases/latest/download/install.sh) | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA-test/main/scripts/install.sh \| bash` |
+| **🌐 Web Browser** | [👉 **Launch Live Web App**](https://Aravkataria.github.io/VAJRA/) *(Zero Install)* | *Runs directly on GitHub Pages* |
+| **🪟 Windows** | [📥 **Download VAJRA-Setup.exe**](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe) | `irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 \| iex` |
+| **🍏 macOS** | [📥 **Download VAJRA-Setup.command**](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.command) | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh \| bash` |
+| **🐧 Linux** | [📥 **Download install.sh**](https://github.com/Aravkataria/VAJRA/releases/latest/download/install.sh) | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh \| bash` |
 
 ---
 
