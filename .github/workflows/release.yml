@@ -1,0 +1,134 @@
+﻿name: Multi-Platform Cross-Compilation & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ─── 1. RUN TEST SUITE ───
+  test:
+    name: Run Test Suite (Python & Linters)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Run Pytest
+        run: |
+          pytest -v
+
+  # ─── 2. BUILD RUST CORE & INSTALLERS FOR ALL PLATFORMS ───
+  build:
+    name: Build Native Binaries (${{ matrix.os }} - ${{ matrix.target }})
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin_name: vajra-core.exe
+            asset_name: vajra-core-windows-x86_64.exe
+            build_setup_wizard: true
+
+          # Linux x86_64 (Static MUSL - Runs on ANY Linux distro with ZERO GLIBC dependency)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            bin_name: vajra-core
+            asset_name: vajra-core-linux-x86_64
+            use_musl: true
+
+          # macOS Apple Silicon (M1/M2/M3/M4)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bin_name: vajra-core
+            asset_name: vajra-core-macos-arm64
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux MUSL Tools (if needed)
+        if: matrix.use_musl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build vajra-core (Rust Release Mode)
+        run: |
+          cargo build --release --manifest-path crates/vajra-core/Cargo.toml --target ${{ matrix.target }}
+
+      - name: Package Windows Installer (.EXE)
+        if: matrix.build_setup_wizard
+        run: |
+          pip install pyinstaller
+          python scripts/build_setup_exe.py
+          copy dist\VAJRA-Setup.exe VAJRA-Setup-Windows.exe
+
+      - name: Stage Compiled Binaries
+        shell: bash
+        run: |
+          mkdir -p release_assets
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp crates/vajra-core/target/${{ matrix.target }}/release/${{ matrix.bin_name }} release_assets/${{ matrix.asset_name }}
+            cp VAJRA-Setup-Windows.exe release_assets/VAJRA-Setup.exe
+          else
+            cp crates/vajra-core/target/${{ matrix.target }}/release/${{ matrix.bin_name }} release_assets/${{ matrix.asset_name }}
+            chmod +x release_assets/${{ matrix.asset_name }}
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.target }}
+          path: release_assets/*
+
+  # ─── 3. PUBLISH TO GITHUB RELEASES ───
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Built Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all_release_assets
+          merge-multiple: true
+
+      - name: Create GitHub Release & Attach Binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: all_release_assets/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
