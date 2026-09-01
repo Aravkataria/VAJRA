@@ -1,4 +1,4 @@
-﻿name: Multi-Platform Cross-Compilation & Release
+name: Multi-Platform Cross-Compilation & Release
 
 on:
   push:
@@ -33,8 +33,10 @@ jobs:
           pip install pytest httpx
 
       - name: Run Pytest
+        env:
+          PYTHONPATH: .
         run: |
-          pytest -v
+          python -m pytest -v
 
   # ─── 2. BUILD RUST CORE & INSTALLERS FOR ALL PLATFORMS ───
   build:
