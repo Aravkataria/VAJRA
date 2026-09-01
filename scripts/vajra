@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# scripts/vajra
+# Universal entry-point shim for macOS & Linux
+
+set -e
+
+# Locate VAJRA install root
+if [ -d "$HOME/.vajra/venv" ]; then
+    VAJRA_PYTHON="$HOME/.vajra/venv/bin/python"
+    VAJRA_DIR="$HOME/.vajra/app"
+elif [ -d "$(dirname "$0")/../venv" ]; then
+    VAJRA_PYTHON="$(dirname "$0")/../venv/bin/python"
+    VAJRA_DIR="$(dirname "$0")/.."
+else
+    VAJRA_PYTHON="python3"
+    VAJRA_DIR="$(pwd)"
+fi
+
+export PYTHONPATH="$VAJRA_DIR:$PYTHONPATH"
+cd "$VAJRA_DIR"
+exec "$VAJRA_PYTHON" -m app.launcher "$@"
