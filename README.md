@@ -1,5 +1,7 @@
 # VAJRA
 
+## Vulnerability Analysis, Judgment, Repair & Assurance
+
 ## Evidence-Driven Autonomous Cyber-Reasoning & Software Repair System
 
 > **Status:** Active research & production-ready security platform — featuring a dual-shell architecture (100% Serverless Web Edition & Native Cross-Platform Desktop/CLI), 6-stage independent verification proof matrix, universal bootstrapper, and self-updating engine.
