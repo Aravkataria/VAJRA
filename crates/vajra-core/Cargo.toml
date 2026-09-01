@@ -1,0 +1,14 @@
+﻿[package]
+name = "vajra-core"
+version = "2.4.0"
+edition = "2021"
+authors = ["Arav Kataria", "VAJRA Security Team"]
+description = "High-performance multithreaded cyber-reasoning and AST analysis engine for VAJRA"
+
+[dependencies]
+rayon = "1.10.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.10.5"
+walkdir = "2.5.0"
+clap = { version = "4.5.8", features = ["derive"] }
