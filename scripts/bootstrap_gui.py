@@ -23,7 +23,7 @@ from pathlib import Path
 APP_NAME = "VAJRA"
 VERSION = "2.4.0"
 REPO_OWNER = "Aravkataria"
-REPO_NAME = "VAJRA-test"
+REPO_NAME = "VAJRA"
 REPO_ZIP_URL = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/archive/refs/heads/main.zip"
 
 

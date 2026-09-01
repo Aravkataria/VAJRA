@@ -1,6 +1,6 @@
 # scripts/install.ps1
 # Universal 1-Line Bootstrapper & Installer for Windows
-# Usage in PowerShell: irm https://raw.githubusercontent.com/Aravkataria/VAJRA-test/main/scripts/install.ps1 | iex
+# Usage in PowerShell: irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
 
@@ -50,7 +50,7 @@ New-Item -ItemType Directory -Force -Path $vajraHome, $vajraBin | Out-Null
 Write-Host "[3/5] Setting up isolated application environment in $vajraHome..." -ForegroundColor Yellow
 
 # Download latest source code
-$repoUrl = "https://github.com/Aravkataria/VAJRA-test/archive/refs/heads/main.zip"
+$repoUrl = "https://github.com/Aravkataria/VAJRA/archive/refs/heads/main.zip"
 $tempZip = Join-Path $vajraHome "source.zip"
 
 Write-Host "      Downloading latest VAJRA release..."
