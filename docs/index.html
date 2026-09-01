@@ -1034,6 +1034,36 @@
       justify-content: flex-end;
       gap: 0.5rem;
     }
+
+    /* Drag and drop full window overlay */
+    .drag-drop-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+    }
+
+    .drag-drop-overlay.active {
+      display: flex;
+    }
+
+    .drag-drop-modal {
+      border: 2px dashed var(--stamp-pass);
+      background: var(--bg-surface);
+      border-radius: 12px;
+      padding: 2.5rem 3.5rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: var(--shadow-lg);
+    }
   </style>
 </head>
 <body>
@@ -1058,7 +1088,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           New Analysis
         </span>
-        <span style="font-family:'JetBrains Mono', monospace; font-size:0.68rem; color:var(--text-muted);">Ctrl+N</span>
+        <span style="font-family:'JetBrains Mono', monospace; font-size:0.68rem; color:var(--text-muted); background:var(--bg-base); padding:0.1rem 0.35rem; border-radius:3px; border:1px solid var(--border-subtle);">Alt+N</span>
       </button>
     </div>
 
@@ -1091,31 +1121,6 @@
           <span class="casefile-name" id="casefileTargetName">vulnerable-api</span>
           <span class="state-seal" id="casefileStatusBadge">STANDBY</span>
         </div>
-      </div>
-
-      <div class="top-bar-center">
-        <nav class="segmented-tabs">
-          <button class="tab-btn active" data-tab="chatPane">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Audit Log
-          </button>
-          <button class="tab-btn" data-tab="securityPane">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Findings
-          </button>
-          <button class="tab-btn" data-tab="repairsPane">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-            Patches
-          </button>
-          <button class="tab-btn" data-tab="verificationPane">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-            Verification
-          </button>
-          <button class="tab-btn" data-tab="reportPane">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Record
-          </button>
-        </nav>
       </div>
 
       <div class="top-bar-right" style="display:flex; align-items:center; gap:0.5rem;">
@@ -1315,11 +1320,20 @@
   <div class="modal-backdrop" id="githubModal">
     <div class="modal-frame">
       <div style="font-size:0.9rem; font-weight:700;">Scan Public GitHub Repository</div>
-      <input type="text" id="inputGithubUrl" class="modal-input" placeholder="https://github.com/owner/repository" value="https://github.com/Aravkataria/VAJRA-test">
+      <input type="text" id="inputGithubUrl" class="modal-input" placeholder="https://github.com/owner/repository" value="https://github.com/Aravkataria/VAJRA">
       <div class="modal-actions">
         <button class="btn-tool-chip" onclick="closeModal('githubModal')">Cancel</button>
         <button class="btn-run-scan" onclick="submitGithubModal()">Run Scan</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Drag and drop global overlay -->
+  <div class="drag-drop-overlay" id="dragDropOverlay">
+    <div class="drag-drop-modal">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--stamp-pass);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div style="font-weight:700; font-size:1.15rem; color:var(--text-primary);">Drop Codebase or Archive to Analyze</div>
+      <div style="color:var(--text-secondary); font-size:0.85rem;">Supports project directories, .zip packages, or source code files</div>
     </div>
   </div>
 
@@ -2231,6 +2245,57 @@
       dl.setAttribute("download", (sess.title || "vajra") + "_assurance_record.json");
       dl.click();
     };
+
+    // ─── DRAG & DROP GLOBAL EVENT LISTENERS ───
+    var dragCounter = 0;
+    var dropOverlay = document.getElementById("dragDropOverlay");
+
+    window.addEventListener("dragenter", function (e) {
+      e.preventDefault();
+      dragCounter++;
+      if (dropOverlay) dropOverlay.classList.add("active");
+    });
+
+    window.addEventListener("dragover", function (e) {
+      e.preventDefault();
+    });
+
+    window.addEventListener("dragleave", function (e) {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        if (dropOverlay) dropOverlay.classList.remove("active");
+      }
+    });
+
+    window.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dragCounter = 0;
+      if (dropOverlay) dropOverlay.classList.remove("active");
+
+      var dt = e.dataTransfer;
+      if (!dt || !dt.files || dt.files.length === 0) return;
+
+      var file = dt.files[0];
+      if (file.name.toLowerCase().endsWith(".zip")) {
+        handleZipSelect({ target: { files: dt.files } });
+      } else {
+        handleFolderSelect({ target: { files: dt.files } });
+      }
+    });
+
+    // ─── CONSISTENT CROSS-PLATFORM KEYBOARD SHORTCUTS ───
+    // Alt+N (browser & native safe), Ctrl+Shift+N, and Ctrl+K / Cmd+K
+    document.addEventListener("keydown", function (e) {
+      var isNewAnalysis = (e.altKey && e.key.toLowerCase() === "n") ||
+                          (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n") ||
+                          ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k");
+      if (isNewAnalysis) {
+        e.preventDefault();
+        createNewSession();
+      }
+    });
 
     loadStoredSessions();
     renderSidebarSessions();
