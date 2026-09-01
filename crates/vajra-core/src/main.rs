@@ -1,7 +1,10 @@
 ﻿use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::time::Instant;
-use vajra_core::{CoreScanner, ReachabilityAnalyzer, ScanReport};
+use vajra_core::{
+    CoreScanner, FuzzCorpusGenerator, GitHistoryArchaeologist, PatchMutationEngine,
+    ReachabilityAnalyzer, ScanReport,
+};
 
 #[derive(Parser)]
 #[command(name = "vajra-core")]
@@ -13,13 +16,39 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Scan a directory for dangerous execution sinks
+    /// Multi-threaded repository AST sink scan
     Scan {
         /// Path to target codebase directory
         path: PathBuf,
         /// Output results as JSON
         #[arg(long, default_value_t = true)]
         json: bool,
+    },
+    /// Generate high-throughput boundary fuzzing corpus
+    Fuzz {
+        /// Vulnerability sink type (e.g. command_injection, insecure_deserialization)
+        vuln_type: String,
+        /// Fuzz nesting depth
+        #[arg(long, default_value_t = 5)]
+        depth: usize,
+    },
+    /// Synthesize adversarial mutant variants for candidate patch verification
+    Mutate {
+        /// Code of candidate patch
+        code: String,
+        /// Vulnerability type
+        vuln_type: String,
+    },
+    /// Line-level causal git commit and intent archaeological investigation
+    GitBlame {
+        /// Repository directory path
+        repo_path: String,
+        /// Relative file path
+        file: String,
+        /// Line number
+        line: usize,
+        /// Vulnerability type
+        vuln_type: String,
     },
     /// Analyze package import and call-graph reachability
     Reachability {
@@ -60,10 +89,26 @@ fn main() {
                 }
             }
         }
+        Commands::Fuzz { vuln_type, depth } => {
+            let report = FuzzCorpusGenerator::generate_corpus(&vuln_type, depth);
+            println!("{}", serde_json::to_string_pretty(&report).unwrap());
+        }
+        Commands::Mutate { code, vuln_type } => {
+            let report = PatchMutationEngine::generate_mutants(&code, &vuln_type);
+            println!("{}", serde_json::to_string_pretty(&report).unwrap());
+        }
+        Commands::GitBlame {
+            repo_path,
+            file,
+            line,
+            vuln_type,
+        } => {
+            let intent = GitHistoryArchaeologist::investigate_line(&repo_path, &file, line, &vuln_type);
+            println!("{}", serde_json::to_string_pretty(&intent).unwrap());
+        }
         Commands::Reachability { path } => {
             let results = ReachabilityAnalyzer::analyze(&path);
-            let json_output = serde_json::to_string_pretty(&results).unwrap();
-            println!("{}", json_output);
+            println!("{}", serde_json::to_string_pretty(&results).unwrap());
         }
     }
 }
