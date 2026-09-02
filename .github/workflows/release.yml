@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v2.4.0)'
+        description: 'Release Tag Name (e.g. v2.0.0)'
         required: false
-        default: 'v2.4.0'
+        default: 'v2.0.0'
 
 permissions:
   contents: write
@@ -83,22 +83,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
+      # Build core scanner
       - name: Build vajra-core (Rust Standalone Binary)
         run: |
           cargo build --release --manifest-path crates/vajra-core/Cargo.toml
 
-      - name: Stage Release Artifacts
-        shell: bash
-        run: |
-          mkdir -p release_assets
-          if [ -f "crates/vajra-core/target/release/${{ matrix.bin_name }}" ]; then
-            cp "crates/vajra-core/target/release/${{ matrix.bin_name }}" "release_assets/${{ matrix.asset_name }}"
-          fi
-          if [ "${{ matrix.os }}" = "macos-latest" ] && [ -f "scripts/install.sh" ]; then
-            cp "scripts/install.sh" "release_assets/install.sh"
-            cp "scripts/install.ps1" "release_assets/install.ps1"
-          fi
-
+      # Build Tauri v2 native installer (NSIS on Windows, DMG on Mac, AppImage on Linux)
       - name: Build Tauri Desktop Bundle
         uses: tauri-apps/tauri-action@v0
         continue-on-error: true
@@ -106,9 +96,40 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: src-tauri
-          tagName: ${{ github.ref_name || inputs.tag_name || 'v2.4.0' }}
+          tagName: ${{ github.ref_name || inputs.tag_name || 'v2.0.0' }}
           releaseDraft: false
           prerelease: false
+
+      # Collect all compiled binaries and installer bundles
+      - name: Stage Release Artifacts
+        shell: bash
+        run: |
+          mkdir -p release_assets
+          
+          # 1. Raw scanner binaries
+          if [ -f "crates/vajra-core/target/release/${{ matrix.bin_name }}" ]; then
+            cp "crates/vajra-core/target/release/${{ matrix.bin_name }}" "release_assets/${{ matrix.asset_name }}"
+          fi
+
+          # 2. Windows NSIS & MSI Installers
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            find src-tauri/target/release/bundle -name "*.exe" -exec cp {} release_assets/VAJRA_x64-setup.exe \; 2>/dev/null || true
+            find src-tauri/target/release/bundle -name "*.exe" -exec cp {} release_assets/VAJRA-Setup.exe \; 2>/dev/null || true
+            find src-tauri/target/release/bundle -name "*.msi" -exec cp {} release_assets/ \; 2>/dev/null || true
+          fi
+
+          # 3. macOS DMG Installers
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            find src-tauri/target/release/bundle -name "*.dmg" -exec cp {} release_assets/VAJRA_aarch64.dmg \; 2>/dev/null || true
+            if [ -f "scripts/install.sh" ]; then cp "scripts/install.sh" "release_assets/install.sh"; fi
+            if [ -f "scripts/install.ps1" ]; then cp "scripts/install.ps1" "release_assets/install.ps1"; fi
+          fi
+
+          # 4. Linux AppImage & DEB
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            find src-tauri/target/release/bundle -name "*.AppImage" -exec cp {} release_assets/VAJRA_amd64.AppImage \; 2>/dev/null || true
+            find src-tauri/target/release/bundle -name "*.deb" -exec cp {} release_assets/ \; 2>/dev/null || true
+          fi
 
       - name: Upload Raw Release Assets
         uses: actions/upload-artifact@v4
