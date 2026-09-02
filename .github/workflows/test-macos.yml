@@ -37,7 +37,14 @@ jobs:
           pip install -r requirements.txt pytest
           python -m pytest
 
-      # Interactive mode: Opens live web terminal (no SSH key required)
+      # Interactive mode: Generate dummy key so tmate never looks for GitHub profile keys
+      - name: Generate Local Runner Key
+        if: ${{ inputs.mode == 'interactive-web-terminal' }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N "" -q
+          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
       - name: Open Interactive Web Terminal
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         uses: mxschmitt/action-tmate@v3
