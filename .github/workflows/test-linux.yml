@@ -37,38 +37,40 @@ jobs:
           pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
-      # Interactive mode: Pins link to the very top banner of the GitHub Actions page
-      - name: Launch Live Web Terminal
+      # Interactive mode: Huge prominent URL printed directly in logs
+      - name: 🚀 OPEN LIVE LINUX TERMINAL (CLICK LINK BELOW)
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
           echo "=== Installing tmate ==="
           sudo apt-get update -qq
           sudo apt-get install -y -qq tmate
           
-          echo "=== Starting tmate session ==="
+          echo "=== Generating Web Terminal Session ==="
           tmate -S /tmp/tmate.sock new-session -d
-          tmate -S /tmp/tmate.sock wait tmate-ready
           
-          WEB_URL=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
-          SSH_CMD=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+          WEB_URL=""
+          for i in $(seq 1 30); do
+            WEB_URL=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}' 2>/dev/null || true)
+            if [[ "$WEB_URL" == https* ]]; then
+              break
+            fi
+            sleep 1
+          done
           
-          # 1. PINS A BIG NOTIFICATION BANNER AT THE VERY TOP OF GITHUB ACTIONS
-          echo "::notice title=👉 CLICK HERE TO OPEN LINUX TERMINAL::$WEB_URL"
-          
-          # 2. Writes a huge clickable link on the Summary page
-          echo "# 🖥️ LIVE LINUX TERMINAL READY" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 👉 [CLICK HERE TO OPEN TERMINAL IN YOUR BROWSER]($WEB_URL)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Direct link: $WEB_URL" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "SSH Command: \`$SSH_CMD\`" >> $GITHUB_STEP_SUMMARY
+          SSH_CMD=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}' 2>/dev/null || true)
           
           echo ""
-          echo "****************************************************************"
-          echo "  LINK TO OPEN IN BROWSER:"
-          echo "  $WEB_URL"
-          echo "****************************************************************"
+          echo "################################################################################"
+          echo "################################################################################"
+          echo "##"
+          echo "##   👉 DIRECT LINK TO OPEN LINUX TERMINAL IN YOUR BROWSER:"
+          echo "##"
+          echo "##   $WEB_URL"
+          echo "##"
+          echo "##   (SSH Command: $SSH_CMD)"
+          echo "##"
+          echo "################################################################################"
+          echo "################################################################################"
           echo ""
           
           # Keep terminal alive for 30 minutes
