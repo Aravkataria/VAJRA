@@ -1349,6 +1349,31 @@
   (function () {
     "use strict";
 
+    // ─── GLOBAL THEME CONTROLLER ───
+    window.toggleTheme = function () {
+      var root = document.documentElement;
+      var cur = root.getAttribute("data-theme") === "light" ? "light" : "dark";
+      var next = cur === "light" ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      try {
+        localStorage.setItem("vajra-theme", next);
+      } catch (e) {}
+      updateThemeUI(next);
+    };
+
+    function updateThemeUI(theme) {
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) {
+        textEl.textContent = theme === "light" ? "Dark Mode" : "Light Mode";
+      }
+    }
+
+    try {
+      var savedTheme = localStorage.getItem("vajra-theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      updateThemeUI(savedTheme);
+    } catch (e) {}
+
     var STORAGE_KEY = "vajra_casefiles_v3";
 
     var state = {
