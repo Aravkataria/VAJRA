@@ -49,10 +49,13 @@ class VajraInstallerGUI:
         header_frame = tk.Frame(self.root, bg="#080808", height=80)
         header_frame.pack(fill="x", side="top")
 
+        UI_FONT = "-apple-system" if sys.platform == "darwin" else ("Segoe UI" if sys.platform == "win32" else "Sans")
+        MONO_FONT = "Menlo" if sys.platform == "darwin" else ("Consolas" if sys.platform == "win32" else "monospace")
+
         title_lbl = tk.Label(
             header_frame,
-            text="VAJRA",
-            font=("Segoe UI", 18, "bold"),
+            text="❖ VAJRA",
+            font=(UI_FONT, 18, "bold"),
             fg="#ffffff",
             bg="#080808",
         )
@@ -62,7 +65,7 @@ class VajraInstallerGUI:
         subtitle_lbl = tk.Label(
             header_frame,
             text=f"Autonomous Cyber-Reasoning & Software Repair System ({os_str})",
-            font=("Segoe UI", 9),
+            font=(UI_FONT, 9),
             fg="#a1a1aa",
             bg="#080808",
         )
@@ -75,7 +78,7 @@ class VajraInstallerGUI:
         self.desc_lbl = tk.Label(
             self.body_frame,
             text="This wizard installs VAJRA in an isolated environment,\ncreates native desktop application shortcuts, and configures self-updates.",
-            font=("Segoe UI", 10),
+            font=(UI_FONT, 10),
             fg="#cccccc",
             bg="#000000",
             justify="left",
@@ -86,7 +89,7 @@ class VajraInstallerGUI:
         self.status_lbl = tk.Label(
             self.body_frame,
             text="Ready to install.",
-            font=("Segoe UI", 9),
+            font=(UI_FONT, 9),
             fg="#a1a1aa",
             bg="#000000",
         )
@@ -95,7 +98,7 @@ class VajraInstallerGUI:
         # Progress bar
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("TProgressbar", thickness=8, troughcolor="#161616", background="#ffffff")
+        style.configure("TProgressbar", thickness=8, troughcolor="#161616", background="#f5b400")
         self.progress = ttk.Progressbar(self.body_frame, style="TProgressbar", mode="determinate", maximum=100)
         self.progress.pack(fill="x", pady=(0, 15))
 
@@ -104,7 +107,7 @@ class VajraInstallerGUI:
         self.dest_lbl = tk.Label(
             self.body_frame,
             text=f"Install location: {dest_path}",
-            font=("Consolas", 8),
+            font=(MONO_FONT, 8),
             fg="#666666",
             bg="#000000",
         )
@@ -117,7 +120,7 @@ class VajraInstallerGUI:
         self.btn_cancel = tk.Button(
             footer_frame,
             text="Cancel",
-            font=("Segoe UI", 9),
+            font=(UI_FONT, 9),
             bg="#161616",
             fg="#ffffff",
             activebackground="#202020",
@@ -132,7 +135,7 @@ class VajraInstallerGUI:
         self.btn_install = tk.Button(
             footer_frame,
             text="Install VAJRA",
-            font=("Segoe UI", 9, "bold"),
+            font=(UI_FONT, 9, "bold"),
             bg="#ffffff",
             fg="#000000",
             activebackground="#e5e5e5",
