@@ -7,7 +7,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
@@ -29,9 +29,11 @@
       --text-secondary: #a1a1aa;
       --text-muted: #666666;
 
-      --accent: #ffffff;
-      --accent-hover: #e5e5e5;
-      --accent-glow: rgba(255, 255, 255, 0.08);
+      --spark: #f5b400;
+      --ok: #5fbf7a;
+      --accent: #f5b400;
+      --accent-hover: #ffc72c;
+      --accent-glow: rgba(245, 180, 0, 0.15);
 
       --stamp-pass: #10b981;
       --stamp-pass-bg: rgba(16, 185, 129, 0.12);
@@ -56,41 +58,44 @@
 
     /* ─── LIGHT THEME (Strictly Preserved) ─── */
     :root[data-theme="light"] {
-      --bg-base: #f8fafc;
-      --bg-sidebar: #f1f5f9;
+      --spark: #b45309;
+      --ok: #16a34a;
+
+      --bg-base: #ffffff;
+      --bg-sidebar: rgba(0, 0, 0, 0.02);
       --bg-surface: #ffffff;
-      --bg-elevated: #f8fafc;
-      --bg-hover: #e2e8f0;
-      --bg-code: #0f172a;
+      --bg-elevated: rgba(0, 0, 0, 0.02);
+      --bg-hover: rgba(0, 0, 0, 0.05);
+      --bg-code: rgba(0, 0, 0, 0.03);
 
-      --border-subtle: #e2e8f0;
-      --border-medium: #cbd5e1;
-      --border-strong: #94a3b8;
-      --border-focus: #4f46e5;
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --border-medium: rgba(0, 0, 0, 0.14);
+      --border-strong: rgba(0, 0, 0, 0.28);
+      --border-focus: #000000;
 
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
+      --text-primary: #000000;
+      --text-secondary: rgba(0, 0, 0, 0.7);
+      --text-muted: rgba(0, 0, 0, 0.4);
 
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --accent-glow: rgba(79, 70, 229, 0.12);
+      --accent: #b45309;
+      --accent-hover: #92400e;
+      --accent-glow: rgba(180, 83, 9, 0.12);
 
-      --stamp-pass: #059669;
-      --stamp-pass-bg: rgba(5, 150, 105, 0.1);
-      --stamp-pass-border: rgba(5, 150, 105, 0.3);
+      --stamp-pass: #16a34a;
+      --stamp-pass-bg: rgba(22, 163, 74, 0.1);
+      --stamp-pass-border: rgba(22, 163, 74, 0.3);
 
       --stamp-fail: #e11d48;
       --stamp-fail-bg: rgba(225, 29, 72, 0.1);
       --stamp-fail-border: rgba(225, 29, 72, 0.3);
 
-      --stamp-warn: #d97706;
-      --stamp-warn-bg: rgba(217, 119, 6, 0.1);
-      --stamp-warn-border: rgba(217, 119, 6, 0.3);
+      --stamp-warn: #b45309;
+      --stamp-warn-bg: rgba(180, 83, 9, 0.1);
+      --stamp-warn-border: rgba(180, 83, 9, 0.3);
 
-      --btn-primary-bg: #0f172a;
+      --btn-primary-bg: #000000;
       --btn-primary-text: #ffffff;
-      --btn-primary-hover: #1e293b;
+      --btn-primary-hover: rgba(0, 0, 0, 0.85);
 
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
@@ -100,7 +105,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-base);
       color: var(--text-primary);
       display: flex;
