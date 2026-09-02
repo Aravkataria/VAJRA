@@ -37,7 +37,7 @@ jobs:
           pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
-      # Interactive mode: Huge prominent URL printed directly in logs
+      # Interactive mode: Bulletproof URL retrieval via show-messages
       - name: 🚀 OPEN LIVE LINUX TERMINAL (CLICK LINK BELOW)
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
@@ -45,31 +45,26 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq tmate
           
-          echo "=== Generating Web Terminal Session ==="
+          echo "=== Connecting to tmate servers ==="
           tmate -S /tmp/tmate.sock new-session -d
           
-          WEB_URL=""
+          # Wait up to 30 seconds for connection
           for i in $(seq 1 30); do
-            WEB_URL=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}' 2>/dev/null || true)
-            if [[ "$WEB_URL" == https* ]]; then
+            if tmate -S /tmp/tmate.sock show-messages 2>/dev/null | grep -q "https://tmate.io/t/"; then
               break
             fi
             sleep 1
           done
           
-          SSH_CMD=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}' 2>/dev/null || true)
-          
           echo ""
           echo "################################################################################"
-          echo "################################################################################"
           echo "##"
-          echo "##   👉 DIRECT LINK TO OPEN LINUX TERMINAL IN YOUR BROWSER:"
+          echo "##   🎉 YOUR LIVE LINUX TERMINAL SESSIONS:"
           echo "##"
-          echo "##   $WEB_URL"
+          tmate -S /tmp/tmate.sock show-messages | grep "https://tmate.io/t/" || true
           echo "##"
-          echo "##   (SSH Command: $SSH_CMD)"
+          tmate -S /tmp/tmate.sock show-messages | grep "ssh " || true
           echo "##"
-          echo "################################################################################"
           echo "################################################################################"
           echo ""
           
