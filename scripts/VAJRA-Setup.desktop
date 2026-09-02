@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Install VAJRA
+Comment=One-click installer for VAJRA Autonomous Cyber-Reasoning System
+Exec=bash -c "cd \"$(dirname \"%%k\")\" && bash scripts/install.sh; read -p 'Press Enter to exit...'"
+Icon=system-software-install
+Terminal=true
+Categories=Utility;Security;Development;
