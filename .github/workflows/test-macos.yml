@@ -37,24 +37,20 @@ jobs:
           pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
-      # Interactive mode: ttyd + Cloudflare HTTPS Tunnel (100% firewall proof)
+      # Interactive mode: ttyd + Cloudflare HTTPS Tunnel
       - name: 🚀 OPEN LIVE MAC TERMINAL
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
-          echo "=== [1/3] Installing Web Terminal Engine (ttyd) ==="
-          brew install ttyd >/dev/null 2>&1 || true
+          echo "=== [1/2] Installing ttyd & Cloudflared via Homebrew ==="
+          brew install ttyd cloudflared >/dev/null 2>&1 || brew install ttyd cloudflared
           
-          echo "=== [2/3] Setting up Cloudflare Tunnel ==="
-          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64 -o /tmp/cloudflared
-          chmod +x /tmp/cloudflared
-          
-          echo "=== [3/3] Launching Web Terminal ==="
+          echo "=== [2/2] Launching Web Terminal & HTTPS Tunnel ==="
           ttyd -p 7681 -W -t fontSize=14 bash >/dev/null 2>&1 &
           
-          /tmp/cloudflared tunnel --url http://127.0.0.1:7681 > /tmp/cf.log 2>&1 &
+          cloudflared tunnel --url http://127.0.0.1:7681 > /tmp/cf.log 2>&1 &
           
           CF_URL=""
-          for i in $(seq 1 20); do
+          for i in $(seq 1 30); do
             CF_URL=$(grep -o 'https://[-a-z0-9.]*\.trycloudflare\.com' /tmp/cf.log | head -n 1 || true)
             if [ -n "$CF_URL" ]; then break; fi
             sleep 1
