@@ -37,39 +37,19 @@ jobs:
           pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
-      # Interactive mode: Bulletproof URL retrieval via show-messages
-      - name: 🚀 OPEN LIVE LINUX TERMINAL (CLICK LINK BELOW)
+      # Interactive mode: Foreground mode streams link directly to console
+      - name: 🚀 OPEN LIVE LINUX TERMINAL
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
           echo "=== Installing tmate ==="
           sudo apt-get update -qq
           sudo apt-get install -y -qq tmate
           
-          echo "=== Connecting to tmate servers ==="
-          tmate -S /tmp/tmate.sock new-session -d
-          
-          # Wait up to 30 seconds for connection
-          for i in $(seq 1 30); do
-            if tmate -S /tmp/tmate.sock show-messages 2>/dev/null | grep -q "https://tmate.io/t/"; then
-              break
-            fi
-            sleep 1
-          done
-          
           echo ""
-          echo "################################################################################"
-          echo "##"
-          echo "##   🎉 YOUR LIVE LINUX TERMINAL SESSIONS:"
-          echo "##"
-          tmate -S /tmp/tmate.sock show-messages | grep "https://tmate.io/t/" || true
-          echo "##"
-          tmate -S /tmp/tmate.sock show-messages | grep "ssh " || true
-          echo "##"
-          echo "################################################################################"
+          echo "================================================================"
+          echo "  CONNECTING TO TMATE... (URL WILL APPEAR BELOW IN 2 SECONDS)  "
+          echo "================================================================"
           echo ""
           
-          # Keep terminal alive for 30 minutes
-          for i in $(seq 1 360); do
-            if [ ! -S /tmp/tmate.sock ]; then break; fi
-            sleep 5
-          done
+          # tmate -F runs in foreground and prints web & ssh URLs directly!
+          tmate -F
