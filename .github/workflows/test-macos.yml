@@ -1,0 +1,44 @@
+name: Test macOS (Interactive & Automated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Choose mode'
+        required: true
+        default: 'interactive-web-terminal'
+        type: choice
+        options:
+          - 'interactive-web-terminal'
+          - 'automated-test-suite'
+
+jobs:
+  test-mac:
+    name: Apple Silicon macOS Runner (${{ inputs.mode }})
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Automated test mode
+      - name: Run Automated Installer & Pytest
+        if: ${{ inputs.mode == 'automated-test-suite' }}
+        run: |
+          echo "=== Running scripts/install.sh on macOS ==="
+          bash scripts/install.sh
+          pip install -r requirements.txt pytest
+          python -m pytest
+
+      # Interactive mode: Opens live web terminal in your browser
+      - name: Open Interactive Web Terminal
+        if: ${{ inputs.mode == 'interactive-web-terminal' }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true

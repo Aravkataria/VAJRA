@@ -1,0 +1,44 @@
+name: Test Linux (Interactive & Automated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Choose mode'
+        required: true
+        default: 'interactive-web-terminal'
+        type: choice
+        options:
+          - 'interactive-web-terminal'
+          - 'automated-test-suite'
+
+jobs:
+  test-linux:
+    name: Ubuntu Linux Runner (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Automated test mode
+      - name: Run Automated Installer & Pytest
+        if: ${{ inputs.mode == 'automated-test-suite' }}
+        run: |
+          echo "=== Running scripts/install.sh on Linux ==="
+          bash scripts/install.sh
+          pip install -r requirements.txt pytest
+          python -m pytest
+
+      # Interactive mode: Opens live web terminal in your browser
+      - name: Open Interactive Web Terminal
+        if: ${{ inputs.mode == 'interactive-web-terminal' }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
