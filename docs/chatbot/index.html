@@ -2046,14 +2046,6 @@
       document.getElementById("appSidebar").classList.toggle("collapsed");
     });
 
-    window.toggleTheme = function () {
-      var doc = document.documentElement;
-      var cur = doc.getAttribute("data-theme");
-      var next = cur === "dark" ? "light" : "dark";
-      doc.setAttribute("data-theme", next);
-      document.getElementById("themeToggleText").textContent = next === "dark" ? "Dark" : "Light";
-    };
-
     document.querySelectorAll(".tab-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
