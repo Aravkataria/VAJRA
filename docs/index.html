@@ -240,6 +240,38 @@
   .dl-card.hi .dl-btn{background:var(--s1-text);color:var(--s1-bg);}
   .dl-card.hi .dl-btn:hover{opacity:0.85;}
 
+  /* One-liner install table */
+  .cli-table-card{
+    max-width:1080px;margin:20px auto 0;padding:22px 26px;border-radius:16px;
+    background:var(--s1-card);border:1px solid var(--s1-border);color:var(--s1-text);
+  }
+  .cli-table-head{
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
+  }
+  .cli-table-head h4{
+    font-size:14px;font-weight:600;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;
+  }
+  .cli-table-head span{
+    font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--spark);background:rgba(245,180,0,0.12);
+    padding:3px 8px;border-radius:6px;border:1px solid rgba(245,180,0,0.25);
+  }
+  .cli-rows{display:flex;flex-direction:column;gap:10px;}
+  .cli-row{
+    display:grid;grid-template-columns:140px 1fr auto;align-items:center;gap:16px;
+    padding:10px 14px;border-radius:10px;background:var(--s1-card-strong);border:1px solid var(--s1-border);
+  }
+  .cli-os{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .cli-cmd{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--s1-text-70);
+    overflow-x:auto;white-space:nowrap;user-select:all;
+  }
+  .cli-copy-btn{
+    background:var(--s1-card);border:1px solid var(--s1-border-strong);color:var(--s1-text);
+    padding:6px 12px;border-radius:6px;font-size:11.5px;font-family:'JetBrains Mono',monospace;
+    cursor:pointer;transition:all 0.15s;flex-shrink:0;
+  }
+  .cli-copy-btn:hover{background:var(--s1-text);color:var(--s1-bg);}
+
   .core-band{
     max-width:1080px;margin:16px auto 0;padding:18px 24px;border-radius:16px;
     border:1px solid var(--s1-border);background:var(--s1-card);
@@ -253,23 +285,6 @@
     border:1px solid var(--s1-border-strong);padding:7px 11px;border-radius:6px;transition:background 0.15s;
   }
   .core-link:hover{background:var(--s1-hover);}
-
-  .diff-note{
-    max-width:1080px;margin:14px auto 0;padding:16px 24px;border-radius:12px;
-    background:var(--s1-card);border:1px solid var(--s1-border);
-    display:flex;gap:14px;align-items:flex-start;
-  }
-  .diff-note .diff-icon{
-    flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--s1-card-strong);
-    display:flex;align-items:center;justify-content:center;color:var(--spark);font-size:14px;font-weight:700;
-    font-family:'JetBrains Mono',monospace;
-  }
-  .diff-note p{font-size:13px;color:var(--s1-text-70);line-height:1.6;}
-  .diff-note p b{color:var(--s1-text);font-weight:600;}
-  .diff-note code{
-    font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--s1-card-strong);
-    padding:1px 6px;border-radius:4px;color:var(--s1-text);
-  }
 
   /* ---------- features (s1) ---------- */
   section.features{
@@ -318,7 +333,7 @@
     margin:0 16px 16px;border-radius:20px;
     transition:background 0.2s ease,color 0.2s ease;
   }
-  .faq-inner{max-width:680px;margin:0 auto;}
+  .faq-inner{max-width:760px;margin:0 auto;}
   .faq-head{text-align:center;margin-bottom:36px;}
   .faq-head h2{font-size:clamp(26px,4vw,36px);font-weight:600;}
   .faq-head p{margin-top:10px;color:var(--s2-text-60);font-size:14.5px;}
@@ -337,9 +352,9 @@
     font-size:14px;color:var(--s2-text-60);transition:transform 0.2s;
   }
   .faq-item.open .plus-circle{transform:rotate(45deg);}
-  .faq-a{max-height:0;overflow:hidden;transition:max-height 0.25s ease;}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height 0.3s ease;}
   .faq-a-inner{padding:0 18px 16px;font-size:13.5px;color:var(--s2-text-70);line-height:1.6;}
-  .faq-item.open .faq-a{max-height:200px;}
+  .faq-item.open .faq-a{max-height:300px;}
   .faq-foot{text-align:center;margin-top:36px;}
   .faq-foot p{font-size:15px;font-weight:500;margin-bottom:14px;}
   .faq-foot a{
@@ -374,6 +389,7 @@
     .pipeline-flex{flex-direction:column;align-items:center;}
     .feat-row{grid-template-columns:1fr;}
     .dl-grid{grid-template-columns:1fr;}
+    .cli-row{grid-template-columns:1fr;}
     .foot-top{flex-direction:column;gap:28px;}
     .nav-links{display:none;}
   }
@@ -512,18 +528,38 @@
       </div>
     </div>
 
+    <!-- Instant 1-Liner Terminal Table -->
+    <div class="cli-table-card">
+      <div class="cli-table-head">
+        <h4>⚡ Instant 1-Line Terminal Install</h4>
+        <span>Zero configuration</span>
+      </div>
+      <div class="cli-rows">
+        <div class="cli-row">
+          <div class="cli-os">🪟 Windows</div>
+          <div class="cli-cmd" id="cmd-win">irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex</div>
+          <button class="cli-copy-btn" onclick="copyCmd('cmd-win', this)">Copy</button>
+        </div>
+        <div class="cli-row">
+          <div class="cli-os">🍏 macOS</div>
+          <div class="cli-cmd" id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash</div>
+          <button class="cli-copy-btn" onclick="copyCmd('cmd-mac', this)">Copy</button>
+        </div>
+        <div class="cli-row">
+          <div class="cli-os">🐧 Linux</div>
+          <div class="cli-cmd" id="cmd-nix">curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash</div>
+          <button class="cli-copy-btn" onclick="copyCmd('cmd-nix', this)">Copy</button>
+        </div>
+      </div>
+    </div>
+
     <div class="core-band">
-      <p>Just need the scanner? <b>vajra-core</b> ships as a standalone Rust binary for CLI and scripted use.</p>
+      <p>Just need the standalone scanner? <b>vajra-core</b> ships as a pre-compiled high-performance Rust binary.</p>
       <div class="core-links">
         <a class="core-link" href="https://github.com/Aravkataria/VAJRA/releases/latest/download/vajra-core-macos-arm64">vajra-core-macos-arm64 ↓</a>
         <a class="core-link" href="https://github.com/Aravkataria/VAJRA/releases/latest/download/vajra-core-windows-x86_64.exe">vajra-core-windows-x86_64.exe ↓</a>
         <a class="core-link" href="https://github.com/Aravkataria/VAJRA/releases/latest/download/install.sh">install.sh (Linux) ↓</a>
       </div>
-    </div>
-
-    <div class="diff-note">
-      <div class="diff-icon">?</div>
-      <p><b>vajra-core-windows-x86_64.exe</b> vs <b>VAJRA-Setup.exe</b> — these aren't alternatives, they're different layers. <code>vajra-core</code> is just the raw Rust scanner binary: no UI, no installer, no self-update — you run it straight from a terminal or a CI job and it prints findings. <code>VAJRA-Setup.exe</code> installs the full desktop app around it: the pywebview UI, the local FastAPI server, the self-updating launcher, and the Ollama-backed repair and verification pipeline. Grab <code>vajra-core</code> if you're scripting a scan; grab <code>VAJRA-Setup.exe</code> if you want the actual app.</p>
     </div>
   </section>
 
@@ -585,7 +621,7 @@
     <div class="faq-inner">
       <div class="faq-head">
         <h2>FAQ.</h2>
-        <p>Looking for answers? It's here.</p>
+        <p>Looking for answers? Everything you need to know about VAJRA.</p>
       </div>
 
       <div class="faq-item open">
@@ -593,39 +629,79 @@
           <h3>What does VAJRA actually do?</h3>
           <div class="plus-circle">+</div>
         </button>
-        <div class="faq-a"><div class="faq-a-inner">It scans a codebase for concrete vulnerability sinks (eval, exec, subprocess, pickle, yaml, SQL, hardcoded secrets), synthesizes a minimal patch, then runs that patch through six independent verification stages before applying it.</div></div>
+        <div class="faq-a"><div class="faq-a-inner">VAJRA scans codebases for concrete vulnerability sinks (command injection, eval/exec, SQL injection, insecure deserialization, path traversal, hardcoded credentials), synthesizes minimal surgical AST patches, and independently executes a 6-stage verification matrix to prove every patch before code is applied.</div></div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">
-          <h3>Does my code ever leave my machine?</h3>
+          <h3>How does the 3-Tier Sovereign Model architecture work?</h3>
           <div class="plus-circle">+</div>
         </button>
-        <div class="faq-a"><div class="faq-a-inner">In the web edition, no — analysis runs entirely in your browser. In the desktop edition, everything runs locally against a local Ollama model; nothing is uploaded anywhere.</div></div>
+        <div class="faq-a"><div class="faq-a-inner">To prevent AI hallucinations, VAJRA enforces total separation: Tier 1 (Security Analyst) exclusively diagnoses vulnerabilities and never writes code; Tier 2 (AI Repairer) synthesizes minimal AST repairs and never validates itself; Tier 3 (Verifier) is strictly adversarial and attempts to exploit and break the proposed patch.</div></div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">
-          <h3>Is VAJRA free?</h3>
+          <h3>What happens during the 6-Stage Verification Matrix?</h3>
           <div class="plus-circle">+</div>
         </button>
-        <div class="faq-a"><div class="faq-a-inner">Yes. VAJRA is open source under the Apache 2.0 license — no paid tiers, no accounts.</div></div>
+        <div class="faq-a"><div class="faq-a-inner">Every candidate patch must score a 6/6 PASS: (1) Syntax AST integrity, (2) Static sink elimination re-scan, (3) Dynamic exploit sentinel PoC execution, (4) Baseline regression test run, (5) Boundary input fuzzing, and (6) Patch mutation invariant test (requiring 100% mutant kill score). If any stage fails, the patch is rejected atomically.</div></div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">
-          <h3>Web edition vs desktop — what's the difference?</h3>
+          <h3>How does the Risk Prioritization and Blast Radius engine work?</h3>
           <div class="plus-circle">+</div>
         </button>
-        <div class="faq-a"><div class="faq-a-inner">The web edition is a client-side AST scanner with in-browser defensive fixes — no install, no server. The desktop edition adds the native Rust core, local LLM-backed repairs, regression testing, and fuzzing.</div></div>
+        <div class="faq-a"><div class="faq-a-inner">VAJRA calculates a composite risk score (0.0–100.0) weighting Severity (35%), Exploitability (25%), Call-Graph Reachability (20%), Git Recency (10%), and Complexity (10%). Vulnerabilities are classified into SYSTEM_WIDE, SERVICE, or ISOLATED blast radius tiers to prioritize critical security flaws.</div></div>
       </div>
 
       <div class="faq-item">
         <button class="faq-q" onclick="toggleFaq(this)">
-          <h3>Can I run it in CI?</h3>
+          <h3>What is Patch Minimality and why does ΔLOC / ΔCC matter?</h3>
           <div class="plus-circle">+</div>
         </button>
-        <div class="faq-a"><div class="faq-a-inner">Yes — VAJRA ships a headless scan mode and a sample GitHub Actions workflow that runs on every push or pull request.</div></div>
+        <div class="faq-a"><div class="faq-a-inner">Rather than rewriting whole files, VAJRA calculates line delta (ΔLOC), AST token distance, and cyclomatic complexity changes (ΔCC). It strictly enforces an Invasiveness Score under 35%, ensuring fixes are surgical, safe, and maintainable.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <h3>What is Phase 7 Adaptive Learning & Outcome Tracking?</h3>
+          <div class="plus-circle">+</div>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">Verified 6-stage fixes are automatically indexed into a persistent local knowledge graph (<code>.vajra/knowledge_graph.json</code>). When identical sinks appear in future scans, VAJRA retrieves the proven fix instantly (0ms fast path) and can export training datasets for offline model fine-tuning.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <h3>Does my source code ever leave my machine?</h3>
+          <div class="plus-circle">+</div>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">No. In the Web Edition, analysis runs 100% in your browser RAM with zero external server calls. In the Desktop Edition, everything executes locally against your local Rust core and offline Ollama reasoning models.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <h3>Web edition vs Desktop — what is the difference?</h3>
+          <div class="plus-circle">+</div>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">The Web Edition is an instant, zero-install client-side AST scanner with in-browser defensive patching. The Desktop Edition installs the native Rayon-backed Rust core, full OS subprocess sandboxing, local Ollama reasoning, pytest regression suites, and self-updating capabilities.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <h3>Can I run VAJRA in CI/CD pipelines or headless mode?</h3>
+          <div class="plus-circle">+</div>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">Yes. You can run <code>vajra scan /path/to/project --json</code> in GitHub Actions, GitLab CI, or terminal scripts. A pre-configured multi-platform GitHub Actions workflow is included in the repository.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <h3>Is VAJRA free and open-source?</h3>
+          <div class="plus-circle">+</div>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">Yes. VAJRA is released under the permissive Apache License 2.0. It is 100% free to use, modify, self-host, and inspect.</div></div>
       </div>
 
       <div class="faq-foot">
@@ -687,6 +763,15 @@ function toggleTheme(){
   var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
   try{ localStorage.setItem('vajra-theme', next); }catch(e){}
+}
+
+function copyCmd(id, btn){
+  var text = document.getElementById(id).innerText;
+  navigator.clipboard.writeText(text).then(function(){
+    var old = btn.innerText;
+    btn.innerText = 'Copied!';
+    setTimeout(function(){ btn.innerText = old; }, 2000);
+  });
 }
 
 (function(){
