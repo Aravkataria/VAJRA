@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  # ─── 1. RUN TEST SUITE ───
+  # ─── 1. RUN PYTEST SUITE ───
   test:
     name: Run Test Suite (Python & Linters)
     runs-on: ubuntu-latest
@@ -23,14 +23,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest httpx
+          pip install pytest httpx httpx2
 
       - name: Run Pytest
         env:
@@ -38,99 +38,69 @@ jobs:
         run: |
           python -m pytest -v
 
-  # ─── 2. BUILD RUST CORE & INSTALLERS FOR ALL PLATFORMS ───
-  build:
-    name: Build Native Binaries (${{ matrix.os }} - ${{ matrix.target }})
+  # ─── 2. BUILD TAURI v2 DESKTOP APPS & NATIVE BINARIES ───
+  build-tauri:
+    name: Build Tauri v2 App (${{ matrix.os }})
     needs: test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            bin_name: vajra-core.exe
-            asset_name: vajra-core-windows-x86_64.exe
-            build_setup_wizard: true
-
-          # Linux x86_64 (Static MUSL - Runs on ANY Linux distro with ZERO GLIBC dependency)
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            bin_name: vajra-core
-            asset_name: vajra-core-linux-x86_64
-            use_musl: true
-
-          # macOS Apple Silicon (M1/M2/M3/M4)
           - os: macos-latest
             target: aarch64-apple-darwin
-            bin_name: vajra-core
-            asset_name: vajra-core-macos-arm64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Set up Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Linux MUSL Tools (if needed)
-        if: matrix.use_musl
+      - name: Install Linux WebKit Dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
-      - name: Build vajra-core (Rust Release Mode)
+      - name: Build vajra-core (Rust Standalone Binary)
         run: |
-          cargo build --release --manifest-path crates/vajra-core/Cargo.toml --target ${{ matrix.target }}
+          cargo build --release --manifest-path crates/vajra-core/Cargo.toml
 
-      - name: Package Windows Installer (.EXE)
-        if: matrix.build_setup_wizard
-        run: |
-          pip install pyinstaller
-          python scripts/build_setup_exe.py
-          copy dist\VAJRA-Setup.exe VAJRA-Setup-Windows.exe
-
-      - name: Stage Compiled Binaries
-        shell: bash
-        run: |
-          mkdir -p release_assets
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp crates/vajra-core/target/${{ matrix.target }}/release/${{ matrix.bin_name }} release_assets/${{ matrix.asset_name }}
-            cp VAJRA-Setup-Windows.exe release_assets/VAJRA-Setup.exe
-          else
-            cp crates/vajra-core/target/${{ matrix.target }}/release/${{ matrix.bin_name }} release_assets/${{ matrix.asset_name }}
-            chmod +x release_assets/${{ matrix.asset_name }}
-          fi
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Build Tauri Desktop Application (.msi, .dmg, .AppImage, .deb)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: binaries-${{ matrix.target }}
-          path: release_assets/*
+          projectPath: src-tauri
+          tagName: ${{ github.ref_name }}
+          releaseDraft: true
+          prerelease: false
 
-  # ─── 3. PUBLISH TO GITHUB RELEASES ───
-  release:
-    name: Publish GitHub Release
+  # ─── 3. PUBLISH GITHUB RELEASE ───
+  publish:
+    name: Publish Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: build-tauri
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download Built Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: all_release_assets
-          merge-multiple: true
-
-      - name: Create GitHub Release & Attach Binaries
+      - name: Publish Draft Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: all_release_assets/*
           draft: false
           prerelease: false
           generate_release_notes: true

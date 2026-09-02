@@ -1,0 +1,22 @@
+[package]
+name = "vajra-desktop"
+version = "2.4.0"
+description = "VAJRA - Autonomous Cyber-Reasoning & Software Repair Desktop Application"
+authors = ["Arav Kataria", "VAJRA Security Team"]
+edition = "2021"
+
+[lib]
+name = "vajra_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+tauri-plugin-shell = "2.0.0"
+tauri-plugin-dialog = "2.0.0"
+tauri-plugin-fs = "2.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+vajra-core = { path = "../crates/vajra-core" }

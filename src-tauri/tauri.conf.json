@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/v2.0.0/crates/tauri-cli/schema.json",
+  "productName": "VAJRA",
+  "version": "2.4.0",
+  "identifier": "com.vajra.security",
+  "build": {
+    "frontendDist": "../docs/app"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "VAJRA · Autonomous Cyber-Reasoning System",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Evidence-driven autonomous cyber-reasoning and software repair",
+    "longDescription": "VAJRA discovers, explains, and repairs security vulnerabilities with multi-tier sovereign models and 6-stage verification proofs.",
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    }
+  }
+}
