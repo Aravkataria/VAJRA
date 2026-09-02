@@ -43,7 +43,7 @@ jobs:
 
   # ─── 2. BUILD TAURI v2 DESKTOP APPS & NATIVE BINARIES ───
   build:
-    name: Build Native Apps (${{ matrix.os }})
+    name: Build (${{ matrix.os }})
     needs: test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -67,11 +67,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Set up Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -83,55 +78,51 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
-      # Build core scanner
-      - name: Build vajra-core (Rust Standalone Binary)
-        run: |
-          cargo build --release --manifest-path crates/vajra-core/Cargo.toml
+      # Build the standalone vajra-core scanner binary
+      - name: Build vajra-core Binary
+        run: cargo build --release --manifest-path crates/vajra-core/Cargo.toml
 
-      # Build Tauri v2 native installer (NSIS on Windows, DMG on Mac, AppImage on Linux)
-      - name: Build Tauri Desktop Bundle
-        uses: tauri-apps/tauri-action@v0
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: src-tauri
-          tagName: ${{ github.ref_name || inputs.tag_name || 'v2.0.0' }}
-          releaseDraft: false
-          prerelease: false
+      # Install Tauri CLI and build the native desktop installer
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli@2.0.0 --locked
 
-      # Collect all compiled binaries and installer bundles
+      - name: Build Tauri Desktop Installer
+        run: cargo tauri build
+        working-directory: src-tauri
+
+      # Collect all outputs into release_assets/
       - name: Stage Release Artifacts
         shell: bash
         run: |
           mkdir -p release_assets
-          
-          # 1. Raw scanner binaries
+
+          # 1. vajra-core standalone binary
           if [ -f "crates/vajra-core/target/release/${{ matrix.bin_name }}" ]; then
             cp "crates/vajra-core/target/release/${{ matrix.bin_name }}" "release_assets/${{ matrix.asset_name }}"
           fi
 
-          # 2. Windows NSIS & MSI Installers
+          # 2. Windows: NSIS .exe installer
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            find src-tauri/target/release/bundle -name "*.exe" -exec cp {} release_assets/VAJRA_x64-setup.exe \; 2>/dev/null || true
-            find src-tauri/target/release/bundle -name "*.exe" -exec cp {} release_assets/VAJRA-Setup.exe \; 2>/dev/null || true
-            find src-tauri/target/release/bundle -name "*.msi" -exec cp {} release_assets/ \; 2>/dev/null || true
+            find src-tauri/target/release/bundle/nsis -name "*.exe" -exec cp {} release_assets/VAJRA-Setup.exe \; 2>/dev/null || true
           fi
 
-          # 3. macOS DMG Installers
+          # 3. macOS: .dmg disk image
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            find src-tauri/target/release/bundle -name "*.dmg" -exec cp {} release_assets/VAJRA_aarch64.dmg \; 2>/dev/null || true
+            find src-tauri/target/release/bundle/dmg -name "*.dmg" -exec cp {} release_assets/VAJRA-macOS.dmg \; 2>/dev/null || true
             if [ -f "scripts/install.sh" ]; then cp "scripts/install.sh" "release_assets/install.sh"; fi
             if [ -f "scripts/install.ps1" ]; then cp "scripts/install.ps1" "release_assets/install.ps1"; fi
           fi
 
-          # 4. Linux AppImage & DEB
+          # 4. Linux: .AppImage and .deb
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            find src-tauri/target/release/bundle -name "*.AppImage" -exec cp {} release_assets/VAJRA_amd64.AppImage \; 2>/dev/null || true
-            find src-tauri/target/release/bundle -name "*.deb" -exec cp {} release_assets/ \; 2>/dev/null || true
+            find src-tauri/target/release/bundle/appimage -name "*.AppImage" -exec cp {} release_assets/VAJRA-Linux.AppImage \; 2>/dev/null || true
+            find src-tauri/target/release/bundle/deb -name "*.deb" -exec cp {} release_assets/VAJRA-Linux.deb \; 2>/dev/null || true
           fi
 
-      - name: Upload Raw Release Assets
+          echo "=== Staged release assets ==="
+          ls -la release_assets/
+
+      - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: assets-${{ matrix.os }}
@@ -139,7 +130,7 @@ jobs:
 
   # ─── 3. PUBLISH GITHUB RELEASE ───
   publish:
-    name: Publish Release Assets
+    name: Publish Release
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -152,7 +143,10 @@ jobs:
           path: all_release_assets
           merge-multiple: true
 
-      - name: Attach Assets to Release
+      - name: List Final Assets
+        run: ls -la all_release_assets/
+
+      - name: Attach Assets to GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v') || inputs.tag_name != ''
         with:
