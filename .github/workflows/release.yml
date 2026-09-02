@@ -4,9 +4,12 @@ on:
   push:
     tags:
       - 'v*'
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag Name (e.g. v2.4.0)'
+        required: false
+        default: 'v2.4.0'
 
 permissions:
   contents: write
@@ -39,8 +42,8 @@ jobs:
           python -m pytest -v
 
   # ─── 2. BUILD TAURI v2 DESKTOP APPS & NATIVE BINARIES ───
-  build-tauri:
-    name: Build Tauri v2 App (${{ matrix.os }})
+  build:
+    name: Build Native Apps (${{ matrix.os }})
     needs: test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -49,10 +52,16 @@ jobs:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            bin_name: vajra-core.exe
+            asset_name: vajra-core-windows-x86_64.exe
           - os: macos-latest
             target: aarch64-apple-darwin
+            bin_name: vajra-core
+            asset_name: vajra-core-macos-arm64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            bin_name: vajra-core
+            asset_name: vajra-core-linux-x86_64
 
     steps:
       - name: Checkout Code
@@ -78,29 +87,66 @@ jobs:
         run: |
           cargo build --release --manifest-path crates/vajra-core/Cargo.toml
 
-      - name: Build Tauri Desktop Application (.msi, .dmg, .AppImage, .deb)
+      - name: Package Windows Standalone Setup (.EXE)
+        if: matrix.os == 'windows-latest'
+        run: |
+          pip install pyinstaller
+          python scripts/build_setup_exe.py
+          if (Test-Path "dist\VAJRA-Setup.exe") { Copy-Item "dist\VAJRA-Setup.exe" "VAJRA-Setup.exe" -Force }
+
+      - name: Stage Release Artifacts
+        shell: bash
+        run: |
+          mkdir -p release_assets
+          if [ -f "crates/vajra-core/target/release/${{ matrix.bin_name }}" ]; then
+            cp "crates/vajra-core/target/release/${{ matrix.bin_name }}" "release_assets/${{ matrix.asset_name }}"
+          fi
+          if [ "${{ matrix.os }}" = "windows-latest" ] && [ -f "VAJRA-Setup.exe" ]; then
+            cp "VAJRA-Setup.exe" "release_assets/VAJRA-Setup.exe"
+          fi
+          if [ "${{ matrix.os }}" = "macos-latest" ] && [ -f "scripts/install.sh" ]; then
+            cp "scripts/install.sh" "release_assets/install.sh"
+            cp "scripts/install.ps1" "release_assets/install.ps1"
+          fi
+
+      - name: Build Tauri Desktop Bundle
         uses: tauri-apps/tauri-action@v0
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: src-tauri
-          tagName: ${{ github.ref_name }}
-          releaseDraft: true
+          tagName: ${{ github.ref_name || inputs.tag_name || 'v2.4.0' }}
+          releaseDraft: false
           prerelease: false
+
+      - name: Upload Raw Release Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-${{ matrix.os }}
+          path: release_assets/*
 
   # ─── 3. PUBLISH GITHUB RELEASE ───
   publish:
-    name: Publish Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build-tauri
+    name: Publish Release Assets
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Publish Draft Releases
-        uses: softprops/action-gh-release@v2
+      - name: Download All Built Artifacts
+        uses: actions/download-artifact@v4
         with:
+          path: all_release_assets
+          merge-multiple: true
+
+      - name: Attach Assets to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.tag_name != ''
+        with:
+          tag_name: ${{ github.ref_name || inputs.tag_name }}
+          files: all_release_assets/*
           draft: false
           prerelease: false
           generate_release_notes: true
