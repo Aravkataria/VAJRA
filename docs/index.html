@@ -240,37 +240,43 @@
   .dl-card.hi .dl-btn{background:var(--s1-text);color:var(--s1-bg);}
   .dl-card.hi .dl-btn:hover{opacity:0.85;}
 
-  /* One-liner install table */
-  .cli-table-card{
-    max-width:1080px;margin:20px auto 0;padding:22px 26px;border-radius:16px;
-    background:var(--s1-card);border:1px solid var(--s1-border);color:var(--s1-text);
+  /* Sleek Terminal 1-Liner Install Band */
+  .term-install-box{
+    margin-top:20px;border-radius:12px;background:var(--s1-card-strong);
+    border:1px solid var(--s1-border);overflow:hidden;
   }
-  .cli-table-head{
-    display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
+  .term-install-head{
+    display:flex;justify-content:space-between;align-items:center;padding:10px 16px;
+    border-bottom:1px solid var(--s1-border);background:var(--s1-card);gap:12px;flex-wrap:wrap;
   }
-  .cli-table-head h4{
-    font-size:14px;font-weight:600;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;
+  .term-tabs{display:flex;gap:6px;align-items:center;}
+  .term-tab{
+    background:none;border:none;padding:6px 12px;border-radius:6px;font-family:'Space Grotesk',sans-serif;
+    font-size:12px;font-weight:500;color:var(--s1-text-60);cursor:pointer;transition:all 0.15s;
   }
-  .cli-table-head span{
-    font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--spark);background:rgba(245,180,0,0.12);
-    padding:3px 8px;border-radius:6px;border:1px solid rgba(245,180,0,0.25);
+  .term-tab:hover{color:var(--s1-text);background:var(--s1-card-strong);}
+  .term-tab.active{color:var(--s1-text);background:var(--s1-card-strong);font-weight:600;}
+  .term-tag{
+    font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--spark);
+    padding:2px 8px;border-radius:4px;background:rgba(245,180,0,0.08);border:1px solid rgba(245,180,0,0.18);
   }
-  .cli-rows{display:flex;flex-direction:column;gap:10px;}
-  .cli-row{
-    display:grid;grid-template-columns:140px 1fr auto;align-items:center;gap:16px;
-    padding:10px 14px;border-radius:10px;background:var(--s1-card-strong);border:1px solid var(--s1-border);
+  .term-install-body{
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;
   }
-  .cli-os{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
-  .cli-cmd{
-    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--s1-text-70);
-    overflow-x:auto;white-space:nowrap;user-select:all;
+  .term-cmd-line{
+    display:flex;align-items:center;gap:10px;overflow-x:auto;white-space:nowrap;
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--s1-text);
   }
-  .cli-copy-btn{
-    background:var(--s1-card);border:1px solid var(--s1-border-strong);color:var(--s1-text);
-    padding:6px 12px;border-radius:6px;font-size:11.5px;font-family:'JetBrains Mono',monospace;
-    cursor:pointer;transition:all 0.15s;flex-shrink:0;
+  .term-prompt{color:var(--spark);user-select:none;font-weight:600;}
+  .term-code{color:var(--s1-text-70);user-select:all;}
+  .term-copy-btn{
+    display:inline-flex;align-items:center;gap:6px;background:var(--s1-card);
+    border:1px solid var(--s1-border-strong);color:var(--s1-text);font-family:'Space Grotesk',sans-serif;
+    font-size:12px;font-weight:500;padding:6px 12px;border-radius:6px;cursor:pointer;
+    flex-shrink:0;transition:all 0.15s;
   }
-  .cli-copy-btn:hover{background:var(--s1-text);color:var(--s1-bg);}
+  .term-copy-btn:hover{background:var(--s1-hover);}
+  .term-copy-btn svg{display:block;}
 
   .core-band{
     max-width:1080px;margin:16px auto 0;padding:18px 24px;border-radius:16px;
@@ -389,7 +395,6 @@
     .pipeline-flex{flex-direction:column;align-items:center;}
     .feat-row{grid-template-columns:1fr;}
     .dl-grid{grid-template-columns:1fr;}
-    .cli-row{grid-template-columns:1fr;}
     .foot-top{flex-direction:column;gap:28px;}
     .nav-links{display:none;}
   }
@@ -526,31 +531,29 @@
         </div>
 
       </div>
-    </div>
 
-    <!-- Instant 1-Liner Terminal Table -->
-    <div class="cli-table-card">
-      <div class="cli-table-head">
-        <h4>⚡ Instant 1-Line Terminal Install</h4>
-        <span>Zero configuration</span>
-      </div>
-      <div class="cli-rows">
-        <div class="cli-row">
-          <div class="cli-os">🪟 Windows</div>
-          <div class="cli-cmd" id="cmd-win">irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex</div>
-          <button class="cli-copy-btn" onclick="copyCmd('cmd-win', this)">Copy</button>
+      <!-- Integrated Minimalist Terminal Installer Block -->
+      <div class="term-install-box">
+        <div class="term-install-head">
+          <div class="term-tabs">
+            <button class="term-tab active" onclick="switchTerm('win', this)">Windows</button>
+            <button class="term-tab" onclick="switchTerm('mac', this)">macOS</button>
+            <button class="term-tab" onclick="switchTerm('linux', this)">Linux</button>
+          </div>
+          <span class="term-tag">1-line terminal install</span>
         </div>
-        <div class="cli-row">
-          <div class="cli-os">🍏 macOS</div>
-          <div class="cli-cmd" id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash</div>
-          <button class="cli-copy-btn" onclick="copyCmd('cmd-mac', this)">Copy</button>
-        </div>
-        <div class="cli-row">
-          <div class="cli-os">🐧 Linux</div>
-          <div class="cli-cmd" id="cmd-nix">curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash</div>
-          <button class="cli-copy-btn" onclick="copyCmd('cmd-nix', this)">Copy</button>
+        <div class="term-install-body">
+          <div class="term-cmd-line">
+            <span class="term-prompt">$</span>
+            <span class="term-code" id="term-cmd">irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex</span>
+          </div>
+          <button class="term-copy-btn" onclick="copyTermCmd(this)" aria-label="Copy terminal command">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span>Copy</span>
+          </button>
         </div>
       </div>
+
     </div>
 
     <div class="core-band">
@@ -765,12 +768,28 @@ function toggleTheme(){
   try{ localStorage.setItem('vajra-theme', next); }catch(e){}
 }
 
-function copyCmd(id, btn){
-  var text = document.getElementById(id).innerText;
+var termCommands = {
+  win: 'irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex',
+  mac: 'curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash',
+  linux: 'curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash'
+};
+
+function switchTerm(os, btn){
+  document.querySelectorAll('.term-tab').forEach(function(el){ el.classList.remove('active'); });
+  btn.classList.add('active');
+  var codeEl = document.getElementById('term-cmd');
+  if(codeEl && termCommands[os]){
+    codeEl.innerText = termCommands[os];
+  }
+}
+
+function copyTermCmd(btn){
+  var text = document.getElementById('term-cmd').innerText;
   navigator.clipboard.writeText(text).then(function(){
-    var old = btn.innerText;
-    btn.innerText = 'Copied!';
-    setTimeout(function(){ btn.innerText = old; }, 2000);
+    var span = btn.querySelector('span');
+    var old = span.innerText;
+    span.innerText = 'Copied!';
+    setTimeout(function(){ span.innerText = old; }, 2000);
   });
 }
 
