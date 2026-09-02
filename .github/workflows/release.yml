@@ -87,22 +87,12 @@ jobs:
         run: |
           cargo build --release --manifest-path crates/vajra-core/Cargo.toml
 
-      - name: Package Windows Standalone Setup (.EXE)
-        if: matrix.os == 'windows-latest'
-        run: |
-          pip install pyinstaller
-          python scripts/build_setup_exe.py
-          if (Test-Path "dist\VAJRA-Setup.exe") { Copy-Item "dist\VAJRA-Setup.exe" "VAJRA-Setup.exe" -Force }
-
       - name: Stage Release Artifacts
         shell: bash
         run: |
           mkdir -p release_assets
           if [ -f "crates/vajra-core/target/release/${{ matrix.bin_name }}" ]; then
             cp "crates/vajra-core/target/release/${{ matrix.bin_name }}" "release_assets/${{ matrix.asset_name }}"
-          fi
-          if [ "${{ matrix.os }}" = "windows-latest" ] && [ -f "VAJRA-Setup.exe" ]; then
-            cp "VAJRA-Setup.exe" "release_assets/VAJRA-Setup.exe"
           fi
           if [ "${{ matrix.os }}" = "macos-latest" ] && [ -f "scripts/install.sh" ]; then
             cp "scripts/install.sh" "release_assets/install.sh"
