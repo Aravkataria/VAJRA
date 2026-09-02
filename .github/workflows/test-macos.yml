@@ -6,15 +6,15 @@ on:
       mode:
         description: 'Choose mode'
         required: true
-        default: 'automated-test-suite'
+        default: 'interactive-web-terminal'
         type: choice
         options:
-          - 'automated-test-suite'
           - 'interactive-web-terminal'
+          - 'automated-test-suite'
 
 jobs:
   test-mac:
-    name: Apple Silicon macOS Runner (${{ inputs.mode }})
+    name: Apple Silicon macOS Runner
     runs-on: macos-latest
     timeout-minutes: 45
 
@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Automated test mode: Installs & runs test suite automatically
+      # Automated test mode
       - name: Run Automated Installer & Pytest
         if: ${{ inputs.mode == 'automated-test-suite' }}
         run: |
@@ -37,7 +37,7 @@ jobs:
           pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
-      # Interactive mode: Pure native tmate web terminal
+      # Interactive mode: Pins link to the very top banner of the GitHub Actions page
       - name: Launch Live Web Terminal
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
@@ -51,21 +51,24 @@ jobs:
           WEB_URL=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
           SSH_CMD=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
           
-          # 1. Post directly to GitHub Actions Summary Dashboard
-          echo "## 🖥️ Live macOS Web Terminal" >> $GITHUB_STEP_SUMMARY
+          # 1. PINS A BIG NOTIFICATION BANNER AT THE VERY TOP OF GITHUB ACTIONS
+          echo "::notice title=👉 CLICK HERE TO OPEN MAC TERMINAL::$WEB_URL"
+          
+          # 2. Writes a huge clickable link on the Summary page
+          echo "# 🖥️ LIVE MACOS TERMINAL READY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 👉 [Click here to open Live macOS Terminal]($WEB_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "## 👉 [CLICK HERE TO OPEN TERMINAL IN YOUR BROWSER]($WEB_URL)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Direct URL:" >> $GITHUB_STEP_SUMMARY
-          echo "\`$WEB_URL\`" >> $GITHUB_STEP_SUMMARY
+          echo "Direct link: $WEB_URL" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "SSH Command: \`$SSH_CMD\`" >> $GITHUB_STEP_SUMMARY
           
-          # 2. Print to console logs
-          echo "================================================================"
-          echo "  WEB TERMINAL URL: $WEB_URL"
-          echo "  SSH COMMAND:      $SSH_CMD"
-          echo "================================================================"
+          echo ""
+          echo "****************************************************************"
+          echo "  LINK TO OPEN IN BROWSER:"
+          echo "  $WEB_URL"
+          echo "****************************************************************"
+          echo ""
           
           # Keep terminal alive for 30 minutes
           for i in $(seq 1 360); do
