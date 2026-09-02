@@ -16,7 +16,7 @@ jobs:
   test-linux:
     name: Ubuntu Linux Runner (${{ inputs.mode }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout Repository
@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Automated test mode: Installs & verifies automatically
+      # Automated test mode: Installs & runs test suite automatically
       - name: Run Automated Installer & Pytest
         if: ${{ inputs.mode == 'automated-test-suite' }}
         run: |
@@ -37,16 +37,33 @@ jobs:
           pip install -r requirements.txt pytest
           python -m pytest
 
-      # Interactive mode: Generate dummy key so tmate never looks for GitHub profile keys
-      - name: Generate Local Runner Key
+      # Interactive mode: Pure native tmate web terminal (0 SSH keys needed)
+      - name: Launch Live Web Terminal
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
-          mkdir -p ~/.ssh
-          ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N "" -q
-          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-
-      - name: Open Interactive Web Terminal
-        if: ${{ inputs.mode == 'interactive-web-terminal' }}
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: false
+          echo "=== Installing tmate ==="
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tmate
+          
+          echo "=== Starting tmate session ==="
+          tmate -S /tmp/tmate.sock new-session -d
+          tmate -S /tmp/tmate.sock wait tmate-ready
+          
+          WEB_URL=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
+          SSH_CMD=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+          
+          echo ""
+          echo "================================================================"
+          echo "  🎉 LIVE WEB TERMINAL IS READY!"
+          echo "  Click or open this URL in your browser to access the Linux terminal:"
+          echo ""
+          echo "  👉 $WEB_URL"
+          echo ""
+          echo "  (Or SSH: $SSH_CMD)"
+          echo "================================================================"
+          echo ""
+          
+          # Keep terminal alive for interactive use
+          while [ -S /tmp/tmate.sock ]; do
+            sleep 5
+          done
