@@ -27,7 +27,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "msi", "dmg", "appimage", "deb"],
     "category": "DeveloperTool",
     "shortDescription": "Evidence-driven autonomous cyber-reasoning and software repair",
     "longDescription": "VAJRA discovers, explains, and repairs security vulnerabilities with multi-tier sovereign models and 6-stage verification proofs.",
@@ -35,6 +35,10 @@
       "minimumSystemVersion": "10.15"
     },
     "windows": {
+      "nsis": {
+        "installMode": "both",
+        "displayLanguageSelector": false
+      },
       "wix": {
         "language": "en-US"
       }
