@@ -242,15 +242,29 @@ def main():
     parser.add_argument("--benchmark", action="store_true", help="Run the empirical 50-fixture benchmark suite and output telemetry")
     parser.add_argument("--update", action="store_true", help="Check and install the latest release update")
     parser.add_argument("--version", action="store_true", help="Display version and system information")
+    parser.add_argument("--no-update-check", action="store_true", help="Disable automatic update checks")
+
+    # Support 'vajra scan <path>' seamlessly as a subcommand alias
+    raw_args = sys.argv[1:]
+    if raw_args and raw_args[0] == "scan":
+        raw_args.pop(0)
+        if raw_args and not raw_args[0].startswith("-"):
+            target_path = raw_args.pop(0)
+            raw_args = ["--scan", target_path] + raw_args
 
     parser.add_argument("target", nargs="?", default=None, help="Target directory to scan (optional)")
 
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
 
     if args.version:
         print(f"VAJRA version {__version__} ({sys.platform})")
         print(f"Python: {sys.version.split()[0]}")
         print(f"Install Root: {get_app_root()}")
+        return
+
+    if args.benchmark:
+        from tests.benchmark_suite import run_benchmark
+        run_benchmark()
         return
 
     if args.update:
@@ -261,15 +275,10 @@ def main():
         return
 
     # Background update check (skip if scanning or disabled)
-    if not args.no_update_check and not args.scan and not args.target:
+    if not getattr(args, 'no_update_check', False) and not getattr(args, 'scan', None) and not getattr(args, 'target', None) and not getattr(args, 'benchmark', False) and not getattr(args, 'version', False):
         updated = check_for_updates(quiet=True)
         if updated:
             os.execv(sys.executable, [sys.executable, "-m", "app.launcher"] + sys.argv[1:])
-
-    if args.benchmark:
-        from tests.benchmark_suite import run_benchmark
-        run_benchmark()
-        return
 
     # Command routing
     if args.scan or args.target:
