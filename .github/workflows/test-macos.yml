@@ -34,7 +34,7 @@ jobs:
           echo "=== Running scripts/install.sh on macOS ==="
           bash scripts/install.sh
           echo "=== Testing Python Pytest Suite ==="
-          pip install -r requirements.txt pytest
+          pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
       # Interactive mode: Pure native tmate web terminal (0 SSH keys needed)
