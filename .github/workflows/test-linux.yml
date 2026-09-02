@@ -37,7 +37,7 @@ jobs:
           pip install -r requirements.txt pytest httpx httpx2
           python -m pytest
 
-      # Interactive mode: Pure native tmate web terminal (0 SSH keys needed)
+      # Interactive mode: Pure native tmate web terminal
       - name: Launch Live Web Terminal
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
@@ -52,18 +52,24 @@ jobs:
           WEB_URL=$(tmate -S /tmp/tmate.sock display -p '#{tmate_web}')
           SSH_CMD=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
           
-          echo ""
-          echo "================================================================"
-          echo "  🎉 LIVE WEB TERMINAL IS READY!"
-          echo "  Click or open this URL in your browser to access the Linux terminal:"
-          echo ""
-          echo "  👉 $WEB_URL"
-          echo ""
-          echo "  (Or SSH: $SSH_CMD)"
-          echo "================================================================"
-          echo ""
+          # 1. Post directly to GitHub Actions Summary Dashboard
+          echo "## 🖥️ Live Linux Web Terminal" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 👉 [Click here to open Live Linux Terminal]($WEB_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Direct URL:" >> $GITHUB_STEP_SUMMARY
+          echo "\`$WEB_URL\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "SSH Command: \`$SSH_CMD\`" >> $GITHUB_STEP_SUMMARY
           
-          # Keep terminal alive for interactive use
-          while [ -S /tmp/tmate.sock ]; do
+          # 2. Print to console logs
+          echo "================================================================"
+          echo "  WEB TERMINAL URL: $WEB_URL"
+          echo "  SSH COMMAND:      $SSH_CMD"
+          echo "================================================================"
+          
+          # Keep terminal alive for 30 minutes
+          for i in $(seq 1 360); do
+            if [ ! -S /tmp/tmate.sock ]; then break; fi
             sleep 5
           done
