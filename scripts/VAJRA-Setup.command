@@ -27,7 +27,7 @@ fi
 if [ -f "$DIR/install.sh" ]; then
     bash "$DIR/install.sh"
 else
-    curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA-test/main/scripts/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash
 fi
 
 echo ""
