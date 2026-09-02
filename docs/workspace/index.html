@@ -1359,7 +1359,7 @@
       currentFiles: {} // { filename: contentString }
     };
 
-    // ─── 1. FORENSIC AST ANALYZER & REPAIR GENERATOR ───
+        // ─── 1. FORENSIC AST ANALYZER & REPAIR GENERATOR ───
     var VULN_PATTERNS = [
       {
         id: "command_injection_eval",
@@ -1422,13 +1422,39 @@
         }
       },
       {
-        id: "sql_injection_format",
+        id: "sql_injection_dynamic",
         type: "sql_injection",
         severity: "CRITICAL",
-        regex: /(cursor\.execute\s*\(\s*f?['"][^'"]*(?:SELECT|INSERT|UPDATE|DELETE)[^'"]*%\s*s|cursor\.execute\s*\(\s*f['"][^'"]*\{[^}]+\})/gi,
-        message: "Unparameterized dynamic SQL query construction vulnerable to SQL injection.",
+        regex: /(cursor\.execute\s*\(\s*f?['"][^'"]*(?:SELECT|INSERT|UPDATE|DELETE)[^'"]*%\s*s|cursor\.execute\s*\(\s*f['"][^'"]*\{[^}]+\}|db\.query\s*\(\s*['"][^'"]*(?:SELECT|INSERT|UPDATE|DELETE)[^'"]*['"]\s*\+\s*[^)]+\))/gi,
+        message: "Unparameterized dynamic SQL query construction vulnerable to SQL injection (CWE-89).",
         repair: function(line) {
-          return line.replace(/cursor\.execute\s*\(\s*f?['"]([^'"]+)['"]\s*%\s*\(([^)]+)\)\s*\)/, "cursor.execute('$1', ($2,))");
+          if (line.includes("%")) {
+            return line.replace(/cursor\.execute\s*\(\s*f?['"]([^'"]+)['"]\s*%\s*\(([^)]+)\)\s*\)/, "cursor.execute('$1', ($2,))");
+          }
+          if (line.includes("f"") || line.includes("f'")) {
+            return line.replace(/cursor\.execute\s*\(\s*f['"]([^'"]*)\{([^}]+)\}([^'"]*)['"]\s*\)/, "cursor.execute('$1?$3', ($2,))");
+          }
+          return line.replace(/\+\s*([a-zA-Z0-9_\.]+)/, ", [$1]");
+        }
+      },
+      {
+        id: "path_traversal_open",
+        type: "path_traversal",
+        severity: "HIGH",
+        regex: /(open\s*\(\s*['"][^'"]*['"]\s*\+\s*([a-zA-Z0-9_\.]+)[^)]*\))/g,
+        message: "Unsanitized path concatenation passed directly to open() file sink (CWE-22).",
+        repair: function(line) {
+          return line.replace(/open\s*\(\s*['"]([^'"]*)['"]\s*\+\s*([a-zA-Z0-9_\.]+)/, "open(Path('$1').resolve() / Path($2).name");
+        }
+      },
+      {
+        id: "dom_xss_innerhtml",
+        type: "cross_site_scripting",
+        severity: "MEDIUM",
+        regex: /(\.\s*innerHTML\s*=\s*([a-zA-Z0-9_\.\[\]]+)\s*;?)/g,
+        message: "Direct assignment to innerHTML with untrusted variables introduces DOM XSS (CWE-79).",
+        repair: function(line) {
+          return line.replace(/\.\s*innerHTML\s*=\s*([^;]+)/, ".textContent = $1");
         }
       }
     ];
