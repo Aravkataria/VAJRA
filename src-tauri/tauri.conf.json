@@ -28,6 +28,13 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi", "dmg", "appimage", "deb"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "Evidence-driven autonomous cyber-reasoning and software repair",
     "longDescription": "VAJRA discovers, explains, and repairs security vulnerabilities with multi-tier sovereign models and 6-stage verification proofs.",

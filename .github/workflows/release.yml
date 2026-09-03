@@ -84,7 +84,7 @@ jobs:
 
       # Install Tauri CLI and build the native desktop installer
       - name: Install Tauri CLI
-        run: cargo install tauri-cli@2.0.0 --locked
+        run: cargo install tauri-cli --version "^2.0.0"
 
       - name: Build Tauri Desktop Installer
         run: cargo tauri build

@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FuzzSeed {
@@ -19,7 +19,7 @@ pub struct FuzzCorpusGenerator;
 
 impl FuzzCorpusGenerator {
     /// Generates high-throughput boundary payload corpus for target sink verification
-    pub fn generate_corpus(vuln_type: &str, depth: usize) -> FuzzCorpusReport {
+    pub fn generate_corpus(_vuln_type: &str, depth: usize) -> FuzzCorpusReport {
         let mut seeds = Vec::new();
 
         // 1. Boundary & Buffer Overflow Seeds
