@@ -1,5 +1,6 @@
 // src-tauri/src/commands.rs
 use std::path::Path;
+use std::time::Instant;
 use serde::{Deserialize, Serialize};
 use vajra_core::{
     scanner::CoreScanner,
@@ -26,20 +27,31 @@ pub fn scan_directory(path: String) -> Result<ScanReport, String> {
         return Err(format!("Target directory does not exist: {}", path));
     }
 
+    let start = Instant::now();
     let scanner = CoreScanner::new();
-    let report = scanner.scan_directory(target);
+    let (findings, files_scanned) = scanner.scan_directory(target);
+    let duration_ms = start.elapsed().as_millis();
+
+    Ok(ScanReport {
+        engine: "VAJRA-Core Native Rayon Engine (Rust)".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        target_path: path,
+        files_scanned,
+        total_findings: findings.len(),
+        duration_ms,
+        findings,
+    })
+}
+
+#[tauri::command]
+pub fn run_mutation_analysis(patched_code: String, vuln_type: String) -> Result<MutationReport, String> {
+    let report = PatchMutationEngine::generate_mutants(&patched_code, &vuln_type);
     Ok(report)
 }
 
 #[tauri::command]
-pub fn run_mutation_analysis(original: String, patch: String) -> Result<MutationReport, String> {
-    let report = PatchMutationEngine::evaluate(&original, &patch);
-    Ok(report)
-}
-
-#[tauri::command]
-pub fn run_fuzz_analysis(code: String) -> Result<FuzzCorpusReport, String> {
-    let report = FuzzCorpusGenerator::generate_corpus(&code);
+pub fn run_fuzz_analysis(vuln_type: String, depth: usize) -> Result<FuzzCorpusReport, String> {
+    let report = FuzzCorpusGenerator::generate_corpus(&vuln_type, depth);
     Ok(report)
 }
 
