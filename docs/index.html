@@ -407,7 +407,7 @@
   /* ---------- System Requirements Matrix ---------- */
   .specs-box {
     max-width: 1080px;
-    margin: 20px auto 0;
+    margin: 16px auto 0;
     border-radius: 16px;
     border: 1px solid var(--s1-border);
     background: var(--s1-card);
@@ -418,7 +418,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 14px 24px;
-    background: var(--s1-card-strong);
+    background: var(--s1-card);
     border-bottom: 1px solid var(--s1-border);
     gap: 12px;
     flex-wrap: wrap;
@@ -436,11 +436,29 @@
   .specs-badge {
     font-size: 11px;
     font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    padding: 3px 10px;
+    font-weight: 500;
+    color: var(--spark);
+    padding: 3px 9px;
     border-radius: 6px;
-    background: var(--s1-card);
-    border: 1px solid var(--s1-border-strong);
+    background: #000000;
+    border: 1px solid rgba(245,180,0,0.22);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .specs-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--spark);
+    opacity: 0.85;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  [data-theme="light"] .specs-badge {
+    background: #000000;
+    border: 1px solid rgba(245,180,0,0.28);
     color: var(--spark);
   }
   .specs-content {
@@ -469,25 +487,32 @@
     border-radius: 10px;
     border: 1px solid var(--s1-border);
     margin-bottom: 20px;
+    background: var(--s1-card);
   }
   .specs-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
     text-align: left;
-    white-space: nowrap;
+    table-layout: fixed;
   }
+  .specs-table th:nth-child(1), .specs-table td:nth-child(1) { width: 22%; }
+  .specs-table th:nth-child(2), .specs-table td:nth-child(2) { width: 39%; }
+  .specs-table th:nth-child(3), .specs-table td:nth-child(3) { width: 39%; }
   .specs-table th {
     background: var(--s1-card-strong);
-    padding: 11px 16px;
+    padding: 12px 18px;
     font-weight: 600;
     color: var(--s1-text);
     border-bottom: 1px solid var(--s1-border);
+    font-size: 12.5px;
   }
   .specs-table td {
-    padding: 10px 16px;
+    padding: 12px 18px;
     border-bottom: 1px solid var(--s1-border);
     color: var(--s1-text-70);
+    line-height: 1.55;
+    vertical-align: top;
   }
   .specs-table td b {
     color: var(--s1-text);
@@ -496,7 +521,12 @@
     border-bottom: none;
   }
   .specs-table tr:hover td {
-    background: var(--s1-card);
+    background: var(--s1-card-strong);
+  }
+  @media (max-width: 680px) {
+    .specs-table {
+      min-width: 540px;
+    }
   }
 
   .web-specs-card {
@@ -507,7 +537,7 @@
     padding: 16px 20px;
     border-radius: 12px;
     background: var(--s1-card-strong);
-    border: 1px solid var(--s1-border-strong);
+    border: 1px solid var(--s1-border);
     flex-wrap: wrap;
   }
   .web-specs-icon {
@@ -538,12 +568,14 @@
     gap: 6px;
     background: var(--s1-text);
     color: var(--s1-bg);
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 13px;
     font-weight: 600;
     padding: 9px 16px;
     border-radius: 8px;
     transition: opacity 0.15s;
     white-space: nowrap;
+    text-decoration: none;
   }
   .web-specs-btn:hover {
     opacity: 0.85;
@@ -932,14 +964,13 @@
     <div class="specs-box">
       <div class="specs-head">
         <div class="specs-head-left">
-          <span class="spark">⚡</span>
           <h3>System Requirements</h3>
         </div>
         <span class="specs-badge">Hardware Matrix</span>
       </div>
 
       <div class="specs-content">
-        <h4 class="specs-subhead">🖥️ Native Desktop &amp; CLI (<code>vajra-core</code> + AI Engine)</h4>
+        <h4 class="specs-subhead">Native Desktop &amp; CLI (<code>vajra-core</code> + AI Engine)</h4>
         <div class="specs-table-wrap">
           <table class="specs-table">
             <thead>
@@ -981,12 +1012,11 @@
 
         <!-- Web Edition Specs Callout below table -->
         <div class="web-specs-card">
-          <div class="web-specs-icon">🌐</div>
           <div class="web-specs-text">
             <h5>Web Edition (100% In-Browser &amp; Serverless)</h5>
             <p>Runs on <b>any modern web browser</b> (Chrome, Safari, Firefox, Edge, Brave) across PC, Mac, Linux, iOS, and Android. Requires only <b>1 GB RAM</b> and <b>0 MB storage</b> — analysis runs 100% in client-side RAM with zero installation.</p>
           </div>
-          <a class="web-specs-btn" href="app/">Launch Web Edition ⚡</a>
+          <a class="web-specs-btn" href="app/">Launch Web Edition</a>
         </div>
       </div>
     </div>

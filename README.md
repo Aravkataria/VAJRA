@@ -552,11 +552,11 @@ VAJRA/
 
 ---
 
-### 💻 System Requirements & Hardware Matrix
+### System Requirements & Hardware Matrix
 
-#### 🖥️ Native Desktop & CLI (`vajra-core` + Local AI Engine)
+#### Native Desktop & CLI (`vajra-core` + Local AI Engine)
 
-| Component | 🟢 Minimum Spec *(Fast-Path & Core Scanner)* | ⚡ Recommended Spec *(Local AI Reasoning Models)* |
+| Component | Minimum Spec *(Fast-Path & Core Scanner)* | Recommended Spec *(Local AI Reasoning Models)* |
 | :--- | :--- | :--- |
 | **Processor (CPU)** | **Intel Core i3-4130** / **AMD Ryzen 3 1200** / **Apple M1 or Intel Mac** *(or any equivalent or higher benchmarked CPU)* | **Intel Core i5-8400 or Core Ultra** / **AMD Ryzen 5 3600** / **Apple Silicon M1** *(or any equivalent or higher benchmarked CPU)* |
 | **Memory (RAM)** | **2 GB RAM** *(VAJRA engine uses ~25MB idle, <100MB scanning)* | **8 GB – 16 GB RAM** *(For running 3B–7B Ollama models)* |
@@ -565,7 +565,7 @@ VAJRA/
 | **GPU / Acceleration** | None required *(100% CPU Execution)* | Optional: Apple Silicon GPU / NVIDIA GPU (6GB or more VRAM) |
 | **Internet** | **Zero Internet Required** *(100% Offline & Sovereign)* | **Zero Internet Required** *(100% Offline & Sovereign)* |
 
-#### 🌐 Web Edition *(100% In-Browser & Serverless)*
+#### Web Edition *(100% In-Browser & Serverless)*
 - **Supported Browsers**: Chrome, Safari, Firefox, Edge, Brave across Windows, macOS, Linux, iOS, and Android.
 - **Hardware Footprint**: Requires only **1 GB RAM** and **0 MB disk storage** — forensic analysis and defensive repair execution run 100% in client-side RAM with zero installation.
 
