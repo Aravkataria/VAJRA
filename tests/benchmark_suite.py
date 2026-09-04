@@ -150,7 +150,7 @@ def run_benchmark():
     print(f"  • Total Fixtures Tested:        {total_fixtures}")
     print(f"  • Vulnerabilities Discovered:   {detected_count}/{total_fixtures} ({detection_rate:.1f}%)")
     print(f"  • Minimal Repairs Synthesized:  {repaired_count}/{detected_count} ({repair_rate:.1f}%)")
-    print(f"  • 6-Stage Verified Repairs:     {verified_count}/{repaired_count} ({verified_rate:.1f}%)")
+    print(f"  • 7-Stage Verified Repairs:     {verified_count}/{repaired_count} ({verified_rate:.1f}%)")
     print(f"  • Zero-Regression Rate:         100.0%")
     print(f"  • LLM Calls Avoided:            {deterministic_count}/{detected_count} ({llm_avoided_rate:.1f}% Resolved Deterministically)")
     print(f"  • Total Suite Execution Time:   {elapsed_time_s:.2f} seconds ({elapsed_time_s/total_fixtures*1000:.1f}ms/fixture)")
