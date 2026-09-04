@@ -404,6 +404,151 @@
   .foot-bottom a{color:var(--s1-text-40);transition:color 0.15s;}
   .foot-bottom a:hover{color:var(--s1-text);}
 
+  /* ---------- System Requirements Matrix ---------- */
+  .specs-box {
+    max-width: 1080px;
+    margin: 20px auto 0;
+    border-radius: 16px;
+    border: 1px solid var(--s1-border);
+    background: var(--s1-card);
+    overflow: hidden;
+  }
+  .specs-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    background: var(--s1-card-strong);
+    border-bottom: 1px solid var(--s1-border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .specs-head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .specs-head-left h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--s1-text);
+  }
+  .specs-badge {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: var(--s1-card);
+    border: 1px solid var(--s1-border-strong);
+    color: var(--spark);
+  }
+  .specs-content {
+    padding: 24px;
+  }
+  .specs-subhead {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--s1-text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .specs-subhead code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--spark);
+    background: var(--s1-card-strong);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--s1-border);
+  }
+  .specs-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--s1-border);
+    margin-bottom: 20px;
+  }
+  .specs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .specs-table th {
+    background: var(--s1-card-strong);
+    padding: 11px 16px;
+    font-weight: 600;
+    color: var(--s1-text);
+    border-bottom: 1px solid var(--s1-border);
+  }
+  .specs-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--s1-border);
+    color: var(--s1-text-70);
+  }
+  .specs-table td b {
+    color: var(--s1-text);
+  }
+  .specs-table tr:last-child td {
+    border-bottom: none;
+  }
+  .specs-table tr:hover td {
+    background: var(--s1-card);
+  }
+
+  .web-specs-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: var(--s1-card-strong);
+    border: 1px solid var(--s1-border-strong);
+    flex-wrap: wrap;
+  }
+  .web-specs-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .web-specs-text {
+    flex: 1;
+    min-width: 240px;
+  }
+  .web-specs-text h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--s1-text);
+    margin-bottom: 4px;
+  }
+  .web-specs-text p {
+    font-size: 12.5px;
+    color: var(--s1-text-70);
+    line-height: 1.5;
+  }
+  .web-specs-text p b {
+    color: var(--s1-text);
+  }
+  .web-specs-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--s1-text);
+    color: var(--s1-bg);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 8px;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .web-specs-btn:hover {
+    opacity: 0.85;
+  }
+
   /* ---------- Floating Navigation Dock ---------- */
   .dock {
     position: fixed;
@@ -780,6 +925,69 @@
         <a class="core-link" href="https://github.com/Aravkataria/VAJRA/releases/latest/download/vajra-core-macos-arm64">vajra-core-macos-arm64 ↓</a>
         <a class="core-link" href="https://github.com/Aravkataria/VAJRA/releases/latest/download/vajra-core-windows-x86_64.exe">vajra-core-windows-x86_64.exe ↓</a>
         <a class="core-link" href="https://github.com/Aravkataria/VAJRA/releases/latest/download/vajra-core-linux-x86_64">vajra-core-linux-x86_64 ↓</a>
+      </div>
+    </div>
+
+    <!-- System Requirements Matrix -->
+    <div class="specs-box">
+      <div class="specs-head">
+        <div class="specs-head-left">
+          <span class="spark">⚡</span>
+          <h3>System Requirements</h3>
+        </div>
+        <span class="specs-badge">Hardware Matrix</span>
+      </div>
+
+      <div class="specs-content">
+        <h4 class="specs-subhead">🖥️ Native Desktop &amp; CLI (<code>vajra-core</code> + AI Engine)</h4>
+        <div class="specs-table-wrap">
+          <table class="specs-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>🟢 Minimum Spec (Fast-Path &amp; Core Scanner)</th>
+                <th>⚡ Recommended Spec (Local AI Reasoning Models)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Processor (CPU)</b></td>
+                <td>• Intel Core i3-4130 (AVX2 baseline)<br>• AMD Ryzen 3 1200<br>• Apple M1 or Intel Mac<br><span style="font-size:11.5px; opacity:0.8;">(or any equivalent or higher CPU)</span></td>
+                <td>• Intel Core i5-8400 or Core Ultra<br>• AMD Ryzen 5 3600<br>• Apple Silicon M1 (Unified Memory)<br><span style="font-size:11.5px; opacity:0.8;">(or any equivalent or higher CPU)</span></td>
+              </tr>
+              <tr>
+                <td><b>Memory (RAM)</b></td>
+                <td><b>2 GB RAM</b> (Engine uses ~25MB idle, &lt;100MB scanning)</td>
+                <td><b>8 GB – 16 GB RAM</b> (For running AI models)</td>
+              </tr>
+              <tr>
+                <td><b>Disk Storage</b></td>
+                <td><b>100 MB free space</b> (Standalone binary)</td>
+                <td><b>5 GB – 10 GB free space</b> (For local quantized weights)</td>
+              </tr>
+              <tr>
+                <td><b>Operating System</b></td>
+                <td>Windows 10/11 (64-bit), macOS 10.15 or later, Linux (Ubuntu/Debian/Fedora)</td>
+                <td>Windows 11 (64-bit), macOS 13 or later, Linux (x86_64 / ARM64)</td>
+              </tr>
+              <tr>
+                <td><b>GPU / NPU</b></td>
+                <td>None (100% CPU Execution)</td>
+                <td>Optional (Apple Silicon GPU or NVIDIA GPU with 6GB or more VRAM)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Web Edition Specs Callout below table -->
+        <div class="web-specs-card">
+          <div class="web-specs-icon">🌐</div>
+          <div class="web-specs-text">
+            <h5>Web Edition (100% In-Browser &amp; Serverless)</h5>
+            <p>Runs on <b>any modern web browser</b> (Chrome, Safari, Firefox, Edge, Brave) across PC, Mac, Linux, iOS, and Android. Requires only <b>1 GB RAM</b> and <b>0 MB storage</b> — analysis runs 100% in client-side RAM with zero installation.</p>
+          </div>
+          <a class="web-specs-btn" href="app/">Launch Web Edition ⚡</a>
+        </div>
       </div>
     </div>
   </section>
