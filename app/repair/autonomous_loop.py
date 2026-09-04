@@ -95,7 +95,7 @@ class AutonomousRepairLoop:
 
             # Failure occurred: extract feedback for next attempt
             failed_stage = next((v for v in stage_results if not v.verified), None)
-            failure_feedback = f"Verification failed: {failed_stage.details}" if failed_stage else "Verification checks failed."
+            failure_feedback = f"Verification failed at [{failed_stage.method}]: {failed_stage.reason}" if failed_stage else "Verification checks failed."
 
             attempts_history.append(
                 RepairEvolutionAttempt(
@@ -108,8 +108,15 @@ class AutonomousRepairLoop:
                 )
             )
 
-            # Evolve decision for next iteration
+            # Evolve decision with verifier feedback for next iteration
             last_feedback = failure_feedback
+            current_decision = Decision(
+                evidence=current_decision.evidence,
+                route=current_decision.route,
+                reason=current_decision.reason,
+                deterministic_fix=current_decision.deterministic_fix,
+                feedback=last_feedback,
+            )
 
         # Graceful, structured decline if all attempts failed
         decline_msg = f"All {len(attempts_history)} repair attempts failed verification. Last feedback: {last_feedback}"
