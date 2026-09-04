@@ -220,8 +220,16 @@ class SMTVerifier(VerificationModel):
     def _verify_generic_ast_cleanliness(self, tree: ast.AST) -> Tuple[bool, str]:
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
-                call_repr = ast.unparse(node) if hasattr(ast, "unparse") else ""
-                if "eval(" in call_repr or "exec(" in call_repr:
+                func_name = ""
+                if isinstance(node.func, ast.Name):
+                    func_name = node.func.id
+                elif isinstance(node.func, ast.Attribute):
+                    func_name = node.func.attr
+                    # ast.literal_eval is explicitly safe
+                    if func_name == "literal_eval":
+                        continue
+
+                if func_name in ("eval", "exec"):
                     if node.args and not isinstance(node.args[0], ast.Constant):
                         return False, "Dynamic arbitrary code evaluation detected in patch."
         return True, "All structural invariant constraints verified under safe domain."
