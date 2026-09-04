@@ -9,6 +9,7 @@ from app.verification.mutation_verifier import PatchMutationVerifier
 from app.verification.regression_verifier import RegressionVerifier
 from app.verification.result import VerificationResult
 from app.verification.security_test_verifier import SecurityTestVerifier
+from app.verification.smt_verifier import SMTVerifier
 from app.verification.static_rescan_verifier import StaticRescanVerifier
 from app.verification.syntax_verifier import SyntaxVerifier
 from app.verification.verification_model import VerificationModel
@@ -28,6 +29,7 @@ class Verifier:
                 RegressionVerifier(),
                 FuzzingVerifier(),
                 PatchMutationVerifier(),
+                SMTVerifier(),
             ]
         )
 
