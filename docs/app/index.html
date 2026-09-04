@@ -1069,7 +1069,146 @@
       gap: 0.75rem;
       box-shadow: var(--shadow-lg);
     }
-  </style>
+
+    /* Sidebar Mobile Backdrop */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      z-index: 38;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    /* ==========================================================================
+       6. COMPREHENSIVE MOBILE RESPONSIVENESS (Phone & Tablet)
+       ========================================================================== */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0; bottom: 0; left: 0;
+        width: 280px;
+        max-width: 85vw;
+        z-index: 50;
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-lg);
+      }
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      .sidebar.collapsed {
+        width: 280px;
+        transform: translateX(-100%);
+      }
+      .sidebar-backdrop.active {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      
+      .top-bar {
+        padding: 0 0.85rem;
+        height: 48px;
+      }
+      .casefile-name {
+        max-width: 130px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .btn-theme span {
+        display: none;
+      }
+      
+      .chat-stream {
+        padding: 1.25rem 0.85rem 7.5rem 0.85rem;
+        gap: 1rem;
+      }
+      .hero-container {
+        padding: 0.5rem 0;
+        gap: 1.15rem;
+      }
+      .hero-title {
+        font-size: 1.35rem;
+      }
+      .hero-subtitle {
+        font-size: 0.84rem;
+      }
+      .hero-quick-cards {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      
+      .composer-shell {
+        padding: 0.5rem 0.75rem 0.85rem 0.75rem;
+      }
+      .composer-panel {
+        padding: 0.55rem 0.75rem;
+      }
+      .composer-toolbar {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .toolbar-left {
+        gap: 0.25rem;
+      }
+      .btn-tool-chip {
+        padding: 0.3rem 0.55rem;
+        font-size: 0.72rem;
+      }
+      .btn-run-scan {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.76rem;
+      }
+      
+      .tab-view-container {
+        padding: 1.25rem 0.85rem 5rem 0.85rem;
+        gap: 1rem;
+      }
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+      }
+      .metric-box {
+        padding: 0.65rem 0.85rem;
+      }
+      .metric-val {
+        font-size: 1.2rem;
+      }
+      
+      .code-diff {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .top-bar-left {
+        gap: 0.4rem;
+      }
+      .casefile-badge-wrap span:first-child {
+        display: none;
+      }
+      .state-seal {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.35rem;
+      }
+      .chat-stream {
+        padding: 1rem 0.65rem 7rem 0.65rem;
+      }
+      .msg-card {
+        padding: 0.85rem 0.95rem;
+        font-size: 0.84rem;
+      }
+      .modal-frame {
+        max-width: 95vw;
+        padding: 1.15rem;
+      }
+    }
 </head>
 <body>
 
@@ -1110,6 +1249,7 @@
       <div style="color: var(--text-muted); font-size: 0.68rem; font-family:'JetBrains Mono', monospace;">100% In-Browser Forensic Sentinel</div>
     </div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
 
   <!-- ======================================================================
        2. MAIN APPLICATION WORKSPACE
@@ -2042,8 +2182,23 @@
       if (el) el.classList.remove("active");
     };
 
+    window.closeSidebarMobile = function () {
+      var sb = document.getElementById("appSidebar");
+      var bd = document.getElementById("sidebarBackdrop");
+      if (sb) sb.classList.remove("mobile-open");
+      if (bd) bd.classList.remove("active");
+    };
+
     document.getElementById("toggleSidebarBtn").addEventListener("click", function () {
-      document.getElementById("appSidebar").classList.toggle("collapsed");
+      var isMobile = window.innerWidth <= 768;
+      var sb = document.getElementById("appSidebar");
+      var bd = document.getElementById("sidebarBackdrop");
+      if (isMobile) {
+        if (sb) sb.classList.toggle("mobile-open");
+        if (bd) bd.classList.toggle("active");
+      } else {
+        if (sb) sb.classList.toggle("collapsed");
+      }
     });
 
     document.querySelectorAll(".tab-btn").forEach(function (btn) {
