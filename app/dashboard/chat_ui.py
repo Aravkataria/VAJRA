@@ -1271,7 +1271,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
         <div class="tab-view-container">
           <div class="tab-view-header">
             <span class="tab-view-title">Independent Verification Matrix</span>
-            <span class="state-seal verified">ALL 6 STAGES REQUIRED</span>
+            <span class="state-seal verified">ALL 7 STAGES REQUIRED</span>
           </div>
 
           <div id="verifMatrixContainer">
@@ -1286,6 +1286,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
               <div class="verif-row"><span><span class="verif-idx">04</span>Baseline Regression Tests</span><span class="verif-status">0 Regressions</span></div>
               <div class="verif-row"><span><span class="verif-idx">05</span>Boundary Input Fuzzing</span><span class="verif-status">Clean</span></div>
               <div class="verif-row"><span><span class="verif-idx">06</span>Patch Mutation Testing</span><span class="verif-status">Mutant Killed</span></div>
+              <div class="verif-row"><span><span class="verif-idx">07</span>SMT Formal Constraint Prover</span><span class="verif-status">Formally UNSAT</span></div>
             </div>
           </div>
         </div>

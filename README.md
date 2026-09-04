@@ -4,7 +4,7 @@
 
 ## Evidence-Driven Autonomous Cyber-Reasoning & Software Repair System
 
-> **Status:** Active research & production-ready sovereign security platform — featuring a 3-tier independent AI model architecture, native multithreaded Rust core engine (`vajra-core`), 6-stage independent verification proof matrix, risk-based blast radius prioritizer, patch minimality evaluator, long-term adaptive learning, and a dual-shell client (100% Serverless Web Edition & Native Desktop/CLI).
+> **Status:** Active research & production-ready sovereign security platform — featuring a 3-tier independent AI model architecture, native multithreaded Rust core engine (`vajra-core`), 7-stage independent verification proof matrix (including SMT formal constraint solver), universal multi-language Code Property Graph (CPG) engine, risk-based blast radius prioritizer, patch minimality evaluator, long-term adaptive learning, and a dual-shell client (100% Serverless Web Edition & Native Desktop/CLI).
 
 [![Live Web Edition](https://img.shields.io/badge/Web_App-Live_on_GitHub_Pages-black?style=flat&logo=github)](https://Aravkataria.github.io/VAJRA/)
 [![Cross-Platform](https://img.shields.io/badge/Platform-macOS_|_Windows_|_Linux-blue?style=flat)](https://github.com/Aravkataria/VAJRA)
@@ -52,14 +52,14 @@ Synthesize Minimal Patch (Patch Minimality & Cyclomatic Delta Evaluator)
    ↓
 Generate Targeted Exploit PoC Sentinels & Fuzz Corpus
    ↓
-Verify Independently (Tier 3 Adversarial 6-Stage Proof Matrix)
+Verify Independently (Tier 3 Adversarial 7-Stage Proof Matrix)
    ↓
 Accept / Reject Atomically (Adaptive Learning Feedback Loop)
    ↓
 Produce an Auditable Cryptographic Repair Assurance Record
 ```
 
-The central design principle is that **the reasoning model is not the source of truth**. Specialized static and dynamic analyzers produce concrete evidence, the Decision Engine chooses an optimal repair strategy, repair synthesizers construct minimal candidate diffs, and an independent **6-Stage Verification Matrix** rigorously proves patch correctness before code is ever applied.
+The central design principle is that **the reasoning model is not the source of truth**. Specialized static and dynamic analyzers produce concrete evidence, the Decision Engine chooses an optimal repair strategy, repair synthesizers construct minimal candidate diffs, and an independent **7-Stage Verification Matrix** (including SMT formal constraint proving) rigorously proves patch correctness before code is ever applied.
 
 ---
 
@@ -69,20 +69,21 @@ The central design principle is that **the reasoning model is not the source of 
 - [2. 3-Tier Sovereign Model Architecture](#2-3-tier-sovereign-model-architecture)
 - [3. Native Rust Core Engine (vajra-core)](#3-native-rust-core-engine-vajra-core)
 - [4. Dual-Shell Client (Web vs Desktop)](#4-dual-shell-client-web-vs-desktop)
-- [5. The 6-Stage Independent Verification Matrix](#5-the-6-stage-independent-verification-matrix)
-- [6. Risk Prioritization & Blast Radius Engine](#6-risk-prioritization--blast-radius-engine)
-- [7. Patch Minimality & Complexity Evaluator](#7-patch-minimality--complexity-evaluator)
-- [8. Phase 7: Long-Term Adaptive Learning & Outcome Tracking](#8-phase-7-long-term-adaptive-learning--outcome-tracking)
-- [9. Section 18: Empirical Benchmark Telemetry & Visualizer](#9-section-18-empirical-benchmark-telemetry--visualizer)
-- [10. Supported Vulnerabilities & Repair Transformation Catalog](#10-supported-vulnerabilities--repair-transformation-catalog)
-- [11. Repository Structure](#11-repository-structure)
-- [12. Installation & Bootstrapping Guide](#12-installation--bootstrapping-guide)
-- [13. Command-Line Interface (CLI) Reference](#13-command-line-interface-cli-reference)
-- [14. REST API Gateway Reference](#14-rest-api-gateway-reference)
-- [15. Multi-Platform CI/CD Release Pipeline](#15-multi-platform-cicd-release-pipeline)
-- [16. Testing & Validation Suite](#16-testing--validation-suite)
-- [17. Evidence Schema & Cryptographic Assurance Record](#17-evidence-schema--cryptographic-assurance-record)
-- [18. License](#18-license)
+- [5. The 7-Stage Independent Verification Matrix](#5-the-7-stage-independent-verification-matrix)
+- [6. Universal Multi-Language Code Property Graph (CPG)](#6-universal-multi-language-code-property-graph-cpg)
+- [7. Risk Prioritization & Blast Radius Engine](#7-risk-prioritization--blast-radius-engine)
+- [8. Patch Minimality & Complexity Evaluator](#8-patch-minimality--complexity-evaluator)
+- [9. Phase 7: Long-Term Adaptive Learning & Outcome Tracking](#9-phase-7-long-term-adaptive-learning--outcome-tracking)
+- [10. Section 18: Empirical Benchmark Telemetry & Visualizer](#10-section-18-empirical-benchmark-telemetry--visualizer)
+- [11. Supported Vulnerabilities & Repair Transformation Catalog](#11-supported-vulnerabilities--repair-transformation-catalog)
+- [12. Repository Structure](#12-repository-structure)
+- [13. Installation & Bootstrapping Guide](#13-installation--bootstrapping-guide)
+- [14. Command-Line Interface (CLI) Reference](#14-command-line-interface-cli-reference)
+- [15. REST API Gateway Reference](#15-rest-api-gateway-reference)
+- [16. Multi-Platform CI/CD Release Pipeline](#16-multi-platform-cicd-release-pipeline)
+- [17. Testing & Validation Suite](#17-testing--validation-suite)
+- [18. Evidence Schema & Cryptographic Assurance Record](#18-evidence-schema--cryptographic-assurance-record)
+- [19. License](#19-license)
 
 ---
 
@@ -97,30 +98,12 @@ VAJRA addresses this with **Evidence, Not Confidence**:
 
 - **Evidence First**: A vulnerability is only actionable if deterministic AST traces or dynamic sentinels prove the presence of an exploitable execution sink.
 - **Minimal Surgical Patching**: Rather than rewriting whole files, VAJRA synthesizes the absolute minimal AST transformation required to eliminate the weakness.
-- **Independent Proof Requirement**: Code is never trusted simply because an AI generated it. Every candidate patch must score **6/6 PASS** across 6 independent verification stages.
-- **Auditable Assurance**: Every successful repair produces a tamper-evident Repair Assurance Record containing exact diffs, test logs, and proof hashes.
+- **Independent Proof Requirement**: Code is never trusted simply because an AI generated it. Every candidate patch must score **7/7 PASS** across 7 independent verification stages.
 
 ---
 
 # 2. 3-Tier Sovereign Model Architecture
 
-VAJRA enforces strict architectural separation across three specialized model tiers to prevent self-grading hallucinations:
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│               TIER 1: SECURITY ANALYST MODEL (Diagnostic)              │
-│  • Inputs: AST traces, CFG call-graphs, dependency reachability.       │
-│  • Role: Discovers, confirms, and explains root-cause vulnerabilities. │
-│  • INVARIANT: NEVER writes patches. Only explains vulnerabilities.     │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│               DECISION ENGINE & RISK BLAST RADIUS ROUTER               │
-│  • Routes trivial sinks to Deterministic Fast Path (<5ms, $0 cost).    │
-│  • Routes ambiguous sinks to Tier 2 Repair Model.                      │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │
                                    ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                 TIER 2: REPAIR REASONING MODEL (Prescriptive)          │
@@ -218,13 +201,14 @@ VAJRA ships in two synchronized editions sharing the exact same visual identity,
   └─ Produces candidate modified file in staging sandbox
         │
         ▼
-[5. 6-STAGE INDEPENDENT VERIFICATION]
+[5. 7-STAGE INDEPENDENT VERIFICATION]
   ├─ Stage 1: Syntax & AST Structural Integrity Check
   ├─ Stage 2: Static Sink Elimination Re-scan
   ├─ Stage 3: Dynamic Exploit Sentinel PoC Execution
   ├─ Stage 4: Baseline Regression Test Suite Run
   ├─ Stage 5: Boundary Input Fuzzing Campaign
-  └─ Stage 6: Patch Mutation Invariant Verification
+  ├─ Stage 6: Patch Mutation Invariant Verification
+  └─ Stage 7: SMT Formal Constraint Prover (Z3 Theorem Proving)
         │
         ▼
 [6. ATOMIC APPLICATION & ASSURANCE]
@@ -235,9 +219,9 @@ VAJRA ships in two synchronized editions sharing the exact same visual identity,
 
 ---
 
-# 5. The 6-Stage Independent Verification Matrix
+# 5. The 7-Stage Independent Verification Matrix
 
-Every candidate patch must achieve a **6/6 PASS** before code is accepted. If any stage fails, the patch is rejected and returned to the reasoning engine with feedback for an iterative retry:
+Every candidate patch must achieve a **7/7 PASS** before code is accepted. If any stage fails, the patch is rejected and returned to the reasoning engine with feedback for an iterative retry:
 
 ```text
 Candidate Patch
@@ -249,7 +233,7 @@ Candidate Patch
    │              Re-runs AST analysis to prove the dangerous sink node is completely removed.
    │
    ├── [Stage 03] Dynamic Sentinel PoC
-   │              Executes concrete exploit payloads against the patched code to verify neutralization.
+   │              Executes concrete exploit payloads in ephemeral sandboxes to verify neutralization.
    │
    ├── [Stage 04] Baseline Regression Invariant
    │              Runs existing project unit tests to ensure zero functional regressions.
@@ -257,8 +241,13 @@ Candidate Patch
    ├── [Stage 05] Boundary Input Fuzzing
    │              Fuzzes patched functions with edge cases, null bytes, unicode, and large buffers.
    │
-   └── [Stage 06] Patch Mutation Invariant
-                  Mutates the repair AST to prove the verification suite is sensitive to regressions (100% Kill Score).
+   ├── [Stage 06] Patch Mutation Invariant
+   │              Mutates the repair AST to prove the verification suite is sensitive (100% Kill Score).
+   │
+   └── [Stage 07] SMT Formal Constraint Prover (Z3 Theorem Proving)
+                  Mathematically proves that the patch's guard and parameterization conditions
+                  render the vulnerability sink condition UNSATISFIABLE (UNSAT) for all inputs X:
+                  ∀X: Guard(X) ⟹ ¬VulnerableSink(X)
    │
    ▼
 [VERIFIED & APPLIED ATOMICALLY]
@@ -266,7 +255,19 @@ Candidate Patch
 
 ---
 
-# 6. Risk Prioritization & Blast Radius Engine
+# 6. Universal Multi-Language Code Property Graph (CPG)
+
+Located in [`app/analysis/cpg_engine.py`](app/analysis/cpg_engine.py), this engine merges **AST (Syntax)**, **CFG (Control Flow)**, and **DFG (Data Flow)** into a queryable graph across:
+- **Python** (`.py`)
+- **JavaScript & TypeScript** (`.js`, `.jsx`, `.ts`, `.tsx`)
+- **C & C++** (`.c`, `.cpp`, `.h`, `.hpp`)
+- **Rust** (`.rs`)
+- **Go** (`.go`)
+- **Java** (`.java`)
+
+---
+
+# 7. Risk Prioritization & Blast Radius Engine
 
 Located in [`app/decision/risk_prioritizer.py`](app/decision/risk_prioritizer.py), VAJRA calculates a multi-factor composite risk score ($0.0$ to $100.0$) for every discovered vulnerability:
 
@@ -501,14 +502,14 @@ VAJRA/
 │   ├── desktop_app.py                # Desktop application bridge
 │   ├── api.py                        # FastAPI REST API & local server
 │   ├── model_independence.py         # 3-Tier model independence enforcer
-│   ├── analysis/                     # AST static analyzers & Rust adapter
+│   ├── analysis/                     # AST static analyzers, Multi-Language CPG & Rust adapter
 │   ├── decision/                     # Decision Engine & Risk Prioritizer
 │   ├── evidence/                     # Evidence aggregator & schema
-│   ├── repair/                       # Deterministic repair & Minimality Evaluator
+│   ├── repair/                       # Autonomous loop, deterministic repair & Minimality Evaluator
 │   ├── report/                       # HTML/JSON Assurance Records & Benchmark Visualizer
 │   ├── repository/                   # Workspace isolation, ZIP extraction, Git manager
 │   ├── storage/                      # SQLite persistence & Adaptive Learning Engine
-│   ├── verification/                 # 6-Stage independent verification matrix
+│   ├── verification/                 # 7-Stage independent verification matrix (SMT + Sandbox)
 │   └── dashboard/                    # Chat UI & renderer
 │
 ├── .github/workflows/
