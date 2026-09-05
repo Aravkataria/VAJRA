@@ -40,4 +40,8 @@ def test_17_stage_pipeline_execution():
         assert (out_dir / "model1_export_metadata.json").exists()
 
         meta = json.loads((out_dir / "model1_export_metadata.json").read_text(encoding="utf-8"))
-        assert meta["model_name"] == "vajra-model1-security-analyst-7b"
+        assert meta["model_name"] == "vajra-model1-security-analyst-1.5b-scratch"
+        assert meta["training_paradigm"] == "trained_from_scratch"
+        assert meta["model_roles"]["model_1_finder"] == "trained_from_scratch"
+        assert meta["model_roles"]["model_2_fixer"] == "fine_tuned_lora"
+        assert meta["model_roles"]["model_3_verifier"] == "trained_from_scratch"
