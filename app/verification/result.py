@@ -1,7 +1,7 @@
 # app/verification/result.py
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict, Optional
 
 from app.repair.patch import Patch
 
@@ -13,6 +13,7 @@ class VerificationResult:
     method: str
     reason: str
     remaining_findings: list[Any] = field(default_factory=list)
+    performance_profile: Optional[Dict[str, Any]] = None
 
     def to_dict(self):
         return {
@@ -21,4 +22,5 @@ class VerificationResult:
             "method": self.method,
             "reason": self.reason,
             "remaining_findings": self.remaining_findings,
+            "performance_profile": self.performance_profile,
         }
