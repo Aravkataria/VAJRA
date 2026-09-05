@@ -299,7 +299,9 @@ Merging all three views matters because a vulnerability is rarely visible from s
  
 Located in [`app/decision/risk_prioritizer.py`](app/decision/risk_prioritizer.py), VAJRA calculates a multi-factor composite risk score (0.0 to 100.0) for every discovered vulnerability:
  
-$$\text{Risk Score} = (35\%\times\text{Severity}) + (25\%\times\text{Exploitability}) + (20\%\times\text{Reachability}) + (10\%\times\text{Git Recency}) + (10\%\times\text{Complexity})$$
+```text
+Risk Score = (35% × Severity) + (25% × Exploitability) + (20% × Reachability) + (10% × Git Recency) + (10% × Complexity)
+```
  
 This weighting means severity alone doesn't drive priority — a critical-severity bug in dead code scores lower than a moderate bug sitting on a hot, frequently-changed, easily reachable path.
  
@@ -335,22 +337,22 @@ Located in [`app/analysis/performance_engine.py`](app/analysis/performance_engin
   PERF-05: Quadratic Concat └─ str.join() Array
 ```
  
-### Deterministic Performance Rule Catalog
+#### Deterministic Performance Rule Catalog
  
 | Rule ID | Anti-Pattern | Algorithmic Impact | Automated Repair Strategy |
 | :--- | :--- | :--- | :--- |
-| `PERF-01-QUADRATIC-LOOKUP` | Membership test (`item in target_list`) inside nested loop | $O(N \times M) \to O(N^2)$ quadratic slowdown | Hoists target sequence into an $O(1)$ lookup hash `set()` outside the loop |
+| `PERF-01-QUADRATIC-LOOKUP` | Membership test (`item in target_list`) inside nested loop | `O(N × M) → O(N²)` quadratic slowdown | Hoists target sequence into an `O(1)` lookup hash `set()` outside the loop |
 | `PERF-02-SYNC-BLOCKING-IN-ASYNC` | Synchronous blocking call (`requests.get`, `time.sleep`) in `async def` | Freezes entire async event loop | Replaces blocking calls with `asyncio.sleep` or asynchronous clients (`httpx`, `aiohttp`) |
 | `PERF-03-REPEATED-REGEX-COMPILATION` | Dynamic `re.compile()` or `re.search()` compiled inside loop body | Redundant regex DFA/NFA parser compilation | Hoists static regex compilation to module/function scope `re.compile()` |
 | `PERF-04-REPEATED-DISK-IO-IN-LOOP` | Repeated `open()` and file read/write inside tight loop | Heavy OS syscall & disk I/O overhead | Hoists file descriptor opening or pre-buffers contents into memory |
-| `PERF-05-QUADRATIC-STRING-CONCAT` | Iterative string concatenation (`res += chunk`) inside loop | $O(N^2)$ memory reallocation & buffer copying | Collects elements in a list buffer and combines using `''.join(chunks)` |
+| `PERF-05-QUADRATIC-STRING-CONCAT` | Iterative string concatenation (`res += chunk`) inside loop | `O(N²)` memory reallocation & buffer copying | Collects elements in a list buffer and combines using `''.join(chunks)` |
  
 ### Latency Profiling & Telemetry Delta
  
 Every performance remediation produces a `PerformanceProfile` metric object:
-- **Baseline Latency ($T_{\text{before}}$)** vs **Optimized Latency ($T_{\text{after}}$)**
-- **Speedup Delta ($\Delta \text{Speedup} = \frac{T_{\text{before}} - T_{\text{after}}}{T_{\text{before}}} \times 100\%$)**
-- **Memory Consumption Delta ($\Delta \text{RAM}$ in KB/MB)**
+- **Baseline Latency (`T_before`)** vs **Optimized Latency (`T_after`)**
+- **Speedup Delta**: `ΔSpeedup = ((T_before - T_after) / T_before) × 100%`
+- **Memory Consumption Delta**: `ΔRAM` (KB/MB)
 - **Dual Verification**: Patches must satisfy both Stage 1–7 security invariants and baseline regression test invariants.
  
 ---
