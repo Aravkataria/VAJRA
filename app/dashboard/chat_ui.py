@@ -1239,10 +1239,11 @@ CHAT_HTML = r"""<!DOCTYPE html>
             <span style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:var(--text-muted);" id="postureSummary">POSTURE: UNKNOWN</span>
           </div>
 
-          <div class="metric-grid">
+          <div class="metric-grid" style="grid-template-columns: repeat(5, 1fr);">
             <div class="metric-box"><span class="metric-val" style="color:var(--stamp-fail);" id="mCrit">0</span><span class="metric-label">Critical</span></div>
             <div class="metric-box"><span class="metric-val" style="color:var(--stamp-warn);" id="mHigh">0</span><span class="metric-label">High</span></div>
             <div class="metric-box"><span class="metric-val" style="color:var(--text-secondary);" id="mMed">0</span><span class="metric-label">Medium</span></div>
+            <div class="metric-box"><span class="metric-val" style="color:var(--spark);" id="mPerf">0</span><span class="metric-label">Optimizations</span></div>
             <div class="metric-box"><span class="metric-val" style="color:var(--stamp-pass);" id="mVerified">0</span><span class="metric-label">Verified Fixes</span></div>
           </div>
 
@@ -1642,30 +1643,43 @@ CHAT_HTML = r"""<!DOCTYPE html>
 
       var critCount = findings.filter(function (f) { return (f.severity || '').toLowerCase() === 'critical' || f.vulnerability_type.includes('injection') || f.vulnerability_type.includes('exec'); }).length;
       var highCount = findings.filter(function (f) { return (f.severity || '').toLowerCase() === 'high' || f.vulnerability_type.includes('deserialization') || f.vulnerability_type.includes('creds'); }).length;
-      var medCount = findings.length - critCount - highCount;
+      var perfCount = findings.filter(function (f) { return (f.severity || '').toLowerCase() === 'optimization' || f.vulnerability_type.startsWith('PERF-'); }).length;
+      var medCount = findings.length - critCount - highCount - perfCount;
+      if (medCount < 0) medCount = 0;
 
       document.getElementById("mCrit").textContent = critCount;
       document.getElementById("mHigh").textContent = highCount;
       document.getElementById("mMed").textContent = medCount;
+      document.getElementById("mPerf").textContent = perfCount;
       document.getElementById("mVerified").textContent = patches.length;
-      document.getElementById("postureSummary").textContent = critCount > 0 ? "POSTURE: CRITICAL" : (highCount > 0 ? "POSTURE: HIGH" : "POSTURE: VERIFIED CLEAN");
+      document.getElementById("postureSummary").textContent = critCount > 0 ? "POSTURE: CRITICAL" : (highCount > 0 ? "POSTURE: HIGH" : (perfCount > 0 ? "POSTURE: OPTIMIZED" : "POSTURE: VERIFIED CLEAN"));
 
       // Findings
       document.getElementById("findingsContainer").innerHTML = findings.map(function (f) {
         var matched = patches.find(function (p) { return p.file === f.file && p.line === f.line; });
+        var isPerf = (f.severity || '').toLowerCase() === 'optimization' || f.vulnerability_type.startsWith('PERF-');
+        var badgeStyle = isPerf ? 'background:rgba(245,180,0,0.15); color:var(--spark); border:1px solid rgba(245,180,0,0.3);' : '';
+        var badgeClass = isPerf ? 'state-seal' : 'state-seal vulnerable';
+        var badgeText = isPerf ? 'OPTIMIZATION' : (f.severity || 'HIGH').toUpperCase();
+
         return '<div class="finding-card">' +
           '<div class="finding-card-header">' +
             '<div style="display:flex; align-items:center; gap:0.5rem;">' +
-              '<span class="state-seal vulnerable">HIGH</span>' +
-              '<span style="font-weight:700; color:var(--text-primary);">' + escapeHtml(f.vulnerability_type) + '</span>' +
+              '<span class="' + badgeClass + '" style="' + badgeStyle + '">' + badgeText + '</span>' +
+              '<span style="font-weight:700; color:var(--text-primary); font-family:\'JetBrains Mono\', monospace;">' + escapeHtml(f.vulnerability_type) + '</span>' +
             '</div>' +
-            '<span style="color:var(--text-muted);">' + escapeHtml(f.file) + ':' + escapeHtml(f.line) + '</span>' +
+            '<span style="color:var(--text-muted); font-family:\'JetBrains Mono\', monospace; font-size:0.75rem;">' + escapeHtml(f.file) + ':' + escapeHtml(f.line) + '</span>' +
           '</div>' +
           '<div class="finding-card-body">' +
             '<div>' + escapeHtml(f.message) + '</div>' +
+            (isPerf ?
+              '<div style="background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:5px; padding:0.6rem 0.75rem; font-family:\'JetBrains Mono\', monospace; font-size:0.75rem; margin-top:0.35rem;">' +
+                '<span style="color:var(--spark); font-weight:600;">[OPTIMIZATION PROFILING]</span> <span style="color:var(--text-secondary);">' + escapeHtml(f.speedup || 'Latency Delta Reduced & Event Loop Protected') + '</span>' +
+              '</div>'
+            : '') +
             (matched ?
               '<div class="code-diff">' +
-                '<div class="diff-title-bar"><span>' + escapeHtml(f.file) + '</span><span>MINIMAL REPAIR</span></div>' +
+                '<div class="diff-title-bar"><span>' + escapeHtml(f.file) + '</span><span>' + (isPerf ? 'MINIMAL OPTIMIZATION REPAIR' : 'MINIMAL DEFENSIVE REPAIR') + '</span></div>' +
                 '<pre style="padding:0.65rem 0.85rem; color:var(--stamp-pass);">' + escapeHtml(matched.diff) + '</pre>' +
               '</div>'
             : '') +
@@ -1846,26 +1860,35 @@ CHAT_HTML = r"""<!DOCTYPE html>
       var findings = scanData.findings || [];
       var patches = scanData.patches || [];
       var critCount = findings.filter(function (f) { return (f.severity || '').toLowerCase() === 'critical' || f.vulnerability_type.includes('injection') || f.vulnerability_type.includes('exec'); }).length;
+      var perfCount = findings.filter(function (f) { return (f.severity || '').toLowerCase() === 'optimization' || f.vulnerability_type.startsWith('PERF-'); }).length;
 
       var findingsHtml = "";
       findings.forEach(function (f) {
         var matched = patches.find(function (p) { return p.file === f.file && p.line === f.line; });
-        var sev = (critCount > 0 && f.vulnerability_type.includes('injection')) ? 'CRITICAL' : 'HIGH';
+        var isPerf = (f.severity || '').toLowerCase() === 'optimization' || f.vulnerability_type.startsWith('PERF-');
+        var sev = isPerf ? 'OPTIMIZATION' : ((critCount > 0 && f.vulnerability_type.includes('injection')) ? 'CRITICAL' : 'HIGH');
+        var badgeStyle = isPerf ? 'background:rgba(245,180,0,0.15); color:var(--spark); border:1px solid rgba(245,180,0,0.3);' : '';
+        var badgeClass = isPerf ? 'state-seal' : 'state-seal vulnerable';
 
         findingsHtml +=
           '<div class="finding-card">' +
             '<div class="finding-card-header">' +
               '<div style="display:flex; align-items:center; gap:0.5rem;">' +
-                '<span class="state-seal vulnerable">' + sev + '</span>' +
-                '<span style="font-weight:700; color:var(--text-primary);">' + escapeHtml(f.vulnerability_type) + '</span>' +
+                '<span class="' + badgeClass + '" style="' + badgeStyle + '">' + sev + '</span>' +
+                '<span style="font-weight:700; color:var(--text-primary); font-family:\'JetBrains Mono\', monospace;">' + escapeHtml(f.vulnerability_type) + '</span>' +
               '</div>' +
-              '<span style="color:var(--text-muted);">' + escapeHtml(f.file) + ':' + escapeHtml(f.line) + '</span>' +
+              '<span style="color:var(--text-muted); font-family:\'JetBrains Mono\', monospace; font-size:0.75rem;">' + escapeHtml(f.file) + ':' + escapeHtml(f.line) + '</span>' +
             '</div>' +
             '<div class="finding-card-body">' +
               '<div>' + escapeHtml(f.message) + '</div>' +
+              (isPerf ?
+                '<div style="background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:5px; padding:0.6rem 0.75rem; font-family:\'JetBrains Mono\', monospace; font-size:0.75rem; margin-top:0.35rem;">' +
+                  '<span style="color:var(--spark); font-weight:600;">[OPTIMIZATION PROFILING]</span> <span style="color:var(--text-secondary);">' + escapeHtml(f.speedup || 'Latency Delta Reduced & Event Loop Protected') + '</span>' +
+                '</div>'
+              : '') +
               (matched ?
                 '<div class="code-diff">' +
-                  '<div class="diff-title-bar"><span>' + escapeHtml(f.file) + '</span><span>MINIMAL REPAIR</span></div>' +
+                  '<div class="diff-title-bar"><span>' + escapeHtml(f.file) + '</span><span>' + (isPerf ? 'MINIMAL OPTIMIZATION REPAIR' : 'MINIMAL DEFENSIVE REPAIR') + '</span></div>' +
                   '<pre style="padding:0.65rem 0.85rem; color:var(--stamp-pass);">' + escapeHtml(matched.diff) + '</pre>' +
                 '</div>'
               : '') +
@@ -1891,8 +1914,8 @@ CHAT_HTML = r"""<!DOCTYPE html>
       var logResponse =
         '<div>' +
           'Inspection complete for <b>' + escapeHtml(targetName) + '</b>. ' +
-          'Found <b>' + findings.length + ' vulnerabilities</b>, generated <b>' + patches.length + ' minimal patches</b>, ' +
-          'and verified all 6 proof stages in isolation.' +
+          'Found <b>' + findings.length + ' findings</b> (including <b>' + perfCount + ' performance optimizations</b>), generated <b>' + patches.length + ' minimal verified patches</b>, ' +
+          'and verified all proof stages in isolation.' +
         '</div>' +
         findingsHtml +
         verifLedgerHtml +

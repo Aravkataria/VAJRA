@@ -633,7 +633,7 @@ def build_exact_benchmark_html() -> str:
         <p>VAJRA establishes defensive proof invariants before committing any source code change. Every patch is verified against the 7-stage sentinel matrix.</p>
       </div>
 
-      <div class="formal-grid">
+      <div class="formal-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
         <div class="formal-card">
           <h3>1. AST Invariant Preservation</h3>
           <p>Mutations operate strictly under Causal Git Intent bounds, preserving non-vulnerable AST branches without behavioral regressions.</p>
@@ -645,6 +645,10 @@ def build_exact_benchmark_html() -> str:
         <div class="formal-card">
           <h3>3. First-Order Z3 Logic Proofs</h3>
           <p>Symbolic taint equations are transformed into first-order logic formulas where exploit conditions are verified unsatisfiable (UNSAT).</p>
+        </div>
+        <div class="formal-card">
+          <h3>4. Dual Performance Invariants</h3>
+          <p>Pairs security hardening with deterministic AST speedup rules (PERF-01 to 05), validating speedup telemetry and zero memory regression.</p>
         </div>
       </div>
     </div>

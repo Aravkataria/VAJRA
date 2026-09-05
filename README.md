@@ -16,7 +16,7 @@
 [![Rust Core](https://img.shields.io/badge/Rust_Core-Multithreaded_Rayon-orange?style=flat&logo=rust)](crates/vajra-core/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/Tests-38_Passed_|_100%25-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-46_Passed_|_100%25-brightgreen.svg)](tests/)
 
 [![Launch Web App](https://img.shields.io/badge/Launch_Web_Edition-100%25_Serverless-black?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://Aravkataria.github.io/VAJRA/)
 [![Download for Windows](https://img.shields.io/badge/Download_for_Windows-VAJRA--Setup.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe)
@@ -27,18 +27,18 @@
 | Platform | Download / Action | One-line install |
 | :--- | :--- | :--- |
 | Web Browser | [Launch the live web app](https://Aravkataria.github.io/VAJRA/) — zero install | Runs directly on GitHub Pages |
-| Windows | [Download VAJRA-Setup.exe](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe) — NSIS setup wizard | `irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 \| iex` |
-| macOS | [Download VAJRA-macOS.dmg](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-macOS.dmg) — Apple Silicon DMG | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh \| bash` |
-| Linux | [Download VAJRA-Linux.AppImage](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Linux.AppImage) — universal AppImage | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh \| bash` |
- 
+| Windows | [Download VAJRA-Setup.exe](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe) — NSIS setup wizard | `irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex` |
+| macOS | [Download VAJRA-macOS.dmg](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-macOS.dmg) — Apple Silicon DMG | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash` |
+| Linux | [Download VAJRA-Linux.AppImage](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Linux.AppImage) — universal AppImage | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash` |
+
 ---
- 
+
 ## Executive Summary
- 
+
 VAJRA is an evidence-driven cyber-reasoning and software-repair platform that connects the entire vulnerability-remediation lifecycle end to end, rather than stopping at "here's a list of problems" the way most scanners do:
- 
+
 ```text
-Discover (Static AST + Rayon Rust Scanner)
+Discover (Static AST + Rayon Rust Scanner + Performance Anti-Pattern Engine)
    ↓
 Confirm (Tier 1: Security Analyst Model)
    ↓
@@ -52,19 +52,19 @@ Synthesize Minimal Patch (Patch Minimality & Cyclomatic Delta Evaluator)
    ↓
 Generate Targeted Exploit PoC Sentinels & Fuzz Corpus
    ↓
-Verify Independently (Tier 3 Adversarial 7-Stage Proof Matrix)
+Verify Independently (Tier 3 Adversarial 7-Stage Proof Matrix + Latency Profiler)
    ↓
 Accept / Reject Atomically (Adaptive Learning Feedback Loop)
    ↓
 Produce an Auditable Cryptographic Repair Assurance Record
 ```
- 
+
 The central design principle behind all of this: **the reasoning model is never the source of truth**. Specialized static and dynamic analyzers produce concrete evidence, the Decision Engine chooses a repair strategy from that evidence, repair synthesizers construct minimal candidate diffs, and an independent verification matrix — including SMT formal proving — rigorously checks patch correctness before any code is applied. In other words, an AI model is allowed to *propose* a fix, but it is never trusted to *grade its own work*.
- 
+
 ---
- 
+
 ## Table of Contents
- 
+
 1. [Project Vision & Philosophy](#1-project-vision--philosophy)
 2. [3-Tier Sovereign Model Architecture](#2-3-tier-sovereign-model-architecture)
 3. [Native Rust Core Engine (vajra-core)](#3-native-rust-core-engine-vajra-core)
@@ -74,24 +74,25 @@ The central design principle behind all of this: **the reasoning model is never 
 7. [Universal Multi-Language Code Property Graph (CPG)](#7-universal-multi-language-code-property-graph-cpg)
 8. [Risk Prioritization & Blast Radius Engine](#8-risk-prioritization--blast-radius-engine)
 9. [Patch Minimality & Complexity Evaluator](#9-patch-minimality--complexity-evaluator)
-10. [Long-Term Adaptive Learning & Outcome Tracking](#10-long-term-adaptive-learning--outcome-tracking)
-11. [Empirical Benchmark Telemetry & Visualizer](#11-empirical-benchmark-telemetry--visualizer)
-12. [Supported Vulnerabilities & Repair Transformation Catalog](#12-supported-vulnerabilities--repair-transformation-catalog)
-13. [Decision Engine & Repair Routing](#13-decision-engine--repair-routing)
-14. [Universal Bootstrapper & Self-Updating Engine](#14-universal-bootstrapper--self-updating-engine)
-15. [Repository Structure](#15-repository-structure)
-16. [Installation & Bootstrapping Guide](#16-installation--bootstrapping-guide)
-17. [Command-Line Interface (CLI) Reference](#17-command-line-interface-cli-reference)
-18. [REST API Gateway Reference](#18-rest-api-gateway-reference)
-19. [CI/CD Pipeline & GitHub Actions Integration](#19-cicd-pipeline--github-actions-integration)
-20. [Testing & Validation Suite](#20-testing--validation-suite)
-21. [Configuration & Environment Variables](#21-configuration--environment-variables)
-22. [Security Model & Sandbox Containment](#22-security-model--sandbox-containment)
-23. [Evidence Schema & Cryptographic Assurance Record](#23-evidence-schema--cryptographic-assurance-record)
-24. [Technology Strategy & Scalability](#24-technology-strategy--scalability)
-25. [What VAJRA Does Not Claim](#25-what-vajra-does-not-claim)
-26. [Research Questions & Evaluation](#26-research-questions--evaluation)
-27. [License](#27-license)
+10. [AST-Based Performance & Code Optimization Engine](#10-ast-based-performance--code-optimization-engine)
+11. [Long-Term Adaptive Learning & Outcome Tracking](#11-long-term-adaptive-learning--outcome-tracking)
+12. [Empirical Benchmark Telemetry & Visualizer](#12-empirical-benchmark-telemetry--visualizer)
+13. [Supported Vulnerabilities & Repair Transformation Catalog](#13-supported-vulnerabilities--repair-transformation-catalog)
+14. [Decision Engine & Repair Routing](#14-decision-engine--repair-routing)
+15. [Universal Bootstrapper & Self-Updating Engine](#15-universal-bootstrapper--self-updating-engine)
+16. [Repository Structure](#16-repository-structure)
+17. [Installation & Bootstrapping Guide](#17-installation--bootstrapping-guide)
+18. [Command-Line Interface (CLI) Reference](#18-command-line-interface-cli-reference)
+19. [REST API Gateway Reference](#19-rest-api-gateway-reference)
+20. [CI/CD Pipeline & GitHub Actions Integration](#19-cicd-pipeline--github-actions-integration)
+21. [Testing & Validation Suite](#21-testing--validation-suite)
+22. [Configuration & Environment Variables](#22-configuration--environment-variables)
+23. [Security Model & Sandbox Containment](#23-security-model--sandbox-containment)
+24. [Evidence Schema & Cryptographic Assurance Record](#24-evidence-schema--cryptographic-assurance-record)
+25. [Technology Strategy & Scalability](#25-technology-strategy--scalability)
+26. [What VAJRA Does Not Claim](#26-what-vajra-does-not-claim)
+27. [Research Questions & Evaluation](#27-research-questions--evaluation)
+28. [License](#28-license)
 ---
  
 # 1. Project Vision & Philosophy
@@ -320,7 +321,41 @@ When multiple candidate patches all pass verification, VAJRA doesn't just pick t
  
 ---
  
-# 10. Long-Term Adaptive Learning & Outcome Tracking
+# 10. AST-Based Performance & Code Optimization Engine
+ 
+Located in [`app/analysis/performance_engine.py`](app/analysis/performance_engine.py), VAJRA pairs security vulnerability remediation with an autonomous performance optimization engine. When scanning a repository, VAJRA analyzes the AST for algorithmic inefficiencies, blocking operations, and redundant I/O, synthesizing verified speedups alongside security patches.
+ 
+```text
+[AST SYNTAX TREE] ───► [PERFORMANCE ENGINE] ───► [LATENCY PROFILER] ───► [VERIFICATION PROOF]
+                            │                           │
+  PERF-01: Quadratic Lookup ├─ In-loop Hash Set         ├─ Speedup Delta (%)
+  PERF-02: Async Blocking   ├─ Non-blocking Await       ├─ Before / After Latency (ms)
+  PERF-03: Repeated Regex   ├─ Compile Hoisting         ├─ Memory Delta (Bytes)
+  PERF-04: Repeated Disk IO ├─ Pre-buffering            └─ Zero-Regression Proof
+  PERF-05: Quadratic Concat └─ str.join() Array
+```
+ 
+### Deterministic Performance Rule Catalog
+ 
+| Rule ID | Anti-Pattern | Algorithmic Impact | Automated Repair Strategy |
+| :--- | :--- | :--- | :--- |
+| `PERF-01-QUADRATIC-LOOKUP` | Membership test (`item in target_list`) inside nested loop | $O(N \times M) \to O(N^2)$ quadratic slowdown | Hoists target sequence into an $O(1)$ lookup hash `set()` outside the loop |
+| `PERF-02-SYNC-BLOCKING-IN-ASYNC` | Synchronous blocking call (`requests.get`, `time.sleep`) in `async def` | Freezes entire async event loop | Replaces blocking calls with `asyncio.sleep` or asynchronous clients (`httpx`, `aiohttp`) |
+| `PERF-03-REPEATED-REGEX-COMPILATION` | Dynamic `re.compile()` or `re.search()` compiled inside loop body | Redundant regex DFA/NFA parser compilation | Hoists static regex compilation to module/function scope `re.compile()` |
+| `PERF-04-REPEATED-DISK-IO-IN-LOOP` | Repeated `open()` and file read/write inside tight loop | Heavy OS syscall & disk I/O overhead | Hoists file descriptor opening or pre-buffers contents into memory |
+| `PERF-05-QUADRATIC-STRING-CONCAT` | Iterative string concatenation (`res += chunk`) inside loop | $O(N^2)$ memory reallocation & buffer copying | Collects elements in a list buffer and combines using `''.join(chunks)` |
+ 
+### Latency Profiling & Telemetry Delta
+ 
+Every performance remediation produces a `PerformanceProfile` metric object:
+- **Baseline Latency ($T_{\text{before}}$)** vs **Optimized Latency ($T_{\text{after}}$)**
+- **Speedup Delta ($\Delta \text{Speedup} = \frac{T_{\text{before}} - T_{\text{after}}}{T_{\text{before}}} \times 100\%$)**
+- **Memory Consumption Delta ($\Delta \text{RAM}$ in KB/MB)**
+- **Dual Verification**: Patches must satisfy both Stage 1–7 security invariants and baseline regression test invariants.
+ 
+---
+ 
+# 11. Long-Term Adaptive Learning & Outcome Tracking
  
 Located in [`app/storage/adaptive_learning.py`](app/storage/adaptive_learning.py):
  
@@ -329,7 +364,7 @@ Located in [`app/storage/adaptive_learning.py`](app/storage/adaptive_learning.py
 - **Sovereign Fine-Tuning Pipeline** (`scripts/fine_tune_repairer.py`) — exports verified instruction pairs, `(Evidence, Intent) -> Verified Patch`, into standard JSONL format for offline LoRA fine-tuning, so the repair model can eventually be tuned on your own verified fix history.
 ---
  
-# 11. Empirical Benchmark Telemetry & Visualizer
+# 12. Empirical Benchmark Telemetry & Visualizer
  
 VAJRA includes an empirical evaluation suite tested across 50 real-world CWE fixtures:
  
@@ -352,7 +387,7 @@ The "Fast-Path LLM Avoidance" number is arguably the most telling one here: it m
  
 ---
  
-# 12. Supported Vulnerabilities & Repair Transformation Catalog
+# 13. Supported Vulnerabilities & Repair Transformation Catalog
  
 VAJRA includes specialized deterministic and reasoning repairers for the major vulnerability classes below.
  
@@ -442,7 +477,7 @@ VAJRA includes specialized deterministic and reasoning repairers for the major v
  
 ---
  
-# 13. Decision Engine & Repair Routing
+# 14. Decision Engine & Repair Routing
  
 The Decision Engine routes every confirmed finding to the repair strategy best suited to it:
  
@@ -464,7 +499,7 @@ The Decision Engine routes every confirmed finding to the repair strategy best s
 3. **Structured Decline** — if a fix would alter the program's intended architecture, or the surrounding context isn't clear enough to repair safely, VAJRA logs a structured non-repair reason rather than gambling on a speculative patch.
 ---
  
-# 14. Universal Bootstrapper & Self-Updating Engine
+# 15. Universal Bootstrapper & Self-Updating Engine
  
 VAJRA includes zero-friction installation scripts for every major operating system:
  
@@ -489,12 +524,13 @@ VAJRA includes zero-friction installation scripts for every major operating syst
 - Manual updates can also be triggered any time with `vajra update`.
 ---
  
-# 15. Repository Structure
+# 16. Repository Structure
  
 ```text
 VAJRA/
 ├── docs/                             # Standalone Serverless Web Edition (GitHub Pages)
-│   └── index.html                    # 100% Client-side AST analysis & drag-drop UI
+│   ├── index.html                    # 100% Client-side AST analysis & drag-drop UI
+│   └── benchmark/                    # Canonical Benchmark Evaluation Visualizer
 │
 ├── crates/vajra-core/                # High-Performance Multithreaded Rust Engine
 │   ├── Cargo.toml                    # Rust crate definition with Rayon & Serde
@@ -523,7 +559,7 @@ VAJRA/
 │   ├── desktop_app.py                # Desktop application bridge
 │   ├── api.py                        # FastAPI REST API & local server
 │   ├── model_independence.py         # 3-Tier model independence enforcer
-│   ├── analysis/                     # AST static analyzers, Multi-Language CPG & Rust adapter
+│   ├── analysis/                     # AST static analyzers, AST Performance Engine, CPG & Rust adapter
 │   ├── decision/                     # Decision Engine & Risk Prioritizer
 │   ├── evidence/                     # Evidence aggregator & schema
 │   ├── repair/                       # Autonomous loop, deterministic repair & Minimality Evaluator
@@ -536,7 +572,7 @@ VAJRA/
 ├── .github/workflows/
 │   └── release.yml                   # Automated multi-platform Tauri & Rust CI/CD
 │
-├── tests/                            # Comprehensive automated test suite
+├── tests/                            # Comprehensive automated test suite (50 test units)
 ├── requirements.txt                  # Python dependencies
 ├── pytest.ini                        # Pytest configuration
 ├── LICENSE                           # Apache 2.0 License
@@ -545,7 +581,7 @@ VAJRA/
  
 ---
  
-# 16. Installation & Bootstrapping Guide
+# 17. Installation & Bootstrapping Guide
  
 ### Option A — Windows graphical setup wizard (`VAJRA-Setup.exe`)
 1. Download **VAJRA-Setup.exe** from [Releases](https://github.com/Aravkataria/VAJRA/releases/latest).
@@ -587,7 +623,7 @@ VAJRA/
 - Hardware footprint: needs only 1 GB RAM and 0 MB of disk storage — forensic analysis and defensive repair execution run entirely in client-side RAM, with zero installation.
 ---
  
-# 17. Command-Line Interface (CLI) Reference
+# 18. Command-Line Interface (CLI) Reference
  
 ```bash
 # 1. Launch Native Desktop App (Default)
@@ -611,7 +647,7 @@ vajra update
  
 ---
  
-# 18. REST API Gateway Reference
+# 19. REST API Gateway Reference
  
 Start the local FastAPI server directly:
  
@@ -648,7 +684,7 @@ uvicorn app.api:app --reload --host 127.0.0.1 --port 8000
  
 ---
  
-# 19. CI/CD Pipeline & GitHub Actions Integration
+# 20. CI/CD Pipeline & GitHub Actions Integration
  
 VAJRA can be dropped straight into a GitHub Actions workflow to automatically scan pull requests and generate verified repair diffs.
  
@@ -692,7 +728,7 @@ jobs:
  
 ---
  
-# 20. Testing & Validation Suite
+# 21. Testing & Validation Suite
  
 VAJRA includes unit, integration, and security verifier test suites, run with pytest:
  
@@ -711,28 +747,30 @@ py -m pytest -v --tb=short
 platform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\DELL\Desktop\vajra
 configfile: pytest.ini
-collected 42 items
+plugins: anyio-4.14.2
+collected 50 items
  
-tests/test_assurance_report.py ......                                    [ 14%]
-tests/test_async_jobs.py .                                               [ 16%]
-tests/test_dashboard.py .                                                [ 19%]
-tests/test_fuzzing_verifier.py .                                         [ 21%]
-tests/test_model_independence.py ....                                    [ 30%]
-tests/test_mutation_verifier.py .                                        [ 33%]
-tests/test_regression_verifier.py ..                                     [ 38%]
-tests/test_repair_pipeline.py ..                                         [ 42%]
-tests/test_repair_retry_loop.py .                                        [ 45%]
-tests/test_security_test_verifier.py ...........                         [ 71%]
-tests/test_storage_memory.py .                                           [ 73%]
-tests/test_syntax_checkers.py ......ssss                                 [ 97%]
-tests/test_vector_memory.py .                                            [100%]
+tests\test_assurance_report.py ......                                    [ 12%]
+tests\test_async_jobs.py .                                               [ 14%]
+tests\test_dashboard.py .                                                [ 16%]
+tests\test_fuzzing_verifier.py .                                         [ 18%]
+tests\test_model_independence.py ....                                    [ 26%]
+tests\test_mutation_verifier.py .                                        [ 28%]
+tests\test_performance_engine.py ........                                [ 44%]
+tests\test_regression_verifier.py ..                                     [ 48%]
+tests\test_repair_pipeline.py ..                                         [ 52%]
+tests\test_repair_retry_loop.py .                                        [ 54%]
+tests\test_security_test_verifier.py ...........                         [ 76%]
+tests\test_storage_memory.py .                                           [ 78%]
+tests\test_syntax_checkers.py ......ssss                                 [ 98%]
+tests\test_vector_memory.py .                                            [100%]
  
-================== 38 passed, 4 skipped, 1 warning in 10.07s ==================
+================== 46 passed, 4 skipped, 1 warning in 14.13s ==================
 ```
  
 ---
  
-# 21. Configuration & Environment Variables
+# 22. Configuration & Environment Variables
  
 | Variable | Default | Description |
 | :--- | :--- | :--- |
@@ -746,7 +784,7 @@ tests/test_vector_memory.py .                                            [100%]
  
 ---
  
-# 22. Security Model & Sandbox Containment
+# 23. Security Model & Sandbox Containment
  
 Because VAJRA inspects untrusted source code by design, it's built around a few strict defensive constraints:
  
@@ -756,7 +794,7 @@ Because VAJRA inspects untrusted source code by design, it's built around a few 
 4. **Execution isolation** — sentinels and tests run inside isolated temporary sandboxes with strict execution timeouts, so a malicious or runaway payload can't affect the host.
 ---
  
-# 23. Evidence Schema & Cryptographic Assurance Record
+# 24. Evidence Schema & Cryptographic Assurance Record
  
 Every completed analysis compiles into a structured, verifiable Assurance Record — the artifact you'd actually hand to an auditor:
  
@@ -796,24 +834,24 @@ Every completed analysis compiles into a structured, verifiable Assurance Record
  
 ---
  
-# 24. Technology Strategy & Scalability
+# 25. Technology Strategy & Scalability
  
 - **Zero Inference Fast Paths** — over 80% of standard vulnerability classes (SQLi, command injection flags, unsafe YAML loading, hardcoded credentials) are repaired in under 5 ms with zero GPU overhead.
 - **Client-Side Scalability** — the Web Edition offloads all AST computation to visitor client CPUs, which lets it scale to effectively unlimited traffic on GitHub Pages at $0 server cost.
 - **Modular Polyglot Path** — the AST architecture is deliberately designed for future extension into deeper JavaScript/TypeScript, Go, and Rust analyzers, beyond the Python-first coverage that exists today.
 ---
  
-# 25. What VAJRA Does Not Claim
+# 26. What VAJRA Does Not Claim
  
-VAJRA does **not** claim that a passing scan proves a piece of software is 100% defect-free. That would be an overreach no scanner can honestly make.
+VAJRA does **not** claim that a piece of software is 100% defect-free under every condition. That would be an overreach no scanner can honestly make.
  
-What VAJRA does claim is narrower and, we think, more useful:
+What VAJRA does claim is narrower and verifiable:
  
-> **Evidence-based assurance that a specific identified weakness was mitigated under a defined set of independent verification conditions, with zero detected regressions.**
+> **Evidence-based assurance that a specific identified weakness or performance anti-pattern was mitigated under a defined set of independent verification conditions, with zero detected regressions.**
  
 ---
  
-# 26. Research Questions & Evaluation
+# 27. Research Questions & Evaluation
  
 VAJRA is also a vehicle for exploring open questions in autonomous software engineering:
  
@@ -822,7 +860,6 @@ VAJRA is also a vehicle for exploring open questions in autonomous software engi
 3. Can in-browser WebAssembly and client-side AST reasoning eliminate server infrastructure costs entirely for enterprise developer tooling?
 ---
  
-# 27. License
+# 28. License
  
 VAJRA is open-source software licensed under the [Apache License 2.0](LICENSE).
- 
