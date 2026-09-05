@@ -11,7 +11,19 @@
 ---
  
 ## Get VAJRA
- 
+ [![Live Web Edition](https://img.shields.io/badge/Web_App-Live_on_GitHub_Pages-black?style=flat&logo=github)](https://Aravkataria.github.io/VAJRA/)
+[![Cross-Platform](https://img.shields.io/badge/Platform-macOS_|_Windows_|_Linux-blue?style=flat)](https://github.com/Aravkataria/VAJRA)
+[![Rust Core](https://img.shields.io/badge/Rust_Core-Multithreaded_Rayon-orange?style=flat&logo=rust)](crates/vajra-core/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/Tests-38_Passed_|_100%25-brightgreen.svg)](tests/)
+
+[![Launch Web App](https://img.shields.io/badge/Launch_Web_Edition-100%25_Serverless-black?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://Aravkataria.github.io/VAJRA/)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-VAJRA--Setup.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe)
+[![Download for macOS](https://img.shields.io/badge/Download_for_macOS-VAJRA--macOS.dmg-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-macOS.dmg)
+[![Download for Linux](https://img.shields.io/badge/Download_for_Linux-VAJRA--Linux.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Linux.AppImage)
+
+
 | Platform | Download / Action | One-line install |
 | :--- | :--- | :--- |
 | Web Browser | [Launch the live web app](https://Aravkataria.github.io/VAJRA/) — zero install | Runs directly on GitHub Pages |
