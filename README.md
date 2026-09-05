@@ -92,7 +92,8 @@ The central design principle behind all of this: **the reasoning model is never 
 25. [Technology Strategy & Scalability](#25-technology-strategy--scalability)
 26. [What VAJRA Does Not Claim](#26-what-vajra-does-not-claim)
 27. [Research Questions & Evaluation](#27-research-questions--evaluation)
-28. [License](#28-license)
+28. [Future Roadmap & Planned Capabilities](#28-future-roadmap--planned-capabilities)
+29. [License](#29-license)
 ---
  
 # 1. Project Vision & Philosophy
@@ -833,14 +834,15 @@ Every completed analysis compiles into a structured, verifiable Assurance Record
   }
 }
 ```
- 
+
 ---
- 
+
 # 25. Technology Strategy & Scalability
- 
+
 - **Zero Inference Fast Paths** — over 80% of standard vulnerability classes (SQLi, command injection flags, unsafe YAML loading, hardcoded credentials) are repaired in under 5 ms with zero GPU overhead.
 - **Client-Side Scalability** — the Web Edition offloads all AST computation to visitor client CPUs, which lets it scale to effectively unlimited traffic on GitHub Pages at $0 server cost.
 - **Modular Polyglot Path** — the AST architecture is deliberately designed for future extension into deeper JavaScript/TypeScript, Go, and Rust analyzers, beyond the Python-first coverage that exists today.
+
 ---
  
 # 26. What VAJRA Does Not Claim
@@ -862,6 +864,52 @@ VAJRA is also a vehicle for exploring open questions in autonomous software engi
 3. Can in-browser WebAssembly and client-side AST reasoning eliminate server infrastructure costs entirely for enterprise developer tooling?
 ---
  
-# 28. License
+# 28. Future Roadmap & Planned Capabilities
+ 
+VAJRA is actively evolving into a comprehensive sovereign cyber-reasoning ecosystem with zero-friction automated remediation across local workstations and cloud version control systems.
+ 
+```text
+[GITHUB / LOCAL TRIGGER]
+          │
+          ├──► 1. Automated GitHub PR Bot (API & App-based Contributor Permissions)
+          │         - Clones repository via GitHub App credentials
+          │         - Spawns isolated fix branch (vajra/fix-cwe-*)
+          │         - Submits verified PR with signed cryptographic assurance record
+          │
+          ├──► 2. Tri-Model Sovereign AI Pipeline (3 Specialized Local Models)
+          │         - Finder Model: High-speed AST & semantic vulnerability isolator
+          │         - Fixer Model: Minimal cyclomatic perturbation repair synthesizer
+          │         - Verifier Model: Adversarial sentinel & exploit PoC test generator
+          │
+          ├──► 3. Interactive Permission-Gated Local Auto-Repair
+          │         - `vajra fix --interactive`: Prompts user before applying code diffs
+          │         - Automated local rollback & git branch snapshot guarantees
+          │
+          └──► 4. IDE Language Server (LSP) & Polyglot Ecosystem
+                    - Real-time diagnostic redline & 1-click in-editor remediation
+                    - Native CPG support for Rust, Go, TypeScript, C/C++, and Java
+```
+ 
+### 1. Automated GitHub PR Bot & Contributor Integration
+- **GitHub App & REST/GraphQL API Gateway**: Directly integrate with GitHub webhooks to scan incoming pull requests, commits, and periodic cron audits.
+- **Contributor Permission Gating**: With contributor or write authorization, VAJRA automatically provisions an isolated fix branch (`vajra/fix-<vuln>-<timestamp>`), applies surgical patches, and opens a ready-to-merge pull request.
+- **Auditable PR Commentary**: Automatically posts full 7-stage verification matrices, AST diffs, and cryptographic assurance records directly into the pull request review body.
+ 
+### 2. Dedicated 3-Tier Sovereign AI Pipeline
+- **Model 1: The Finder (Vulnerability & Flaw Detector)** — Specialized 1.5B/3B parameter model trained to detect complex taint flows, semantic logic bugs, and algorithmic performance anti-patterns that evade simple static pattern matching.
+- **Model 2: The Fixer (Surgical Repair Synthesizer)** — Reasoning model fine-tuned on verified minimal diffs, trained to produce non-invasive, style-preserving, single-hunk fixes with low cyclomatic delta ($< 35\%$ invasiveness).
+- **Model 3: The Verifier (Adversarial Sentinel & Test Synthesizer)** — Independent model strictly isolated from the repair process, task-specific for synthesizing boundary test harnesses, dynamic exploit PoCs, and mutation invariants to stress-test candidate patches before acceptance.
+ 
+### 3. Permission-Gated Local Auto-Repair Engine
+- **Interactive Approval Prompts**: The CLI and Desktop shell will support `--auto-apply` with granular permission prompts (`[Y/n/diff]`), allowing developers to approve or customize patches before touching disk files.
+- **Safety-First Branching**: Automatically creates safety checkpoints (e.g. `git stash` or atomic rollback staging trees) so that no file is permanently overwritten without 100% rollback capability.
+ 
+### 4. Native IDE Extensions & Language Server Protocol (LSP)
+- **VS Code, Cursor, and JetBrains Plugins**: Run the sovereign Rayon scanner directly inside the editor, highlighting vulnerabilities with real-time diagnostic squiggles and offering 1-click "Fix with VAJRA (Verified)" code actions.
+- **Full Polyglot AST/CPG Expansion**: Broadening first-class semantic graph representations across Go, Rust, Java, C/C++, and JavaScript/TypeScript.
+ 
+---
+ 
+# 29. License
  
 VAJRA is open-source software licensed under the [Apache License 2.0](LICENSE).
