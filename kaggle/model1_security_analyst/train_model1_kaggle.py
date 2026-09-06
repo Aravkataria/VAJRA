@@ -208,6 +208,7 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
     test_set = unified_corpus[train_cnt + val_cnt:]
     
     # Save training dataset to disk
+    data_dir.mkdir(parents=True, exist_ok=True)
     train_file = data_dir / "vajra_model1_train.jsonl"
     with open(train_file, "w", encoding="utf-8") as f:
         for item in train_set:
