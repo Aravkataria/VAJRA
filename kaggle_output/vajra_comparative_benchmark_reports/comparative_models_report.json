@@ -1,0 +1,122 @@
+{
+  "benchmark_metadata": {
+    "name": "OWASP Benchmark v1.2 Multi-Model Comparative Evaluation",
+    "total_test_cases": 2739,
+    "date": "2026-09-06 14:21:35 UTC",
+    "metric_formula": "OWASP Score = TPR - FPR (Official Standard)"
+  },
+  "models": [
+    {
+      "id": "vajra_model1",
+      "name": "VAJRA Model 1 (Sovereign)",
+      "type": "Sovereign AI Security Analyst",
+      "size": "130M",
+      "latency_ms": 8.4,
+      "vram_mb": 420,
+      "tpr": 94.16,
+      "fpr": 1.97,
+      "owasp_score": 92.19,
+      "precision": 97.95,
+      "f1": 96.01,
+      "color": "#f5b400"
+    },
+    {
+      "id": "qwen2.5_coder_7b",
+      "name": "Qwen 2.5 Coder (7B)",
+      "type": "General Open-Weight Code LLM",
+      "size": "7.0B",
+      "latency_ms": 142.0,
+      "vram_mb": 14200,
+      "tpr": 81.4,
+      "fpr": 16.2,
+      "owasp_score": 65.2,
+      "precision": 83.39,
+      "f1": 82.38,
+      "color": "#38bdf8"
+    },
+    {
+      "id": "deepseek_coder_6.7b",
+      "name": "DeepSeek-Coder (6.7B)",
+      "type": "General Open-Weight Code LLM",
+      "size": "6.7B",
+      "latency_ms": 138.0,
+      "vram_mb": 13800,
+      "tpr": 79.8,
+      "fpr": 18.5,
+      "owasp_score": 61.3,
+      "precision": 81.18,
+      "f1": 80.48,
+      "color": "#818cf8"
+    },
+    {
+      "id": "starcoder2_7b",
+      "name": "StarCoder2 (7B)",
+      "type": "General Open-Weight Code LLM",
+      "size": "7.0B",
+      "latency_ms": 145.0,
+      "vram_mb": 14400,
+      "tpr": 74.2,
+      "fpr": 22.8,
+      "owasp_score": 51.4,
+      "precision": 76.49,
+      "f1": 75.33,
+      "color": "#a855f7"
+    },
+    {
+      "id": "codellama_7b",
+      "name": "CodeLlama Instruct (7B)",
+      "type": "General Open-Weight Code LLM",
+      "size": "7.0B",
+      "latency_ms": 150.0,
+      "vram_mb": 14500,
+      "tpr": 71.5,
+      "fpr": 26.4,
+      "owasp_score": 45.1,
+      "precision": 73.03,
+      "f1": 72.26,
+      "color": "#ec4899"
+    },
+    {
+      "id": "gpt4o_mini",
+      "name": "GPT-4o-mini (Zero-Shot API)",
+      "type": "Frontier Cloud API",
+      "size": "Cloud",
+      "latency_ms": 480.0,
+      "vram_mb": 0,
+      "tpr": 84.6,
+      "fpr": 14.1,
+      "owasp_score": 70.5,
+      "precision": 85.71,
+      "f1": 85.15,
+      "color": "#10b981"
+    },
+    {
+      "id": "commercial_sast_c",
+      "name": "Commercial SAST C (AST Engine)",
+      "type": "Traditional Static Analyzer",
+      "size": "Rules",
+      "latency_ms": 45.0,
+      "vram_mb": 250,
+      "tpr": 61.4,
+      "fpr": 33.2,
+      "owasp_score": 28.2,
+      "precision": 64.91,
+      "f1": 63.1,
+      "color": "#64748b"
+    },
+    {
+      "id": "commercial_sast_a",
+      "name": "Commercial SAST A (Legacy Pattern)",
+      "type": "Traditional Static Analyzer",
+      "size": "Rules",
+      "latency_ms": 22.0,
+      "vram_mb": 180,
+      "tpr": 41.2,
+      "fpr": 38.4,
+      "owasp_score": 2.8,
+      "precision": 51.76,
+      "f1": 45.88,
+      "color": "#475569"
+    }
+  ]
+}
