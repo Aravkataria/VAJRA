@@ -252,7 +252,7 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
                 },
                 {
                     "role": "assistant",
-                    "content": json.dumps({"findings": findings, "vulnerable": is_vuln, "cwe": s["cwe"]}, indent=2)
+                    "content": json.dumps({"vulnerable": is_vuln, "cwe": s["cwe"] if is_vuln else None, "findings": findings}, indent=2)
                 }
             ],
             "vulnerable": is_vuln,
@@ -278,11 +278,14 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
     
     test_safe_cnt = min(2000, int(len(safe_corpus) * 0.10))
     val_safe_cnt = int(len(safe_corpus) * 0.10)
-    train_safe_cnt = len(safe_corpus) - test_safe_cnt - val_safe_cnt
     
-    train_set = vuln_corpus[:train_vuln_cnt] + safe_corpus[:train_safe_cnt]
-    val_set = vuln_corpus[train_vuln_cnt:train_vuln_cnt + val_vuln_cnt] + safe_corpus[train_safe_cnt:train_safe_cnt + val_safe_cnt]
-    test_set = vuln_corpus[train_vuln_cnt + val_vuln_cnt:] + safe_corpus[train_safe_cnt + val_safe_cnt:train_safe_cnt + val_safe_cnt + test_safe_cnt]
+    # Enforce strictly 1:1 balanced training set so model cannot collapse to majority class
+    train_vulns = vuln_corpus[:train_vuln_cnt]
+    train_safes = safe_corpus[:len(train_vulns)]
+    train_set = train_vulns + train_safes
+    
+    val_set = vuln_corpus[train_vuln_cnt:train_vuln_cnt + val_vuln_cnt] + safe_corpus[len(train_vulns):len(train_vulns) + val_safe_cnt]
+    test_set = vuln_corpus[train_vuln_cnt + val_vuln_cnt:] + safe_corpus[len(train_vulns) + val_safe_cnt:len(train_vulns) + val_safe_cnt + test_safe_cnt]
     
     random.shuffle(train_set)
     random.shuffle(val_set)
@@ -295,7 +298,8 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
             f.write(json.dumps(item) + "\n")
             
     test_vuln_actual = sum(1 for s in test_set if s["vulnerable"])
-    print(f"  * Stratified Split: {len(train_set)} Train | {len(val_set)} Validation | {len(test_set)} Benchmark Test")
+    train_vuln_actual = sum(1 for s in train_set if s["vulnerable"])
+    print(f"  * Stratified Split: {len(train_set)} Train ({train_vuln_actual} Vuln / {len(train_set) - train_vuln_actual} Safe [1:1 Balanced]) | {len(val_set)} Validation | {len(test_set)} Benchmark Test")
     print(f"  * Test Benchmark Density: {test_vuln_actual} Ground-Truth Vulnerabilities across all CWE categories.")
     print(f"  * Training Corpus Exported -> {train_file}")
     return train_set, val_set, test_set
@@ -404,10 +408,10 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
         }
 
     print("\n[Stage 11/17 - 12/17] Executing Genuine PyTorch Training Loop (Loss Backpropagation)...")
-    train_dataset = SecurityInstructionDataset(train_set[:3000], tokenizer)
+    train_dataset = SecurityInstructionDataset(train_set, tokenizer)
     train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)
     epochs = 3
     total_steps = len(train_loader) * epochs
     scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=int(total_steps * 0.05), num_training_steps=total_steps)
