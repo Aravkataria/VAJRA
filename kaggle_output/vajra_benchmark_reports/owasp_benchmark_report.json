@@ -4,12 +4,12 @@
     "owasp_benchmark_version": "1.2",
     "total_owasp_cases": 2740,
     "total_ood_cases": 496,
-    "owasp_score": "100.00%",
+    "owasp_score": "93.87%",
     "tpr_sensitivity": "100.00%",
-    "fpr_false_alarm": "0.00%",
-    "youden_index": 1.0,
-    "precision": "100.00%",
-    "f1_score": "100.00%",
+    "fpr_false_alarm": "6.13%",
+    "youden_index": 0.939,
+    "precision": "94.22%",
+    "f1_score": "97.02%",
     "ood_precision": "100.00%",
     "ood_recall": "100.00%",
     "independent_discovery_rate": "86.72%"
@@ -32,12 +32,12 @@
       "vuln": 125,
       "safe": 125,
       "tp": 125,
-      "fp": 0,
-      "tn": 125,
+      "fp": 84,
+      "tn": 41,
       "fn": 0,
       "tpr_percent": "100.0%",
-      "fpr_percent": "0.0%",
-      "owasp_score": "100.0%"
+      "fpr_percent": "67.2%",
+      "owasp_score": "32.8%"
     },
     "Path Traversal": {
       "total": 268,
@@ -177,7 +177,7 @@
     ],
     "fpr_values": [
       0.0,
-      0.0,
+      67.2,
       0.0,
       0.0,
       0.0,
@@ -190,7 +190,7 @@
     ],
     "owasp_scores": [
       100.0,
-      100.0,
+      32.8,
       100.0,
       100.0,
       100.0,
