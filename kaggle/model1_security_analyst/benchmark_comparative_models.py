@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 benchmark_comparative_models.py
 
@@ -216,24 +216,67 @@ class VajraModel1Evaluator(BaseEvaluator):
         self._load_model(model_dir)
 
     def _load_model(self, model_dir: Optional[Path]):
+        import zipfile
+
+        # 1. Auto-extract any zip found in input
+        zip_candidates = [Path("/kaggle/input"), Path("/kaggle/working"), Path("./"), Path("./kaggle_output")]
+        for root in zip_candidates:
+            if root.exists():
+                for zf in root.glob("**/*vajra*model1*.zip"):
+                    try:
+                        target_dir = Path("/kaggle/working/vajra_model1_exported") if Path("/kaggle/working").exists() else Path("./kaggle_output/vajra_model1_exported")
+                        if not target_dir.exists() or not (target_dir / "config.json").exists():
+                            print(f"  * [Auto-Extract] Extracting checkpoint archive {zf} -> {target_dir}")
+                            target_dir.mkdir(parents=True, exist_ok=True)
+                            with zipfile.ZipFile(zf, 'r') as zip_ref:
+                                zip_ref.extractall(target_dir)
+                    except Exception:
+                        pass
+
         candidate_dirs = [
+            Path("/kaggle/input/vajra-v2/vajra_model1_exported"),
+            Path("/kaggle/input/vajra_v2/vajra_model1_exported"),
+            Path("/kaggle/input/VAJRA_V2/vajra_model1_exported"),
+            Path("/kaggle/input/vajra-v2"),
+            Path("/kaggle/input/vajra_v2"),
+            Path("/kaggle/input/VAJRA_V2"),
             Path("/kaggle/working/vajra_model1_exported"),
             Path("./vajra_model1_exported"),
-            Path("./kaggle_output/vajra_model1_exported")
+            Path("./kaggle_output/vajra_model1_exported"),
+            Path("../vajra_model1_exported")
         ]
         if model_dir:
             candidate_dirs.insert(0, model_dir)
 
         found_dir = None
         for d in candidate_dirs:
-            if d.exists() and (d / "model.safetensors").exists():
+            if d.exists() and ((d / "model.safetensors").exists() or (d / "config.json").exists()):
                 found_dir = d
                 break
 
+        if not found_dir and Path("/kaggle/input").exists():
+            for sub in Path("/kaggle/input").glob("**/vajra_model1_exported"):
+                if sub.is_dir() and ((sub / "config.json").exists() or (sub / "model.safetensors").exists()):
+                    found_dir = sub
+                    break
+
         if found_dir:
-            print(f"  * Loaded VAJRA Model 1 checkpoint from -> {found_dir}")
+            print(f"  * [Live Model Found] Importing VAJRA Model 1 weights from -> {found_dir}")
+            try:
+                import torch
+                from transformers import AutoModelForCausalLM, AutoTokenizer
+                self.tokenizer = AutoTokenizer.from_pretrained(str(found_dir), trust_remote_code=True)
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    str(found_dir),
+                    torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                    device_map="auto" if self.device == "cuda" else None,
+                    trust_remote_code=True
+                )
+                print("  * [✓] Successfully loaded VAJRA Model 1 PyTorch weights into GPU memory!")
+            except Exception as e:
+                print(f"  * [!] PyTorch load notice: {e}")
         else:
-            print("  * VAJRA Model 1 checkpoint using Sovereign Inference Engine.")
+            print("  * [Live Model Notice] Checkpoint directory not found; running with sovereign reference engine.")
 
     def predict(self, code_snippet: str) -> Tuple[bool, str, float]:
         t0 = time.perf_counter()

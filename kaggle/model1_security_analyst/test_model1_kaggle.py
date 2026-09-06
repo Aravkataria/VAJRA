@@ -29,6 +29,68 @@ from typing import Dict, List, Any, Optional, Tuple
 # ==============================================================================
 # [STAGE 01/06] Environment Setup & Compute Discovery
 # ==============================================================================
+def discover_model_checkpoint() -> Optional[Path]:
+    """
+    Auto-discovers the VAJRA Model 1 checkpoint across:
+      - /kaggle/input/vajra-v2/**, /kaggle/input/vajra_v2/**, /kaggle/input/VAJRA_V2/**
+      - /kaggle/input/**/vajra_model1_exported
+      - /kaggle/working/vajra_model1_exported
+      - Local workspace paths
+    Also auto-extracts any vajra_model1_exported.zip found in /kaggle/input or /kaggle/working.
+    """
+    import zipfile
+
+    # 1. Check for any zip file to extract
+    zip_candidates = [
+        Path("/kaggle/input"),
+        Path("/kaggle/working"),
+        Path("./"),
+        Path("./kaggle_output")
+    ]
+    for root in zip_candidates:
+        if root.exists():
+            for zf in root.glob("**/*vajra*model1*.zip"):
+                try:
+                    target_dir = Path("/kaggle/working/vajra_model1_exported") if Path("/kaggle/working").exists() else Path("./kaggle_output/vajra_model1_exported")
+                    if not target_dir.exists() or not (target_dir / "config.json").exists():
+                        print(f"  * [Auto-Extract] Unzipping checkpoint archive {zf} -> {target_dir}")
+                        target_dir.mkdir(parents=True, exist_ok=True)
+                        with zipfile.ZipFile(zf, 'r') as zip_ref:
+                            zip_ref.extractall(target_dir)
+                except Exception as e:
+                    pass
+
+    # 2. Priority candidate directories
+    candidate_paths = [
+        Path("/kaggle/input/vajra-v2/vajra_model1_exported"),
+        Path("/kaggle/input/vajra_v2/vajra_model1_exported"),
+        Path("/kaggle/input/VAJRA_V2/vajra_model1_exported"),
+        Path("/kaggle/input/vajra-v2"),
+        Path("/kaggle/input/vajra_v2"),
+        Path("/kaggle/input/VAJRA_V2"),
+        Path("/kaggle/working/vajra_model1_exported"),
+        Path("./vajra_model1_exported"),
+        Path("./kaggle_output/vajra_model1_exported"),
+        Path("../vajra_model1_exported")
+    ]
+
+    for p in candidate_paths:
+        if p.exists() and ((p / "config.json").exists() or (p / "model.safetensors").exists()):
+            return p
+
+    # 3. Dynamic recursive search across /kaggle/input
+    input_root = Path("/kaggle/input")
+    if input_root.exists():
+        for sub in input_root.glob("**/vajra_model1_exported"):
+            if sub.is_dir() and ((sub / "config.json").exists() or (sub / "model.safetensors").exists()):
+                return sub
+        for sub in input_root.glob("**"):
+            if sub.is_dir() and (sub / "config.json").exists() and (sub / "model.safetensors").exists():
+                return sub
+
+    return None
+
+
 def stage_01_verify_environment():
     print("=" * 85)
     print("VAJRA MODEL 1: OWASP BENCHMARK & OOD ZERO-LEAKAGE EVALUATION ENGINE")
@@ -51,22 +113,11 @@ def stage_01_verify_environment():
 
     print(f"  * Compute Device: {gpu_name} (CUDA Available: {has_gpu})")
 
-    candidate_paths = [
-        Path("/kaggle/working/vajra_model1_exported"),
-        Path("./vajra_model1_exported"),
-        Path("./kaggle_output/vajra_model1_exported"),
-        Path("../vajra_model1_exported")
-    ]
-    model_dir = None
-    for p in candidate_paths:
-        if p.exists() and (p / "config.json").exists():
-            model_dir = p
-            break
-
+    model_dir = discover_model_checkpoint()
     if model_dir:
-        print(f"  * Found Model Checkpoint -> {model_dir}")
+        print(f"  * [Live Model Found] Importing VAJRA Model 1 weights from -> {model_dir}")
     else:
-        print("  * Running zero-leakage benchmark evaluation engine.")
+        print("  * [Live Model Notice] Running zero-leakage benchmark evaluation engine.")
 
     return torch, device, model_dir
 
