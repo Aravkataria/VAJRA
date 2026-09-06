@@ -257,7 +257,9 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
             ],
             "vulnerable": is_vuln,
             "cwe": s["cwe"],
-            "language": s["language"]
+            "language": s["language"],
+            "code": s["code"],
+            "source": s.get("source", "open-source")
         }
         
         if is_vuln:
@@ -413,12 +415,18 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
     model.train()
     scaler = torch.amp.GradScaler('cuda') if device == "cuda" else None
 
+    try:
+        from tqdm.auto import tqdm
+    except ImportError:
+        tqdm = lambda x, **kwargs: x
+
     step_counter = 0
     start_time = time.time()
 
     for epoch in range(1, epochs + 1):
         epoch_loss = 0.0
-        for batch_idx, batch in enumerate(train_loader):
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", unit="batch")
+        for batch_idx, batch in enumerate(pbar):
             step_counter += 1
             optimizer.zero_grad()
 
@@ -427,21 +435,28 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
                     outputs = model(input_ids=batch["input_ids"], labels=batch["labels"])
                     loss = outputs.loss
                 scaler.scale(loss).backward()
+                scale_before = scaler.get_scale()
                 scaler.step(optimizer)
                 scaler.update()
+                scale_after = scaler.get_scale()
+                if scale_before <= scale_after:
+                    scheduler.step()
             else:
                 outputs = model(input_ids=batch["input_ids"], labels=batch["labels"])
                 loss = outputs.loss
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
 
-            scheduler.step()
             epoch_loss += loss.item()
+            avg_l = epoch_loss / (batch_idx + 1)
+            lr_curr = scheduler.get_last_lr()[0]
+            
+            if hasattr(pbar, "set_postfix"):
+                pbar.set_postfix({"loss": f"{loss.item():.4f}", "avg_loss": f"{avg_l:.4f}", "lr": f"{lr_curr:.2e}"})
 
             if step_counter % 50 == 0 or step_counter == total_steps:
                 elapsed = time.time() - start_time
-                avg_l = epoch_loss / (batch_idx + 1)
-                lr_curr = scheduler.get_last_lr()[0]
                 print(f"  * Epoch {epoch}/{epochs} | Step {step_counter:04d}/{total_steps} | Loss: {loss.item():.4f} (Avg: {avg_l:.4f}) | LR: {lr_curr:.2e} | Elapsed: {elapsed:.1f}s")
 
     print("  [+] Model 1 Genuine PyTorch Training Complete! Model weights successfully optimized.")
@@ -453,6 +468,11 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
 # ==============================================================================
 def stage_13_to_16_benchmark(model, tokenizer, test_set: List[Dict[str, Any]]):
     import torch
+    try:
+        from tqdm.auto import tqdm
+    except ImportError:
+        tqdm = lambda x, **kwargs: x
+
     print("\n[Stage 13/17 - 16/17] Executing Pure Neural Evaluation on Held-Out Test Set...")
     print("=" * 80)
     print("VAJRA MODEL 1 PURE NEURAL BENCHMARK EVALUATION (ZERO FALLBACKS)")
@@ -467,11 +487,21 @@ def stage_13_to_16_benchmark(model, tokenizer, test_set: List[Dict[str, Any]]):
     tp, fp, tn, fn = 0, 0, 0, 0
     ai_only = 0
 
-    print(f"Evaluating {min(300, len(test_set))} held-out test samples directly through neural forward passes...")
-
     eval_subset = test_set[:300]
-    for idx, item in enumerate(eval_subset):
-        code = item["code"]
+    print(f"Evaluating {len(eval_subset)} held-out test samples directly through neural forward passes...")
+
+    for idx, item in enumerate(tqdm(eval_subset, desc="Evaluating Test Set", unit="sample")):
+        # Robust code extraction
+        code = item.get("code")
+        if not code and "messages" in item and len(item["messages"]) > 1:
+            usr_text = item["messages"][1]["content"]
+            if "Code:\n" in usr_text:
+                code = usr_text.split("Code:\n", 1)[1]
+            else:
+                code = usr_text
+        if not code:
+            code = "// Empty code sample"
+
         lang = item.get("language", "generic")
         is_gt_vuln = item.get("vulnerable", False)
 

@@ -428,13 +428,19 @@ def evaluate_benchmarks(owasp_samples: List[Dict[str, Any]], ood_samples: List[D
     print(f"BENCHMARK SUITES: {len(owasp_samples)} OWASP Cases + {len(ood_samples)} OOD Wild Framework Cases")
     print("=" * 85)
 
+    try:
+        from tqdm.auto import tqdm
+    except ImportError:
+        tqdm = lambda x, **kwargs: x
+
     runner = Model1LiveInferenceRunner(model_dir, device=device)
 
     # 1. OWASP Benchmark Evaluation
     owasp_categories = {}
     owasp_tp, owasp_fp, owasp_tn, owasp_fn = 0, 0, 0, 0
 
-    for s in owasp_samples:
+    print(f"\n[Evaluating OWASP Benchmark] Running {len(owasp_samples)} test cases across 11 CWE categories...")
+    for s in tqdm(owasp_samples, desc="OWASP Benchmark", unit="case"):
         cat = s["category_name"]
         if cat not in owasp_categories:
             owasp_categories[cat] = {"total": 0, "vuln": 0, "safe": 0, "tp": 0, "fp": 0, "tn": 0, "fn": 0}
@@ -482,8 +488,9 @@ def evaluate_benchmarks(owasp_samples: List[Dict[str, Any]], ood_samples: List[D
         data["owasp_score"] = f"{(cat_tpr - cat_fpr) * 100:.1f}%"
 
     # 2. OOD Evaluation
+    print(f"\n[Evaluating OOD Suite] Running {len(ood_samples)} unseen framework cases...")
     ood_tp, ood_fp, ood_tn, ood_fn = 0, 0, 0, 0
-    for s in ood_samples:
+    for s in tqdm(ood_samples, desc="OOD Frameworks", unit="case"):
         is_gt_vuln = s["vulnerable"]
         is_pred_vuln, raw_out = runner.predict(s["code"], lang=s.get("language", "python"))
 
