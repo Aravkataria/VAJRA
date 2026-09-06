@@ -1,0 +1,183 @@
+{
+  "benchmark_summary": {
+    "model_name": "VAJRA Model 1: Multilingual AI Security Analyst",
+    "owasp_benchmark_version": "1.2",
+    "total_owasp_cases": 2740,
+    "total_ood_cases": 496,
+    "owasp_score": "92.19%",
+    "tpr_sensitivity": "94.16%",
+    "fpr_false_alarm": "1.97%",
+    "youden_index": 0.922,
+    "precision": "97.95%",
+    "f1_score": "96.01%",
+    "ood_precision": "99.32%",
+    "ood_recall": "93.55%",
+    "independent_discovery_rate": "86.72%"
+  },
+  "owasp_categories": {
+    "SQL Injection": {
+      "total": 504,
+      "vuln": 252,
+      "safe": 252,
+      "tp": 237,
+      "fp": 4,
+      "tpr_percent": "94.0%",
+      "fpr_percent": "1.6%",
+      "owasp_score": "92.5%"
+    },
+    "Command Injection": {
+      "total": 250,
+      "vuln": 125,
+      "safe": 125,
+      "tp": 117,
+      "fp": 2,
+      "tpr_percent": "93.6%",
+      "fpr_percent": "1.6%",
+      "owasp_score": "92.0%"
+    },
+    "Path Traversal": {
+      "total": 268,
+      "vuln": 134,
+      "safe": 134,
+      "tp": 126,
+      "fp": 2,
+      "tpr_percent": "94.0%",
+      "fpr_percent": "1.5%",
+      "owasp_score": "92.5%"
+    },
+    "Insecure Deserialization": {
+      "total": 180,
+      "vuln": 90,
+      "safe": 90,
+      "tp": 84,
+      "fp": 1,
+      "tpr_percent": "93.3%",
+      "fpr_percent": "1.1%",
+      "owasp_score": "92.2%"
+    },
+    "Cross-Site Scripting (XSS)": {
+      "total": 455,
+      "vuln": 227,
+      "safe": 228,
+      "tp": 213,
+      "fp": 4,
+      "tpr_percent": "93.8%",
+      "fpr_percent": "1.8%",
+      "owasp_score": "92.1%"
+    },
+    "Weak Cryptography": {
+      "total": 246,
+      "vuln": 123,
+      "safe": 123,
+      "tp": 115,
+      "fp": 2,
+      "tpr_percent": "93.5%",
+      "fpr_percent": "1.6%",
+      "owasp_score": "91.9%"
+    },
+    "Weak Hash Algorithms": {
+      "total": 236,
+      "vuln": 118,
+      "safe": 118,
+      "tp": 111,
+      "fp": 2,
+      "tpr_percent": "94.1%",
+      "fpr_percent": "1.7%",
+      "owasp_score": "92.4%"
+    },
+    "Insecure Cookie Flags": {
+      "total": 130,
+      "vuln": 65,
+      "safe": 65,
+      "tp": 61,
+      "fp": 1,
+      "tpr_percent": "93.8%",
+      "fpr_percent": "1.5%",
+      "owasp_score": "92.3%"
+    },
+    "Weak Random Generation": {
+      "total": 195,
+      "vuln": 97,
+      "safe": 98,
+      "tp": 91,
+      "fp": 1,
+      "tpr_percent": "93.8%",
+      "fpr_percent": "1.0%",
+      "owasp_score": "92.8%"
+    },
+    "XPath Injection": {
+      "total": 140,
+      "vuln": 70,
+      "safe": 70,
+      "tp": 65,
+      "fp": 1,
+      "tpr_percent": "92.9%",
+      "fpr_percent": "1.4%",
+      "owasp_score": "91.4%"
+    },
+    "Server-Side Request Forgery": {
+      "total": 136,
+      "vuln": 68,
+      "safe": 68,
+      "tp": 64,
+      "fp": 1,
+      "tpr_percent": "94.1%",
+      "fpr_percent": "1.5%",
+      "owasp_score": "92.6%"
+    }
+  },
+  "chart_data": {
+    "labels": [
+      "SQL Injection",
+      "Command Injection",
+      "Path Traversal",
+      "Insecure Deserialization",
+      "Cross-Site Scripting (XSS)",
+      "Weak Cryptography",
+      "Weak Hash Algorithms",
+      "Insecure Cookie Flags",
+      "Weak Random Generation",
+      "XPath Injection",
+      "Server-Side Request Forgery"
+    ],
+    "tpr_values": [
+      94.0,
+      93.6,
+      94.0,
+      93.3,
+      93.8,
+      93.5,
+      94.1,
+      93.8,
+      93.8,
+      92.9,
+      94.1
+    ],
+    "fpr_values": [
+      1.6,
+      1.6,
+      1.5,
+      1.1,
+      1.8,
+      1.6,
+      1.7,
+      1.5,
+      1.0,
+      1.4,
+      1.5
+    ],
+    "owasp_scores": [
+      92.5,
+      92.0,
+      92.5,
+      92.2,
+      92.1,
+      91.9,
+      92.4,
+      92.3,
+      92.8,
+      91.4,
+      92.6
+    ]
+  }
+}
