@@ -101,51 +101,51 @@ def generate_comprehensive_vulnerability_corpus() -> List[Dict[str, Any]]:
         {
             "cwe": "CWE-89", "category": "sql_injection", "severity": "CRITICAL",
             "lang": "python", "vulnerable": True,
-            "template": "from flask import request\nimport sqlite3\n@app.route('/api/v1/{resource}')\ndef get_{resource}():\n    val = request.args.get('{param}', '')\n    conn = sqlite3.connect('prod.db')\n    cursor = conn.cursor()\n    cursor.execute(f'SELECT * FROM {table} WHERE {col} = \"{val}\"')\n    return cursor.fetchall()\n"
+            "template": "from flask import request\nimport sqlite3\n@app.route('/api/v1/{resource}')\ndef get_{resource}():\n    val = request.args.get('{param}', '')\n    conn = sqlite3.connect('prod.db')\n    cursor = conn.cursor()\n    cursor.execute(f'SELECT * FROM {table} WHERE {col} = \"' + val + '\"')\n    return cursor.fetchall()\n"
         },
         {
             "cwe": "CWE-89", "category": "sql_injection", "severity": "CRITICAL",
             "lang": "javascript", "vulnerable": True,
-            "template": "import {{ Request, Response }} from 'express';\nimport db from '../db';\nexport async function get{Resource}(req: Request, res: Response) {{\n    const {param} = req.query.{param};\n    const result = await db.raw('SELECT * FROM {table} WHERE {col} = ' + {param});\n    return res.json(result.rows);\n}}\n"
+            "template": "import { Request, Response } from 'express';\nimport db from '../db';\nexport async function get{Resource}(req: Request, res: Response) {\n    const {param} = req.query.{param};\n    const result = await db.raw('SELECT * FROM {table} WHERE {col} = ' + {param});\n    return res.json(result.rows);\n}\n"
         },
         {
             "cwe": "CWE-89", "category": "sql_injection", "severity": "CRITICAL",
             "lang": "go", "vulnerable": True,
-            "template": "package controllers\nimport (\n    \"database/sql\"\n    \"fmt\"\n    \"net/http\"\n)\nfunc Query{Resource}(w http.ResponseWriter, r *http.Request, db *sql.DB) {{\n    val := r.URL.Query().Get(\"{param}\")\n    query := fmt.Sprintf(\"SELECT * FROM {table} WHERE {col} = '%s'\", val)\n    rows, _ := db.Query(query)\n    defer rows.Close()\n}}\n"
+            "template": "package controllers\nimport (\n    \"database/sql\"\n    \"fmt\"\n    \"net/http\"\n)\nfunc Query{Resource}(w http.ResponseWriter, r *http.Request, db *sql.DB) {\n    val := r.URL.Query().Get(\"{param}\")\n    query := fmt.Sprintf(\"SELECT * FROM {table} WHERE {col} = '%s'\", val)\n    rows, _ := db.Query(query)\n    defer rows.Close()\n}\n"
         },
         {
             "cwe": "CWE-89", "category": "sql_injection", "severity": "CRITICAL",
             "lang": "java", "vulnerable": True,
-            "template": "package com.vajra.dao;\nimport java.sql.*;\npublic class {Resource}Dao {{\n    public ResultSet fetch(Connection conn, String {param}) throws SQLException {{\n        Statement stmt = conn.createStatement();\n        return stmt.executeQuery(\"SELECT * FROM {table} WHERE {col} = '\" + {param} + \"'\");\n    }}\n}}\n"
+            "template": "package com.vajra.dao;\nimport java.sql.*;\npublic class {Resource}Dao {\n    public ResultSet fetch(Connection conn, String {param}) throws SQLException {\n        Statement stmt = conn.createStatement();\n        return stmt.executeQuery(\"SELECT * FROM {table} WHERE {col} = '\" + {param} + \"'\");\n    }\n}\n"
         },
         {
             "cwe": "CWE-89", "category": "sql_injection", "severity": "CRITICAL",
             "lang": "php", "vulnerable": True,
-            "template": "<?php\nfunction fetch_{resource}($conn, $input) {{\n    $sql = \"SELECT * FROM {table} WHERE {col} = '\" . $_GET['{param}'] . \"'\";\n    $result = mysqli_query($conn, $sql);\n    return mysqli_fetch_all($result, MYSQLI_ASSOC);\n}}\n"
+            "template": "<?php\nfunction fetch_{resource}($conn, $input) {\n    $sql = \"SELECT * FROM {table} WHERE {col} = '\" . $_GET['{param}'] . \"'\";\n    $result = mysqli_query($conn, $sql);\n    return mysqli_fetch_all($result, MYSQLI_ASSOC);\n}\n"
         },
 
         # 2. Command Injection (CWE-78)
         {
             "cwe": "CWE-78", "category": "command_injection", "severity": "CRITICAL",
             "lang": "python", "vulnerable": True,
-            "template": "import subprocess, os\nfrom flask import request\n@app.route('/tools/{tool}')\ndef run_{tool}():\n    target = request.args.get('target', '')\n    output = subprocess.check_output(f'{cmd} {{target}}', shell=True)\n    return output.decode()\n"
+            "template": "import subprocess, os\nfrom flask import request\n@app.route('/tools/{tool}')\ndef run_{tool}():\n    target = request.args.get('target', '')\n    output = subprocess.check_output('{cmd} ' + target, shell=True)\n    return output.decode()\n"
         },
         {
             "cwe": "CWE-78", "category": "command_injection", "severity": "CRITICAL",
             "lang": "javascript", "vulnerable": True,
-            "template": "import {{ exec }} from 'child_process';\nimport {{ Request, Response }} from 'express';\nexport function execute{Tool}(req: Request, res: Response) {{\n    const host = req.body.host;\n    exec('{cmd} ' + host, (err, stdout) => {{\n        res.send(stdout);\n    }});\n}}\n"
+            "template": "import { exec } from 'child_process';\nimport { Request, Response } from 'express';\nexport function execute{Tool}(req: Request, res: Response) {\n    const host = req.body.host;\n    exec('{cmd} ' + host, (err, stdout) => {\n        res.send(stdout);\n    });\n}\n"
         },
         {
             "cwe": "CWE-78", "category": "command_injection", "severity": "CRITICAL",
             "lang": "go", "vulnerable": True,
-            "template": "package services\nimport (\n    \"os/exec\"\n    \"net/http\"\n)\nfunc Run{Tool}(w http.ResponseWriter, r *http.Request) {{\n    input := r.FormValue(\"input\")\n    cmd := exec.Command(\"sh\", \"-c\", \"{cmd} \" + input)\n    out, _ := cmd.CombinedOutput()\n    w.Write(out)\n}}\n"
+            "template": "package services\nimport (\n    \"os/exec\"\n    \"net/http\"\n)\nfunc Run{Tool}(w http.ResponseWriter, r *http.Request) {\n    input := r.FormValue(\"input\")\n    cmd := exec.Command(\"sh\", \"-c\", \"{cmd} \" + input)\n    out, _ := cmd.CombinedOutput()\n    w.Write(out)\n}\n"
         },
 
         # 3. Broken Object-Level Authorization / IDOR (CWE-639)
         {
             "cwe": "CWE-639", "category": "broken_object_level_authorization", "severity": "HIGH",
             "lang": "javascript", "vulnerable": True,
-            "template": "import {{ Request, Response }} from 'express';\nimport {{ {Model} }} from '../models';\nexport async function get{Model}(req: Request, res: Response) {{\n    const id = req.params.id;\n    const record = await {Model}.findById(id);\n    if (!record) return res.status(404).send();\n    return res.json(record.sensitiveDetails);\n}}\n"
+            "template": "import { Request, Response } from 'express';\nimport { {Model} } from '../models';\nexport async function get{Model}(req: Request, res: Response) {\n    const id = req.params.id;\n    const record = await {Model}.findById(id);\n    if (!record) return res.status(404).send();\n    return res.json(record.sensitiveDetails);\n}\n"
         },
         {
             "cwe": "CWE-639", "category": "broken_object_level_authorization", "severity": "HIGH",
@@ -162,12 +162,12 @@ def generate_comprehensive_vulnerability_corpus() -> List[Dict[str, Any]]:
         {
             "cwe": "CWE-22", "category": "path_traversal", "severity": "HIGH",
             "lang": "javascript", "vulnerable": True,
-            "template": "import * as fs from 'fs';\nimport {{ Request, Response }} from 'express';\nexport function readFileEndpoint(req: Request, res: Response) {{\n    const path = '/var/data/' + req.query.filename;\n    fs.readFile(path, 'utf8', (err, data) => {{\n        res.send(data);\n    }});\n}}\n"
+            "template": "import * as fs from 'fs';\nimport { Request, Response } from 'express';\nexport function readFileEndpoint(req: Request, res: Response) {\n    const path = '/var/data/' + req.query.filename;\n    fs.readFile(path, 'utf8', (err, data) => {\n        res.send(data);\n    });\n}\n"
         },
         {
             "cwe": "CWE-22", "category": "path_traversal", "severity": "HIGH",
             "lang": "go", "vulnerable": True,
-            "template": "package files\nimport (\n    \"os\"\n    \"io\"\n    \"net/http\"\n)\nfunc GetFile(w http.ResponseWriter, r *http.Request) {{\n    fname := r.URL.Query().Get(\"name\")\n    f, _ := os.Open(\"/uploads/\" + fname)\n    defer f.Close()\n    io.Copy(w, f)\n}}\n"
+            "template": "package files\nimport (\n    \"os\"\n    \"io\"\n    \"net/http\"\n)\nfunc GetFile(w http.ResponseWriter, r *http.Request) {\n    fname := r.URL.Query().Get(\"name\")\n    f, _ := os.Open(\"/uploads/\" + fname)\n    defer f.Close()\n    io.Copy(w, f)\n}\n"
         },
 
         # 5. Server-Side Request Forgery / SSRF (CWE-918)
@@ -179,7 +179,7 @@ def generate_comprehensive_vulnerability_corpus() -> List[Dict[str, Any]]:
         {
             "cwe": "CWE-918", "category": "ssrf", "severity": "HIGH",
             "lang": "javascript", "vulnerable": True,
-            "template": "import axios from 'axios';\nimport {{ Request, Response }} from 'express';\nexport async function proxyHook(req: Request, res: Response) {{\n    const target = req.body.callbackUrl;\n    const resp = await axios.get(target);\n    return res.json(resp.data);\n}}\n"
+            "template": "import axios from 'axios';\nimport { Request, Response } from 'express';\nexport async function proxyHook(req: Request, res: Response) {\n    const target = req.body.callbackUrl;\n    const resp = await axios.get(target);\n    return res.json(resp.data);\n}\n"
         },
 
         # 6. Insecure Deserialization (CWE-502)
@@ -210,17 +210,17 @@ def generate_comprehensive_vulnerability_corpus() -> List[Dict[str, Any]]:
         {
             "cwe": "None", "category": "hard_negative_safe", "severity": "NONE",
             "lang": "javascript", "vulnerable": False,
-            "template": "import {{ Request, Response }} from 'express';\nimport db from '../db';\nexport async function get{Resource}Safe(req: Request, res: Response) {{\n    const {param} = req.query.{param};\n    const result = await db('SELECT * FROM {table} WHERE {col} = $1', [{param}]);\n    return res.json(result.rows);\n}}\n"
+            "template": "import { Request, Response } from 'express';\nimport db from '../db';\nexport async function get{Resource}Safe(req: Request, res: Response) {\n    const {param} = req.query.{param};\n    const result = await db('SELECT * FROM {table} WHERE {col} = $1', [{param}]);\n    return res.json(result.rows);\n}\n"
         },
         {
             "cwe": "None", "category": "hard_negative_safe", "severity": "NONE",
             "lang": "python", "vulnerable": False,
-            "template": "import subprocess\nfrom flask import request\nALLOWED_TOOLS = {{'ping': ['ping', '-c', '4'], 'traceroute': ['traceroute']}}\n@app.route('/tools/{tool}')\ndef run_{tool}_safe():\n    target = request.args.get('target', '127.0.0.1')\n    clean_ip = str(ipaddress.ip_address(target))\n    cmd = ALLOWED_TOOLS.get('{tool}', ['ping']) + [clean_ip]\n    output = subprocess.check_output(cmd, shell=False)\n    return output.decode()\n"
+            "template": "import subprocess\nfrom flask import request\nALLOWED_TOOLS = {'ping': ['ping', '-c', '4'], 'traceroute': ['traceroute']}\n@app.route('/tools/{tool}')\ndef run_{tool}_safe():\n    target = request.args.get('target', '127.0.0.1')\n    clean_ip = str(ipaddress.ip_address(target))\n    cmd = ALLOWED_TOOLS.get('{tool}', ['ping']) + [clean_ip]\n    output = subprocess.check_output(cmd, shell=False)\n    return output.decode()\n"
         },
         {
             "cwe": "None", "category": "hard_negative_safe", "severity": "NONE",
             "lang": "javascript", "vulnerable": False,
-            "template": "import {{ Request, Response }} from 'express';\nimport {{ {Model} }} from '../models';\nexport async function get{Model}Safe(req: Request, res: Response) {{\n    const id = req.params.id;\n    const record = await {Model}.findById(id);\n    if (!record || record.ownerId !== req.user.id) return res.status(403).json({{ error: 'Unauthorized' }});\n    return res.json(record.sensitiveDetails);\n}}\n"
+            "template": "import { Request, Response } from 'express';\nimport { {Model} } from '../models';\nexport async function get{Model}Safe(req: Request, res: Response) {\n    const id = req.params.id;\n    const record = await {Model}.findById(id);\n    if (!record || record.ownerId !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });\n    return res.json(record.sensitiveDetails);\n}\n"
         },
         {
             "cwe": "None", "category": "hard_negative_safe", "severity": "NONE",
@@ -244,18 +244,18 @@ def generate_comprehensive_vulnerability_corpus() -> List[Dict[str, Any]]:
         for gen in vulnerability_generators:
             sample_counter += 1
             idx = (rep + sample_counter) % 10
-            code = gen["template"].format(
-                resource=resources[idx],
-                Resource=resources[idx].capitalize(),
-                param=params[idx],
-                table=tables[idx],
-                col=columns[idx],
-                cmd=cmds[idx],
-                tool=tools[idx],
-                Tool=tools[idx].capitalize(),
-                Model=models[idx],
-                val=f"{{{params[idx]}}}"
-            )
+            
+            # Robust placeholder replacement (immune to format KeyError issues)
+            code = gen["template"]
+            code = code.replace("{resource}", resources[idx])
+            code = code.replace("{Resource}", resources[idx].capitalize())
+            code = code.replace("{param}", params[idx])
+            code = code.replace("{table}", tables[idx])
+            code = code.replace("{col}", columns[idx])
+            code = code.replace("{cmd}", cmds[idx])
+            code = code.replace("{tool}", tools[idx])
+            code = code.replace("{Tool}", tools[idx].capitalize())
+            code = code.replace("{Model}", models[idx])
             
             samples.append({
                 "sample_id": f"VAJRA-SYNTH-{sample_counter:05d}",
