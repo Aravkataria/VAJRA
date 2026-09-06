@@ -22,6 +22,7 @@ Usage:
 
 import os
 import sys
+import time
 import json
 import re
 import random
@@ -548,10 +549,10 @@ def stage_17_export_model(model, tokenizer, total_params: int, train_count: int,
 
     # 3. Write metadata
     metadata = {
-        "model_name": "vajra-model1-security-analyst-0.5b-calibrated",
-        "base_model": "Qwen/Qwen2.5-Coder-0.5B-Instruct",
-        "training_paradigm": "supervised_security_fine_tuning",
-        "parameters": f"{total_params / 1e6:.1f}M ({total_params / 1e9:.2f}B)",
+        "model_name": "vajra-model1-security-analyst-from-scratch",
+        "base_model": "None (Initialized From Scratch - Zero Pretrained Weights)",
+        "training_paradigm": "from_scratch_sovereign_causal_transformer",
+        "parameters": f"{total_params / 1e6:.1f}M ({total_params / 1e9:.3f}B)",
         "total_samples_trained": train_count,
         "independent_discovery_rate": f"{idr * 100:.2f}%",
         "precision": f"{prec * 100:.2f}%",
