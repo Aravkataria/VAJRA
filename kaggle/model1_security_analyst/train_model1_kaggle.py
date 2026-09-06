@@ -309,41 +309,49 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
     from torch.utils.data import Dataset, DataLoader
     from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, get_cosine_schedule_with_warmup
 
-    print("\n[Stage 09/17 - 10/17] Initializing Base Architecture & Security Tokenizer...")
+    print("\n[Stage 09/17 - 10/17] Initializing Sovereign Architecture From Scratch (Zero Pretrained Weights)...")
     
-    base_model_id = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"  * Loading Base Foundation Model: {base_model_id} on {device}...")
 
+    SPECIAL_TOKENS = [
+        "<|pad|>", "<|eos|>", "<|im_start|>", "<|im_end|>", "<|sec_source|>", "<|sec_sink|>", 
+        "<|sec_flow|>", "<|sec_boundary|>", "<|authn_guard|>", "<|authz_guard|>", 
+        "<|sanitizer|>", "<|rate_limit|>", "<|cwe_id|>", "<|finding_start|>", "<|finding_end|>"
+    ]
+
+    # Clean, domain-specific 85M causal transformer designed for rapid convergence on Kaggle T4
+    model_config = AutoConfig.for_model(
+        "qwen2",
+        vocab_size=32000,
+        hidden_size=768,
+        intermediate_size=2048,
+        num_hidden_layers=12,
+        num_attention_heads=12,
+        num_key_value_heads=6,
+        max_position_embeddings=2048,
+        rms_norm_eps=1e-6,
+        tie_word_embeddings=True
+    )
+
+    print("  * Initializing random model weights (Trained From Scratch)...")
+    model = AutoModelForCausalLM.from_config(model_config).to(device)
+
+    # Use fast tokenizer and register special security tokens
+    from transformers import GPT2TokenizerFast
     try:
-        tokenizer = AutoTokenizer.from_pretrained(base_model_id, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            base_model_id,
-            dtype=torch.float16 if device == "cuda" else torch.float32,
-            device_map="auto" if device == "cuda" else None,
-            trust_remote_code=True
-        )
-    except Exception as e:
-        print(f"  * [!] Hugging Face download notice ({e}); initializing sovereign local architecture...")
-        model_config = AutoConfig.for_model(
-            "qwen2",
-            vocab_size=48000,
-            hidden_size=1024,
-            intermediate_size=2816,
-            num_hidden_layers=12,
-            num_attention_heads=16,
-            num_key_value_heads=8,
-            max_position_embeddings=4096
-        )
-        model = AutoModelForCausalLM.from_config(model_config).to(device)
-        from transformers import GPT2TokenizerFast
         tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+        tokenizer.add_special_tokens({"additional_special_tokens": SPECIAL_TOKENS, "pad_token": "<|pad|>"})
+        model.resize_token_embeddings(len(tokenizer))
+    except Exception:
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-0.5B", trust_remote_code=True)
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"  * Active Model Parameters: {total_params / 1e6:.1f}M ({total_params / 1e9:.2f}B)")
+    print(f"  * Sovereign Architecture Parameters: {total_params / 1e6:.1f}M ({total_params / 1e9:.3f}B)")
+    print(f"  * Special Domain Tokens Registered: {len(SPECIAL_TOKENS)}")
+    print(f"  * Training Paradigm: 100% From Scratch (Random Gaussian Init)")
 
     # Prepare Tokenized Training Dataset
     class SecurityInstructionDataset(Dataset):
