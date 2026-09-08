@@ -1,0 +1,10 @@
+﻿# Robots.txt for VAJRA (https://aravkataria.github.io/VAJRA/)
+User-agent: *
+Allow: /
+
+# Sitemap Index
+Sitemap: https://aravkataria.github.io/VAJRA/sitemap.xml
+
+# LLM Documentation Feeds (llmstxt.org)
+# Full LLM documentation: https://aravkataria.github.io/VAJRA/llms-full.txt
+# Summary LLM context: https://aravkataria.github.io/VAJRA/llms.txt
