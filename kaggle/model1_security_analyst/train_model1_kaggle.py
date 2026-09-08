@@ -7,13 +7,12 @@ VAJRA Model 1: Multilingual AI Security Analyst (Trained From Scratch).
 
 Features:
   - 100% Self-Contained: Zero external file dependencies or pre-downloads required.
-  - Multi-Language Stream & Synthesis: 28,000+ authentic open-source functions across Python, JS, Go, Java, PHP, C/C++, Rust.
-  - High-Density Vulnerability Benchmark: Synthesizes 3,500+ confirmed multi-language CWE scenarios + hard negatives.
-  - High-Precision Semantic Taint Filter: Accurately isolates real CVEs from safe/parameterized code (hard negatives).
-  - Custom Domain BPE Tokenizer: Injects specialized Security IR tokens (<|sec_source|>, <|authz_guard|>, etc.).
-  - Custom Transformer Architecture: Initialized from scratch (~1.5B dense parameters, RoPE, SwiGLU, RMSNorm).
-  - Statistically Robust Independent Discovery Matrix: 450+ ground-truth vulnerabilities evaluated in held-out test set.
-  - Direct SafeTensors & Zip Export: Saves model.safetensors, config, and creates 1-click vajra_model1_exported.zip.
+  - Multi-Language Stream & Synthesis: 28,000+ authentic open-source functions across Python, JS, Go, Java, PHP.
+  - 1:1 Balanced Vulnerability Training Matrix: Synthesizes confirmed CWE scenarios + hard negatives.
+  - Custom Domain BPE Tokenizer: Injects specialized Security IR tokens (<|sec_source|>, <|sec_sink|>, etc.).
+  - Sovereign Transformer Architecture: Initialized 100% from scratch (random Gaussian weights, RoPE, RMSNorm).
+  - True Neural Evaluation: Pure live GPU token generation on held-out test set (zero fallbacks, zero mock metrics).
+  - Direct SafeTensors & Zip Export: Exports model.safetensors, config, and 1-click vajra_model1_exported.zip.
 
 Usage:
   python train_model1_kaggle.py
@@ -236,8 +235,7 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
                 "reasoning": f"Unvalidated parameter propagation reaching security-sensitive sink ({s['cwe']}).",
                 "impact": "Potential security compromise under attacker-controlled payloads.",
                 "repair_required": True,
-                "review_status": "confirmed",
-                "discovery_path": "dual_confirmed" if random.random() > 0.50 else "ai_only"
+                "review_status": "confirmed"
             })
             
         formatted_entry = {
@@ -306,9 +304,6 @@ def stage_05_to_08_build_schema(samples: List[Dict[str, Any]], data_dir: Path):
 
 
 # ==============================================================================
-# [STAGE 09/17 - 12/17] Tokenizer, Architecture Initialization & Pretraining
-# ==============================================================================
-# ==============================================================================
 # [STAGE 09/17 - 12/17] Tokenizer, Architecture Initialization & Real PyTorch Training
 # ==============================================================================
 def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set: List[Dict[str, Any]]):
@@ -326,10 +321,21 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
         "<|sanitizer|>", "<|rate_limit|>", "<|cwe_id|>", "<|finding_start|>", "<|finding_end|>"
     ]
 
-    # Clean, domain-specific 85M causal transformer designed for rapid convergence on Kaggle T4
+    # Use fast tokenizer and register special security tokens
+    from transformers import GPT2TokenizerFast
+    try:
+        tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+        tokenizer.add_special_tokens({"additional_special_tokens": SPECIAL_TOKENS, "pad_token": "<|pad|>"})
+    except Exception:
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-0.5B", trust_remote_code=True)
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # Domain-specific 85M causal transformer with exact matching vocabulary size
     model_config = AutoConfig.for_model(
         "qwen2",
-        vocab_size=32000,
+        vocab_size=len(tokenizer),
         hidden_size=768,
         intermediate_size=2048,
         num_hidden_layers=12,
@@ -342,18 +348,6 @@ def stage_09_to_12_initialize_and_train(train_set: List[Dict[str, Any]], val_set
 
     print("  * Initializing random model weights (Trained From Scratch)...")
     model = AutoModelForCausalLM.from_config(model_config).to(device)
-
-    # Use fast tokenizer and register special security tokens
-    from transformers import GPT2TokenizerFast
-    try:
-        tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
-        tokenizer.add_special_tokens({"additional_special_tokens": SPECIAL_TOKENS, "pad_token": "<|pad|>"})
-        model.resize_token_embeddings(len(tokenizer))
-    except Exception:
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-0.5B", trust_remote_code=True)
-
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"  * Sovereign Architecture Parameters: {total_params / 1e6:.1f}M ({total_params / 1e9:.3f}B)")
@@ -489,7 +483,6 @@ def stage_13_to_16_benchmark(model, tokenizer, test_set: List[Dict[str, Any]]):
     total_safe = len(test_set) - total_vulns
 
     tp, fp, tn, fn = 0, 0, 0, 0
-    ai_only = 0
 
     eval_subset = test_set[:300]
     print(f"Evaluating {len(eval_subset)} held-out test samples directly through neural forward passes...")
@@ -526,8 +519,6 @@ def stage_13_to_16_benchmark(model, tokenizer, test_set: List[Dict[str, Any]]):
 
         if is_gt_vuln and is_pred_vuln:
             tp += 1
-            if random.random() > 0.4:
-                ai_only += 1
         elif not is_gt_vuln and is_pred_vuln:
             fp += 1
         elif not is_gt_vuln and not is_pred_vuln:
@@ -546,22 +537,22 @@ def stage_13_to_16_benchmark(model, tokenizer, test_set: List[Dict[str, Any]]):
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tpr
     f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
-    idr = ai_only / tp if tp > 0 else 0.85
+    accuracy = (tp + tn) / len(eval_subset) if len(eval_subset) > 0 else 0.0
 
     print("-" * 80)
     print(f"[*] True Positive Rate (TPR / Recall):    {tpr * 100:.2f}% ({tp}/{eval_vulns})")
     print(f"[*] False Positive Rate (FPR):            {fpr * 100:.2f}% ({fp}/{eval_safe})")
     print(f"[*] Model 1 Precision:                    {precision * 100:.2f}%")
+    print(f"[*] Model 1 Accuracy:                     {accuracy * 100:.2f}%")
     print(f"[*] Model 1 F1 Score:                     {f1 * 100:.2f}%")
-    print(f"[*] Independent Discovery Rate (IDR):     {idr * 100:.2f}%")
     print("=" * 80)
-    return idr, precision, recall, f1
+    return accuracy, precision, recall, f1
 
 
 # ==============================================================================
 # [STAGE 17/17] Model Export & Output Download (SafeTensors + Zip Archive)
 # ==============================================================================
-def stage_17_export_model(model, tokenizer, total_params: int, train_count: int, idr: float, prec: float, rec: float, output_dir: Path):
+def stage_17_export_model(model, tokenizer, total_params: int, train_count: int, acc: float, prec: float, rec: float, f1: float, output_dir: Path):
     output_dir.mkdir(parents=True, exist_ok=True)
     print("\n[Stage 17/17] Exporting Full Model Weights (SafeTensors) & Metadata...")
     
@@ -588,9 +579,10 @@ def stage_17_export_model(model, tokenizer, total_params: int, train_count: int,
         "training_paradigm": "from_scratch_sovereign_causal_transformer",
         "parameters": f"{total_params / 1e6:.1f}M ({total_params / 1e9:.3f}B)",
         "total_samples_trained": train_count,
-        "independent_discovery_rate": f"{idr * 100:.2f}%",
+        "accuracy": f"{acc * 100:.2f}%",
         "precision": f"{prec * 100:.2f}%",
         "recall": f"{rec * 100:.2f}%",
+        "f1_score": f"{f1 * 100:.2f}%",
         "schema": "VAJRA Unified Security Finding Schema",
         "formats_exported": ["model.safetensors", "config.json", "tokenizer.json", "vajra_model1_exported.zip"]
     }
@@ -625,8 +617,8 @@ def main():
     samples = stage_02_to_04_stream_datasets(data_dir)
     train_set, val_set, test_set = stage_05_to_08_build_schema(samples, data_dir)
     model, tokenizer, total_params = stage_09_to_12_initialize_and_train(train_set, val_set)
-    idr, prec, rec, f1 = stage_13_to_16_benchmark(model, tokenizer, test_set)
-    stage_17_export_model(model, tokenizer, total_params, len(train_set), idr, prec, rec, export_dir)
+    acc, prec, rec, f1 = stage_13_to_16_benchmark(model, tokenizer, test_set)
+    stage_17_export_model(model, tokenizer, total_params, len(train_set), acc, prec, rec, f1, export_dir)
 
 
 if __name__ == "__main__":
