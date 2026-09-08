@@ -342,7 +342,7 @@ def generate_ood_benchmark_suite() -> List[Dict[str, Any]]:
 # [STAGE 04/06] Live Model Execution & Exact Score Computation
 # ==============================================================================
 class Model1LiveInferenceRunner:
-    """Imports and executes the real PyTorch VAJRA Model 1 checkpoint."""
+    """Imports and executes the real PyTorch VAJRA Model 1 checkpoint with pure neural forward passes."""
     def __init__(self, model_dir: Optional[Path], device: str = "cpu"):
         self.device = device
         self.model = None
@@ -351,75 +351,55 @@ class Model1LiveInferenceRunner:
         self._load(model_dir)
 
     def _load(self, model_dir: Optional[Path]):
-        if model_dir and model_dir.exists():
-            try:
-                import torch
-                from transformers import AutoModelForCausalLM, AutoTokenizer
-                print(f"  * [Live PyTorch Import] Loading weights from {model_dir} into {self.device}...")
-                self.tokenizer = AutoTokenizer.from_pretrained(str(model_dir), trust_remote_code=True)
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    str(model_dir),
-                    dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                    device_map="auto" if self.device == "cuda" else None,
-                    trust_remote_code=True
-                )
-                print("  * [✓] VAJRA Model 1 PyTorch weights imported successfully into GPU memory!")
-            except Exception as e:
-                print(f"  * [!] PyTorch import notice: {e}")
+        if not model_dir or not model_dir.exists():
+            raise FileNotFoundError(
+                "[-] CRITICAL: Trained VAJRA Model 1 checkpoint not found!\n"
+                "    Please run train_model1_kaggle.py first to train the model from scratch,\n"
+                "    or attach your trained notebook checkpoint archive (vajra_model1_exported.zip)."
+            )
+        try:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            print(f"  * [Live PyTorch Import] Loading weights from {model_dir} into {self.device}...")
+            self.tokenizer = AutoTokenizer.from_pretrained(str(model_dir), trust_remote_code=True)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                str(model_dir),
+                dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                device_map="auto" if self.device == "cuda" else None,
+                trust_remote_code=True
+            )
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            print("  * [✓] VAJRA Model 1 PyTorch weights imported successfully into GPU memory!")
+        except Exception as e:
+            raise RuntimeError(f"[-] Failed to load VAJRA Model 1 weights from {model_dir}: {e}")
 
     def predict(self, code_snippet: str, lang: str = "java") -> Tuple[bool, str]:
         self.sample_idx += 1
-        raw_out = ""
-        
-        if self.model is not None and self.tokenizer is not None:
-            try:
-                import torch
-                prompt = (
-                    "<|im_start|>system\n"
-                    "You are VAJRA Model 1: Multilingual AI Security Analyst. Discover vulnerabilities and output structured findings in VAJRA Unified Security Finding Schema.<|im_end|>\n"
-                    f"<|im_start|>user\n[AUDIT REQUEST]\nLanguage: {lang}\nSource: OWASP Benchmark\n\nCode:\n{code_snippet}\n<|im_end|>\n"
-                    "<|im_start|>assistant\n"
-                )
-                inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-                with torch.no_grad():
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_new_tokens=48,
-                        do_sample=False,
-                        pad_token_id=self.tokenizer.eos_token_id if self.tokenizer.eos_token_id is not None else 0
-                    )
-                raw_out = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
-                is_vuln = '"vulnerable": true' in raw_out.lower() or '"vulnerable":true' in raw_out.lower() or ('vulnerable' in raw_out.lower() and 'safe' not in raw_out.lower() and 'false' not in raw_out.lower())
-                return is_vuln, raw_out
-            except Exception as e:
-                raw_out = f"Inference exception: {e}"
+        if self.model is None or self.tokenizer is None:
+            raise RuntimeError("Model 1 weights are not loaded into memory.")
 
-        # Real-world semantic taint verification across OWASP & Wild Repositories
-        sinks = [
-            "stmt.execute(sql)", "db.query(sql)", "s.executeQuery(", "stmt.executeUpdate(sql)",
-            "Runtime.getRuntime().exec", "ProcessBuilder", "FileInputStream", "Files.readAllBytes",
-            "ois.readObject()", "decoder.readObject()", "response.getWriter().println", "response.getOutputStream().write",
-            "DES/ECB/PKCS5Padding", "Blowfish", "MD5", "SHA-1", "session_id", "Set-Cookie", "Random()", "Math.random()",
-            "xpath.compile(", "xpath.evaluate(", "u.openConnection()", "client.send(",
-            "SELECT * FROM records WHERE id = '{v}'", "this.invoiceService.findRecord(id)",
-            "exec.Command(\"bash\"", "PathBuf::from(\"/var/cdn\")", "strcpy(header_buffer"
-        ]
-        sanitizers = [
-            "conn.prepareStatement", "OracleCodec", "Safe Typed ORM", "CONSTANT_VAL",
-            "ESAPI.validator()", "ls -la", "getCanonicalPath().startsWith", "FilenameUtils.getName",
-            "ValidatingObjectInputStream", "ObjectMapper", "Encode.forHtml", "escapeHtml4",
-            "AES/GCM/NoPadding", "ChaCha20-Poly1305", "SHA-256", "Argon2BytesGenerator",
-            "c.setSecure(true)", "Secure; HttpOnly; SameSite", "SecureRandom",
-            "setXPathVariableResolver", "encodeForXPath", "SSRFValidator.isSafePublicUrl",
-            "ALLOWED_HOSTS.contains", "SELECT * FROM records WHERE id = :id",
-            "if (inv.ownerId !== req.user.id)", "net.LookupIP(", "file_name().unwrap_or_default()"
-        ]
+        import torch
+        prompt = (
+            "<|im_start|>system\n"
+            "You are VAJRA Model 1: Multilingual AI Security Analyst. Discover vulnerabilities and output structured findings in VAJRA Unified Security Finding Schema.<|im_end|>\n"
+            f"<|im_start|>user\n[AUDIT REQUEST]\nLanguage: {lang}\nSource: OWASP Benchmark\n\nCode:\n{code_snippet}\n<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).to(self.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=48,
+                do_sample=False,
+                pad_token_id=self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0
+            )
+        raw_out = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
+        raw_lower = raw_out.lower()
 
-        has_sink = any(s.lower() in code_snippet.lower() for s in sinks)
-        has_sanitizer = any(s.lower() in code_snippet.lower() for s in sanitizers)
-        
-        is_vuln = has_sink and not has_sanitizer
-        return is_vuln, "Semantic Taint Trace: " + ("VULNERABLE" if is_vuln else "SAFE")
+        # Pure neural token output parsing
+        is_vuln = ('"vulnerable": true' in raw_lower) or ('"vulnerable":true' in raw_lower) or ('"vulnerable":\ntrue' in raw_lower) or ('vulnerable' in raw_lower and 'false' not in raw_lower)
+        return is_vuln, raw_out
 
 
 def evaluate_benchmarks(owasp_samples: List[Dict[str, Any]], ood_samples: List[Dict[str, Any]], model_dir: Optional[Path] = None, device: str = "cpu") -> Dict[str, Any]:
@@ -506,7 +486,7 @@ def evaluate_benchmarks(owasp_samples: List[Dict[str, Any]], ood_samples: List[D
     ood_precision = (ood_tp / (ood_tp + ood_fp)) if (ood_tp + ood_fp) > 0 else 0.0
     ood_recall = (ood_tp / total_ood_vuln) if total_ood_vuln > 0 else 0.0
     ood_f1 = (2 * ood_precision * ood_recall) / (ood_precision + ood_recall) if (ood_precision + ood_recall) > 0 else 0.0
-    ood_idr = 86.72
+    ood_idr = (ood_tp / total_ood_vuln * 100.0) if total_ood_vuln > 0 else 0.0
 
     print("\n[*] OFFICIAL OWASP BENCHMARK RESULTS (2,740 Test Cases):")
     print(f"  * True Positive Rate (TPR / Sensitivity):   {tpr * 100:.2f}% ({owasp_tp} / {total_owasp_vuln})")

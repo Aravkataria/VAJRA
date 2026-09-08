@@ -207,7 +207,7 @@ class ASTHeuristicEvaluator(BaseEvaluator):
 
 
 class VajraModel1Evaluator(BaseEvaluator):
-    """Evaluates the trained sovereign VAJRA Model 1."""
+    """Evaluates the trained sovereign VAJRA Model 1 with pure neural forward passes."""
     def __init__(self, model_dir: Optional[Path] = None):
         super().__init__("VAJRA Model 1 (Sovereign)", "Sovereign Security AI", "#f5b400")
         self.model = None
@@ -260,59 +260,54 @@ class VajraModel1Evaluator(BaseEvaluator):
                     found_dir = sub
                     break
 
-        if found_dir:
-            print(f"  * [Live Model Found] Importing VAJRA Model 1 weights from -> {found_dir}")
-            try:
-                import torch
-                from transformers import AutoModelForCausalLM, AutoTokenizer
-                self.tokenizer = AutoTokenizer.from_pretrained(str(found_dir), trust_remote_code=True)
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    str(found_dir),
-                    torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                    device_map="auto" if self.device == "cuda" else None,
-                    trust_remote_code=True
-                )
-                print("  * [✓] Successfully loaded VAJRA Model 1 PyTorch weights into GPU memory!")
-            except Exception as e:
-                print(f"  * [!] PyTorch load notice: {e}")
-        else:
-            print("  * [Live Model Notice] Checkpoint directory not found; running with sovereign reference engine.")
+        if not found_dir:
+            raise FileNotFoundError(
+                "[-] CRITICAL: Trained VAJRA Model 1 checkpoint not found for comparative evaluation!\n"
+                "    Please run train_model1_kaggle.py first or attach your exported checkpoint."
+            )
+
+        print(f"  * [Live Model Found] Importing VAJRA Model 1 weights from -> {found_dir}")
+        try:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(str(found_dir), trust_remote_code=True)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                str(found_dir),
+                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                device_map="auto" if self.device == "cuda" else None,
+                trust_remote_code=True
+            )
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            print("  * [✓] Successfully loaded VAJRA Model 1 PyTorch weights into GPU memory!")
+        except Exception as e:
+            raise RuntimeError(f"[-] Failed to load VAJRA Model 1 weights from {found_dir}: {e}")
 
     def predict(self, code_snippet: str) -> Tuple[bool, str, float]:
+        if self.model is None or self.tokenizer is None:
+            raise RuntimeError("Model 1 weights are not loaded into memory.")
+
+        import torch
         t0 = time.perf_counter()
-        
-        # Exact semantic taint analysis
-        sink_vulnerabilities = [
-            "SELECT * FROM users WHERE id =", "cursor.execute(f'UPDATE", 
-            "os.system('ping", "exec(f'sh", "open('/var/data/' +", 
-            "fs.readFileSync(path.join('/public'", "pickle.loads(",
-            "yaml.load(payload, Loader=yaml.Loader)", "res.send('<div>Hello ' + req",
-            "document.getElementById('out').innerHTML =", "DES/ECB/PKCS5Padding",
-            "crypto.createCipheriv('rc4'", "hashlib.md5(", "hashlib.sha1(",
-            "response.set_cookie('session_id', token)", "Set-Cookie: user=abc; Path=/",
-            "random.randint(100000", "Math.random() * 1000000",
-            "xpath = f\"//users/user", "doc.find(f'./account",
-            "requests.get(user_provided_url)", "fetch(req.body.webhook_url)"
-        ]
-        
-        safe_sanitizers = [
-            "db.query('SELECT * FROM accounts WHERE acc_id = ?", "ORM.find_by_id(",
-            "subprocess.run(['ping'", "shlex.quote(", "os.path.abspath(",
-            "filepath.Clean(", "json.loads(", "yaml.safe_load(", "htmlspecialchars(",
-            "document.getElementById('out').textContent =", "AES/GCM/NoPadding",
-            "aes-256-gcm", "hashlib.sha256(", "bcrypt.hashpw(", "secure=True, httponly=True",
-            "Secure; HttpOnly; SameSite", "secrets.randbelow(", "crypto.randomBytes(",
-            "query.bindVariable(", "xml_security_resolver.find(", "is_safe_public_ip(",
-            "validate_whitelist_domain("
-        ]
-
-        has_sink = any(s in code_snippet for s in sink_vulnerabilities)
-        has_sanitizer = any(s in code_snippet for s in safe_sanitizers)
-
-        is_vuln = has_sink and not has_sanitizer
-        latency_ms = (time.perf_counter() - t0) * 1000.0 + 8.4
-        verdict = f"Semantic Flow: {'VULNERABLE' if is_vuln else 'SAFE'}"
-        return is_vuln, verdict, latency_ms
+        prompt = (
+            "<|im_start|>system\n"
+            "You are VAJRA Model 1: Multilingual AI Security Analyst. Discover vulnerabilities and output structured findings in VAJRA Unified Security Finding Schema.<|im_end|>\n"
+            f"<|im_start|>user\n[AUDIT REQUEST]\nLanguage: java\nSource: OWASP Benchmark\n\nCode:\n{code_snippet}\n<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).to(self.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=48,
+                do_sample=False,
+                pad_token_id=self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0
+            )
+        raw_out = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
+        latency_ms = (time.perf_counter() - t0) * 1000.0
+        raw_lower = raw_out.lower()
+        is_vuln = ('"vulnerable": true' in raw_lower) or ('"vulnerable":true' in raw_lower) or ('"vulnerable":\ntrue' in raw_lower) or ('vulnerable' in raw_lower and 'false' not in raw_lower)
+        return is_vuln, raw_out, latency_ms
 
 
 class LiveHuggingFaceEvaluator(BaseEvaluator):
@@ -338,44 +333,37 @@ class LiveHuggingFaceEvaluator(BaseEvaluator):
                 device_map="auto" if self.device == "cuda" else None,
                 trust_remote_code=True
             )
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
             print(f"  * [✓] Successfully loaded '{self.model_id}'!")
         except Exception as e:
-            print(f"  * [!] Hugging Face load error for '{self.model_id}': {e}")
-            print("  * Falling back to Standard Code LLM Zero-Shot Inference Engine.")
+            raise RuntimeError(f"[-] Failed to download / load Hugging Face model '{self.model_id}': {e}")
 
     def predict(self, code_snippet: str) -> Tuple[bool, str, float]:
+        if self.model is None or self.tokenizer is None:
+            raise RuntimeError(f"Model '{self.model_id}' is not loaded.")
+
+        import torch
         t0 = time.perf_counter()
-        
         prompt = (
             "You are an automated code security auditor. Analyze this function for security vulnerabilities.\n"
-            "Respond ONLY in valid JSON: {\"is_vulnerable\": true} or {\"is_vulnerable\": false}.\n\n"
+            "Respond ONLY in valid JSON: {\"vulnerable\": true} or {\"vulnerable\": false}.\n\n"
             f"Code:\n{code_snippet}\n"
         )
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).to(self.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=32,
+                do_sample=False,
+                pad_token_id=self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0
+            )
+        raw_text = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
+        latency_ms = (time.perf_counter() - t0) * 1000.0
 
-        if self.model is not None and self.tokenizer is not None:
-            try:
-                import torch
-                inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-                with torch.no_grad():
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_new_tokens=32,
-                        temperature=0.01,
-                        do_sample=False,
-                        pad_token_id=self.tokenizer.eos_token_id
-                    )
-                raw_text = self.tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-                latency_ms = (time.perf_counter() - t0) * 1000.0
-
-                is_vuln = "true" in raw_text.lower() and "false" not in raw_text.lower()
-                return is_vuln, raw_text.strip(), latency_ms
-            except Exception as e:
-                pass
-
-        # Robust standard CodeLLM zero-shot response pattern
-        is_vuln = "user_input" in code_snippet or "os.system" in code_snippet or "pickle.loads" in code_snippet
-        latency_ms = (time.perf_counter() - t0) * 1000.0 + 135.0
-        return is_vuln, "{\"is_vulnerable\": " + str(is_vuln).lower() + "}", latency_ms
+        raw_lower = raw_text.lower()
+        is_vuln = ('"vulnerable": true' in raw_lower) or ('"vulnerable":true' in raw_lower) or ('true' in raw_lower and 'false' not in raw_lower)
+        return is_vuln, raw_text, latency_ms
 
 
 # ==============================================================================
