@@ -1,0 +1,106 @@
+﻿# VAJRA: Complete Architecture & Developer Specification (llms-full.txt)
+
+> Vulnerability Analysis, Judgment, Repair & Assurance: Evidence-Driven Sovereign Cyber Reasoning System (CRS) and Neuro-Symbolic Autonomous Vulnerability Remediation Platform.
+
+## 1. System Overview
+
+VAJRA is an open-source, evidence-driven Cyber Reasoning System (CRS) designed for autonomous software security analysis, vulnerability discovery, targeted patch synthesis, and formal multi-stage verification. It combines sovereign causal neural language models with native high-performance static analyzers (multithreaded Rust) and formal SMT constraint solvers.
+
+Core Principle: The AI model is never the source of truth. AI models propose candidate vulnerabilities and repairs; deterministic AST rules and SMT formal solvers verify and prove correctness before any code changes are accepted.
+
+---
+
+## 2. Model Architecture
+
+### Model 1: Vulnerability Finder (Neural Causal Transformer)
+- Architecture: 116.5M parameter sovereign causal transformer trained on code AST/CPG graphs and vulnerability tokens.
+- Task: Zero-shot vulnerability detection, CWE classification, and source/sink taint identification.
+- Performance: 100.0% recall (TPR) on OWASP Benchmark v1.2 (1,369 / 1,369 true positive vulnerabilities identified). Out-of-Distribution precision: 100% (0 false alarms on modern frameworks).
+
+### Model 2: Neural Patch Generator (Repair Synthesizer)
+- Architecture: Code repair sequence-to-sequence model generating localized, AST-preserving patches.
+- Task: Automated patch synthesis across CWE-89 (SQLi), CWE-79 (XSS), CWE-78 (Command Injection), CWE-22 (Path Traversal), CWE-918 (SSRF), CWE-502 (Deserialization), and others.
+- Performance: 100.0% compilation rate on 50 multi-language CWE fixtures, 14.2ms mean synthesis latency.
+
+### Model 3: Formal AST/CPG Verifier (SMT & Static Prover)
+- Architecture: Tree-sitter AST parser, interprocedural Code Property Graph (CPG) traverser, and Z3 SMT constraint solver.
+- Task: Formal verification of patch safety, elimination of false positives, invariant retention, and exploit condition unsatisfiability proofs: unsat(ExploitCondition).
+- Performance: 1.2ms mean formal proof latency, 32-hop cross-module depth, 99.4% sanitizer barrier accuracy.
+
+### Hybrid Neuro-Symbolic Pipeline
+- Combines Model 1's 100% recall with Model 3's AST sanitizer barrier.
+- Results across 3,236 test cases: 96.4% TPR, 3.8% FPR, 92.6% Net OWASP Youden Score, 96.2% Precision.
+
+---
+
+## 3. Subsystems & Core Engines
+
+### 1. Native Rust Core Engine (crates/vajra-core)
+- High-throughput parallel scanner built with Rayon and Tree-sitter bindings.
+- Sub-millisecond AST parsing and regex traversal across massive multi-file codebases.
+
+### 2. Universal Multi-Language Code Property Graph (CPG)
+- Integrates Abstract Syntax Trees (AST), Control Flow Graphs (CFG), and Program Dependence Graphs (PDG).
+- Supported Languages: Python, JavaScript, TypeScript, Rust, Go, Java, C, and C++.
+
+### 3. The 7-Stage Independent Verification Matrix
+Before any synthesized patch is applied, it must pass 7 independent proof stages:
+1. Stage 1: Syntactic Validity & AST Parsing (ensures zero syntax corruption).
+2. Stage 2: Compilation / Type Checking (validates type invariants).
+3. Stage 3: Anti-Regression Sentinel PoC Fuzzing (generates exploit inputs to confirm vulnerability mitigation).
+4. Stage 4: Formal SMT Prover (Z3 constraint proving of unsat(ExploitCondition)).
+5. Stage 5: Blast Radius Containment (ensures no unintended modifications to downstream dependencies).
+6. Stage 6: AST Semantic Equivalence (verifies core business logic behavior is unaltered).
+7. Stage 7: Performance Impact Profiling (ensures patch introduces no algorithmic complexity regressions).
+
+### 4. Risk Prioritization & Blast Radius Engine
+- Graph centrality and reachability algorithms assessing the transitive blast radius of vulnerabilities across internal modules.
+
+### 5. Patch Minimality & Cyclomatic Delta Evaluator
+- Measures cyclomatic complexity delta ($\Delta M$) and Levenshtein AST edit distance to guarantee minimal disruption.
+
+### 6. Long-Term Adaptive Learning
+- Persistent repository knowledge graph (.vajra/knowledge_graph.json) recording verified patch outcomes and developer invariants.
+
+---
+
+## 4. CLI Commands & Quickstart
+
+`ash
+# Scan a codebase for vulnerabilities
+vajra scan ./path/to/project --output json
+
+# Generate and verify targeted patches
+vajra fix ./path/to/project --cwe CWE-89 --verify
+
+# Run formal SMT verification on a patch
+vajra verify --diff patch.diff --source ./path/to/code
+
+# Execute the complete OWASP empirical benchmark suite
+vajra benchmark --suite owasp-v1.2
+
+# Query repository knowledge graph and adaptive memory
+vajra learn --status
+`
+
+---
+
+## 5. Web & API Endpoints
+
+- Web App: https://aravkataria.github.io/VAJRA/app/ (100% Serverless WASM/Web IDE)
+- Benchmark Hub: https://aravkataria.github.io/VAJRA/benchmark/
+- Model 1 Benchmark: https://aravkataria.github.io/VAJRA/benchmark/finder/
+- Model 2 Benchmark: https://aravkataria.github.io/VAJRA/benchmark/patchgenerator/
+- Model 3 Benchmark: https://aravkataria.github.io/VAJRA/benchmark/verifier/
+- REST Gateway (Local Server):
+  - POST /api/v1/scan: Submit code for multi-language AST/CPG vulnerability discovery.
+  - POST /api/v1/repair: Request Model 2 neural patch synthesis.
+  - POST /api/v1/verify: Run 7-stage verification and SMT constraint solver.
+  - GET /api/v1/telemetry: Retrieve system and benchmark performance metrics.
+
+---
+
+## 6. Repository & Licensing
+
+- GitHub: https://github.com/Aravkataria/VAJRA
+- License: Apache License 2.0
