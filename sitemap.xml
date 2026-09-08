@@ -1,0 +1,58 @@
+﻿<?xml version=1.0 encoding=UTF-8?>
+<urlset xmlns=http://www.sitemaps.org/schemas/sitemap/0.9>
+  <!-- Master Documentation & Landing -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Master Benchmark Hub -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/benchmark/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Model 1: Vulnerability Finder Empirical Benchmark -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/benchmark/finder/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Model 2: Neural Patch Generator Benchmark -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/benchmark/patchgenerator/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Model 3: Formal AST/CPG Verifier Benchmark -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/benchmark/verifier/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Interactive Web Workspace IDE -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/app/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Cyber Reasoning Chat Assistant -->
+  <url>
+    <loc>https://aravkataria.github.io/VAJRA/chatbot/</loc>
+    <lastmod>2026-09-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
