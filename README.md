@@ -23,6 +23,12 @@
 [![Download for macOS](https://img.shields.io/badge/Download_for_macOS-VAJRA--macOS.dmg-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-macOS.dmg)
 [![Download for Linux](https://img.shields.io/badge/Download_for_Linux-VAJRA--Linux.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Linux.AppImage)
 
+<p align="center">
+  <img src="https://hitscounter.dev/api/hit?url=https%3A%2F%2Faravkataria.github.io%2FVAJRA%2F&label=Website+Visitors&color=00bfff&style=for-the-badge&v=1" />
+  <img src="https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2FAravkataria%2FVAJRA&label=Repo+Visitors&color=00bfff&style=for-the-badge&v=1" />
+  <img src="https://img.shields.io/github/stars/Aravkataria/VAJRA?style=for-the-badge&color=00bfff" />
+  <img src="https://img.shields.io/github/forks/Aravkataria/VAJRA?style=for-the-badge&color=00bfff" />
+</p>
 
 | Platform | Download / Action | One-line install |
 | :--- | :--- | :--- |
