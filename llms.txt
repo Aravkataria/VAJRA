@@ -1,0 +1,40 @@
+﻿# VAJRA
+
+> Vulnerability Analysis, Judgment, Repair & Assurance: Evidence-Driven Sovereign Cyber Reasoning System (CRS) & Neuro-Symbolic Autonomous Vulnerability Remediation Platform.
+
+VAJRA connects the entire vulnerability-remediation lifecycle end-to-end: from multi-language Code Property Graph (CPG) discovery and causal risk prioritization to neural patch synthesis and 7-stage formal proof verification (including Z3 SMT constraint solving).
+
+The central design principle: **The AI model is never the source of truth.** Specialized static analyzers produce concrete evidence, neural models propose minimal candidate diffs, and an independent formal verification matrix rigorously proves correctness and safety before any code is applied.
+
+## Core Models & Subsystems
+
+- [Model 1: Vulnerability Finder](https://aravkataria.github.io/VAJRA/benchmark/finder/): 116.5M parameter causal transformer trained on AST & Code Property Graph representations for zero-shot vulnerability discovery with 100% recall across OWASP Benchmark v1.2.
+- [Model 2: Neural Patch Generator](https://aravkataria.github.io/VAJRA/benchmark/patchgenerator/): Targeted code repair generator producing syntax-validated diffs with 100% compilation success and AST invariant preservation across multi-language CWE suites.
+- [Model 3: Formal AST/CPG Verifier](https://aravkataria.github.io/VAJRA/benchmark/verifier/): Interprocedural static analysis engine powered by Tree-sitter and Z3 SMT constraint solving to formally prove patch safety and eliminate false positives.
+
+## Documentation & Web Resources
+
+- [Home & Documentation](https://aravkataria.github.io/VAJRA/): Master documentation, architectural overview, component breakdown, and quickstart guide.
+- [Master Benchmark Hub](https://aravkataria.github.io/VAJRA/benchmark/): Comprehensive empirical evaluation across 3,236 test cases (OWASP Benchmark v1.2 + wild framework codebases).
+- [Interactive Web Workspace](https://aravkataria.github.io/VAJRA/app/): 100% serverless browser IDE for scanning repositories, visualizing vulnerability graphs, and applying verified patches.
+- [GitHub Repository](https://github.com/Aravkataria/VAJRA): Full source code, native Rust core engine, Python AI engines, Tauri desktop GUI, and test suites.
+
+## Key Subsystems & Architecture
+
+- [7-Stage Independent Verification Matrix](https://github.com/Aravkataria/VAJRA#6-the-7-stage-independent-verification-matrix): Syntactic validation, compilation check, anti-regression fuzzing, SMT formal constraint proving, blast radius containment, AST equivalence checking, and performance impact profiling.
+- [Native Rust Core (ajra-core)](https://github.com/Aravkataria/VAJRA#3-native-rust-core-engine-vajra-core): High-throughput parallel scanner powered by Rayon for sub-millisecond AST and regex traversal.
+- [Universal Code Property Graph (CPG)](https://github.com/Aravkataria/VAJRA#7-universal-multi-language-code-property-graph-cpg): Merges Abstract Syntax Trees (AST), Control Flow Graphs (CFG), and Program Dependence Graphs (PDG) across Python, Rust, JavaScript, TypeScript, Go, Java, C, and C++.
+- [Risk Prioritization & Blast Radius Engine](https://github.com/Aravkataria/VAJRA#8-risk-prioritization--blast-radius-engine): Graph centrality and reachability algorithms assessing the transitive blast radius of vulnerabilities.
+- [Patch Minimality & Complexity Evaluator](https://github.com/Aravkataria/VAJRA#9-patch-minimality--complexity-evaluator): Computes cyclomatic delta ($\Delta M$) and Levenshtein AST edit distance to ensure minimal syntactic disruption.
+- [Long-Term Adaptive Learning](https://github.com/Aravkataria/VAJRA#11-long-term-adaptive-learning--outcome-tracking): Local repository knowledge graph (.vajra/knowledge_graph.json) recording verified patch outcomes and developer invariants.
+
+## CLI Reference & Integration
+
+- [CLI Reference](https://github.com/Aravkataria/VAJRA#18-command-line-interface-cli-reference): Comprehensive documentation for the ajra CLI commands (scan, ix, erify, learn, enchmark).
+- [REST API Gateway Reference](https://github.com/Aravkataria/VAJRA#19-rest-api-gateway-reference): FastAPI endpoints for vulnerability ingestion, patch proposal, and formal proof verification.
+- [CI/CD GitHub Actions Integration](https://github.com/Aravkataria/VAJRA#19-cicd-pipeline--github-actions-integration): Automated pull-request security auditing, repair generation, and verification workflow.
+
+## Optional & Raw Data
+
+- [Full OWASP Benchmark Report (JSON)](https://aravkataria.github.io/VAJRA/benchmark/assets/owasp_benchmark_report.json): Raw empirical results across all 2,740 OWASP benchmark test cases and out-of-distribution fixtures.
+- [Architecture Whitepaper (PDF)](https://github.com/Aravkataria/VAJRA/blob/main/VAJRA.pdf): Complete technical whitepaper detailing the neuro-symbolic multi-stage CRS architecture.
