@@ -4,39 +4,40 @@ benchmark_model2_kaggle.py
 
 Comprehensive Empirical Benchmark & Scientific Scorecard for
 VAJRA Model 2: Neural Patch Generator (Fine-Tuned Qwen2.5-Coder-7B).
-
-Evaluates the fine-tuned model against 50 diverse multi-language CWE fixtures:
-  1. Patch Compilation & AST Parsing Pass Rate (%)
-  2. Unified Diff Format Integrity (%)
-  3. Vulnerability Mitigation & AST Invariant Retention (%)
-  4. Cyclomatic Complexity Delta (Delta M)
-  5. Mean Synthesis Latency on GPU (ms)
-
-Usage:
-  python benchmark_model2_kaggle.py
-  (or in Kaggle notebook: !python benchmark_model2_kaggle.py)
+Auto-installs dependencies if missing.
 """
 
-import os
 import sys
+import subprocess
+
+for pkg, import_name in [
+    ("bitsandbytes>=0.43.0", "bitsandbytes"),
+    ("peft", "peft"),
+    ("transformers", "transformers"),
+    ("accelerate", "accelerate"),
+    ("tqdm", "tqdm")
+]:
+    try:
+        __import__(import_name)
+    except ImportError:
+        print(f"[*] Auto-installing {pkg}...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-U", pkg])
+
+import os
 import gc
 import time
 import json
 import ast
 import re
 import difflib
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
+from tqdm.auto import tqdm
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import PeftModel
 
-try:
-    from tqdm.auto import tqdm
-except ImportError:
-    os.system("pip install -q tqdm")
-    from tqdm.auto import tqdm
-
-# ==============================================================================
-# 50 Multi-Language CWE Benchmark Fixtures
-# ==============================================================================
 BENCHMARK_FIXTURES = [
     {
         "id": "FIX-001",
@@ -117,13 +118,57 @@ BENCHMARK_FIXTURES = [
     }
 ]
 
-# Create full 50-item benchmark suite
 FULL_BENCHMARK_SUITE = []
 for i in range(50):
     base = BENCHMARK_FIXTURES[i % len(BENCHMARK_FIXTURES)]
     item = dict(base)
     item["id"] = f"FIX-{i+1:03d}"
     FULL_BENCHMARK_SUITE.append(item)
+
+
+def get_adapter_path() -> str:
+    search_roots = [
+        os.getcwd(),
+        "/kaggle/working",
+        "/kaggle/input",
+        "./vajra_model2_patch_generator_lora",
+        "../training/model2_patch_generator/weights",
+        "./weights",
+        "/tmp",
+        os.path.expanduser("~"),
+        ".."
+    ]
+    for root in search_roots:
+        if os.path.exists(root):
+            if os.path.exists(os.path.join(root, "adapter_model.safetensors")):
+                return os.path.abspath(root)
+            for dirpath, _, filenames in os.walk(root):
+                if "adapter_model.safetensors" in filenames and "adapter_config.json" in filenames:
+                    if "checkpoint-" not in os.path.basename(dirpath):
+                        return os.path.abspath(dirpath)
+                    
+    for root in search_roots:
+        if os.path.exists(root):
+            for dirpath, _, filenames in os.walk(root):
+                for f in filenames:
+                    if f.endswith(".zip"):
+                        zip_file = os.path.join(dirpath, f)
+                        try:
+                            with zipfile.ZipFile(zip_file, "r") as z:
+                                names = z.namelist()
+                                if any("adapter_model.safetensors" in name or "adapter_config.json" in name for name in names):
+                                    extract_target = os.path.abspath("./vajra_model2_patch_generator_lora")
+                                    print(f"[*] Found adapter zip archive: {zip_file}")
+                                    print(f"[*] Extracting into: {extract_target}...")
+                                    z.extractall(extract_target)
+                                    for extract_root, _, extract_files in os.walk(extract_target):
+                                        if "adapter_model.safetensors" in extract_files:
+                                            return os.path.abspath(extract_root)
+                        except Exception:
+                            pass
+
+    print("[-] Error: Could not locate 'vajra_model2_patch_generator_lora' or 'vajra_model2_patch_generator.zip'.")
+    sys.exit(1)
 
 
 def validate_python_ast(code: str) -> bool:
@@ -145,18 +190,16 @@ def run_benchmark():
     print("VAJRA MODEL 2: NEURAL PATCH GENERATOR - EMPIRICAL BENCHMARK SCORECARD")
     print("=" * 85)
 
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-    from peft import PeftModel
-
     base_model_id = "Qwen/Qwen2.5-Coder-7B-Instruct"
-    adapter_path = "./vajra_model2_patch_generator_lora"
+    adapter_path = get_adapter_path()
 
-    if not os.path.exists(adapter_path):
-        print(f"Error: LoRA adapter directory '{adapter_path}' not found. Please train first.")
-        sys.exit(1)
+    print(f"\n[1/3] Successfully Loaded Weights from: {adapter_path}")
+    print(f"[1/3] Loading Tokenizer from {base_model_id}...")
+    tokenizer = AutoTokenizer.from_pretrained(base_model_id, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
-    print(f"\n[1/3] Loading Model 2 Checkpoint: {adapter_path}...")
+    print(f"[1/3] Loading Base Model: {base_model_id} with 4-Bit NF4...")
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -164,7 +207,6 @@ def run_benchmark():
         bnb_4bit_compute_dtype=torch.float16
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(adapter_path, trust_remote_code=True)
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_id,
         quantization_config=bnb_config,
@@ -270,6 +312,7 @@ def run_benchmark():
         }, f, indent=2)
 
     print(f"\n[3/3] Exported detailed scorecard report to: {report_path}")
+
 
 if __name__ == "__main__":
     run_benchmark()
