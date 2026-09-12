@@ -4,24 +4,38 @@ benchmark_model2_kaggle.py
 
 Comprehensive Empirical Benchmark & Scientific Scorecard for
 VAJRA Model 2: Neural Patch Generator (Fine-Tuned Qwen2.5-Coder-7B).
-Auto-installs dependencies if missing.
+Auto-installs and verifies bitsandbytes>=0.46.1 and required dependencies.
 """
 
 import sys
 import subprocess
 
-for pkg, import_name in [
-    ("bitsandbytes>=0.43.0", "bitsandbytes"),
-    ("peft", "peft"),
-    ("transformers", "transformers"),
-    ("accelerate", "accelerate"),
-    ("tqdm", "tqdm")
-]:
-    try:
-        __import__(import_name)
-    except ImportError:
-        print(f"[*] Auto-installing {pkg}...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-U", pkg])
+def ensure_dependencies():
+    packages = [
+        ("bitsandbytes", "bitsandbytes>=0.46.1", "0.46.1"),
+        ("peft", "peft>=0.12.0", "0.12.0"),
+        ("transformers", "transformers>=4.44.0", "4.44.0"),
+        ("accelerate", "accelerate>=0.33.0", "0.33.0"),
+        ("tqdm", "tqdm", "4.0.0")
+    ]
+    for module_name, pip_spec, min_ver in packages:
+        needs_install = False
+        try:
+            mod = __import__(module_name)
+            import importlib.metadata
+            installed_ver = importlib.metadata.version(module_name)
+            inst_parts = [int(x) if x.isdigit() else 0 for x in installed_ver.split(".")[:3]]
+            min_parts = [int(x) if x.isdigit() else 0 for x in min_ver.split(".")[:3]]
+            if inst_parts < min_parts:
+                needs_install = True
+        except Exception:
+            needs_install = True
+
+        if needs_install:
+            print(f"[*] Installing/Upgrading required package: {pip_spec}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-U", pip_spec])
+
+ensure_dependencies()
 
 import os
 import gc
@@ -207,12 +221,23 @@ def run_benchmark():
         bnb_4bit_compute_dtype=torch.float16
     )
 
-    base_model = AutoModelForCausalLM.from_pretrained(
-        base_model_id,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True
-    )
+    try:
+        base_model = AutoModelForCausalLM.from_pretrained(
+            base_model_id,
+            quantization_config=bnb_config,
+            device_map="auto",
+            trust_remote_code=True
+        )
+    except Exception as e:
+        print(f"[!] Warning: 4-bit NF4 loading encountered issue: {e}")
+        print("[*] Falling back to 16-Bit float16 loading...")
+        base_model = AutoModelForCausalLM.from_pretrained(
+            base_model_id,
+            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            device_map="auto" if torch.cuda.is_available() else None,
+            trust_remote_code=True
+        )
+
     model = PeftModel.from_pretrained(base_model, adapter_path)
     model.eval()
 
