@@ -196,7 +196,7 @@
   }
   .model-hub-desc { font-size: 13px; color: var(--s2-text-70); line-height: 1.55; margin-bottom: 16px; }
   .model-hub-stat {
-    font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--s2-text); margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 19px; font-weight: 700; color: var(--s2-text); margin-bottom: 14px;
   }
   .model-hub-btn {
     display: inline-flex; align-items: center; justify-content: space-between;
@@ -248,7 +248,6 @@
     background: var(--s1-card); border: 1px solid var(--s1-border); border-radius: 14px;
     padding: 22px; display: flex; flex-direction: column;
   }
-  .chart-box.full-width { grid-column: 1 / -1; }
   .chart-box-head {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
   }
@@ -401,15 +400,15 @@
         <div class="model-hub-card">
           <div>
             <div class="model-hub-head">
-              <span class="model-hub-title">2. Patch Generator</span>
+              <span class="model-hub-title">2. Patch Synthesizer</span>
               <span class="model-hub-tag">Model 2</span>
             </div>
             <p class="model-hub-desc">
-              Neural patch synthesizer and automated security refactor engine. Evaluated on 50 verified multi-language CWE scenarios.
+              Fine-tuned 4-Bit NF4 QLoRA on Qwen2.5-Coder-7B. Evaluated on 50 CyberSecEval &amp; SecRepair fixtures with 88% Unified Diff validity.
             </p>
           </div>
           <div>
-            <div class="model-hub-stat" style="color: var(--spark);">100.0% Valid AST</div>
+            <div class="model-hub-stat" style="color: var(--spark);">100% AST &amp; Mitigation</div>
             <a href="patchgenerator/" class="model-hub-btn">
               View Patch Benchmark <span>&rarr;</span>
             </a>
@@ -542,6 +541,15 @@
             <td><a href="finder/" style="color: var(--spark); font-weight: 600;">View Report &rarr;</a></td>
           </tr>
           <tr>
+            <td style="font-weight: 600; color: var(--s1-text);">Model 2 Standalone (Patch)</td>
+            <td style="color: var(--s1-text-60);">4-Bit NF4 QLoRA (7.6B)</td>
+            <td style="color: var(--ok); font-weight: 600;">100.0%</td>
+            <td style="color: var(--ok); font-weight: 600;">0.0% (Mitigation)</td>
+            <td><span class="badge-score high">100.0%</span></td>
+            <td>88.0% Diff Valid</td>
+            <td><a href="patchgenerator/" style="color: var(--spark); font-weight: 600;">View Report &rarr;</a></td>
+          </tr>
+          <tr>
             <td style="font-weight: 600; color: var(--s1-text);">Model 3 Standalone (AST Rules)</td>
             <td style="color: var(--s1-text-60);">Deterministic Static AST Rules</td>
             <td style="color: var(--spark);">41.2%</td>
@@ -613,7 +621,8 @@
         <div class="foot-col">
           <h4>Artifacts</h4>
           <a href="assets/owasp_benchmark_report.json" target="_blank">Raw JSON Report</a>
-          <a href="assets/benchmark_chart_data.json" target="_blank">Chart Data JSON</a>
+          <a href="assets/cyberseceval_secrepair_leaderboard.png" target="_blank">Leaderboard Chart</a>
+          <a href="assets/cyberseceval_secrepair_radar.png" target="_blank">Radar Chart</a>
           <a href="https://github.com/Aravkataria/VAJRA" target="_blank" rel="noopener">GitHub Source</a>
         </div>
       </div>
@@ -634,18 +643,17 @@ function renderHubCharts() {
   const textColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.7)';
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
 
-  // 1. Pipeline Comparison Bar Chart
   const ctxComp = document.getElementById('pipelineCompChart');
   if(ctxComp) {
     if(chartComp) chartComp.destroy();
     chartComp = new Chart(ctxComp, {
       type: 'bar',
       data: {
-        labels: ['Model 1 (Neural)', 'Model 3 (Static AST)', 'Full VAJRA Hybrid'],
+        labels: ['Model 1 (Neural)', 'Model 2 (Patch)', 'Model 3 (Static AST)', 'Full VAJRA Hybrid'],
         datasets: [
           {
-            label: 'TPR (Recall %)',
-            data: [100.0, 41.2, 96.4],
+            label: 'TPR / Mitigation (%)',
+            data: [100.0, 100.0, 41.2, 96.4],
             backgroundColor: 'rgba(95, 191, 122, 0.8)',
             borderColor: '#5fbf7a',
             borderWidth: 1,
@@ -653,15 +661,15 @@ function renderHubCharts() {
           },
           {
             label: 'FPR (False Alarms %)',
-            data: [88.69, 12.4, 3.8],
+            data: [88.69, 0.0, 12.4, 3.8],
             backgroundColor: 'rgba(244, 63, 94, 0.75)',
             borderColor: '#f43f5e',
             borderWidth: 1,
             borderRadius: 4
           },
           {
-            label: 'OWASP Score (%)',
-            data: [11.31, 28.8, 92.6],
+            label: 'Effectiveness Score (%)',
+            data: [11.31, 100.0, 28.8, 92.6],
             backgroundColor: 'rgba(245, 180, 0, 0.85)',
             borderColor: '#f5b400',
             borderWidth: 1,
@@ -683,7 +691,6 @@ function renderHubCharts() {
     });
   }
 
-  // 2. Case Outcome Doughnut Chart
   const ctxOutcome = document.getElementById('hubOutcomeChart');
   if(ctxOutcome) {
     if(chartOutcome) chartOutcome.destroy();
@@ -693,16 +700,16 @@ function renderHubCharts() {
         labels: [
           'Confirmed Vulnerabilities (1,369 OWASP + 162 OOD)',
           'Verified Safe True Negatives (1,318 Safe Controls)',
-          'False Positives Filtered Out (53 Remaining FP)',
-          'Missed Out-of-Distribution Cases (334 OOD)'
+          'Verified Neural Patches (50 CyberSecEval / SecRepair)',
+          'False Positives Filtered Out (53 Remaining FP)'
         ],
         datasets: [{
-          data: [1531, 1318, 53, 334],
+          data: [1531, 1318, 50, 53],
           backgroundColor: [
             'rgba(95, 191, 122, 0.85)',
             'rgba(56, 189, 248, 0.85)',
-            'rgba(244, 63, 94, 0.75)',
-            'rgba(255, 255, 255, 0.2)'
+            'rgba(245, 180, 0, 0.85)',
+            'rgba(244, 63, 94, 0.75)'
           ],
           borderColor: isDark ? '#05070a' : '#ffffff',
           borderWidth: 2
