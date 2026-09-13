@@ -621,120 +621,120 @@
       <p>Detailed breakdown of AST Compilation Pass Rate, Vulnerability Mitigation, Git Diff Format Validity, and CyberSecEval scores.</p>
     </div>
 
-    <div class="table-box">
+        <div class="table-box">
       <table class="leaderboard-table">
         <thead>
           <tr>
             <th>Model Architecture</th>
             <th>Deployment Tier</th>
+            <th>Parameter Scale</th>
             <th>AST Compilation Pass Rate</th>
             <th>Vulnerability Mitigation Rate</th>
             <th>Unified Diff Validity</th>
             <th>CyberSecEval Score</th>
             <th>SecRepair Pass Rate</th>
-            <th>Unit Cost / 1K</th>
           </tr>
         </thead>
         <tbody>
           <tr class="vajra-row">
             <td><span class="badge-vajra">VAJRA Model 2 (7B QLoRA)</span></td>
             <td><span class="badge-tier">Sovereign Local Edge</span></td>
+            <td>7.6B (4-Bit NF4)</td>
             <td style="color: var(--ok); font-weight: 700;">100.0%</td>
             <td style="color: var(--ok); font-weight: 700;">100.0%</td>
             <td style="color: var(--spark); font-weight: 700;">88.0%</td>
             <td style="color: var(--ok); font-weight: 700;">98.5%</td>
             <td style="color: var(--ok); font-weight: 700;">96.0%</td>
-            <td style="color: var(--ok); font-weight: 700;">$0.00</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">OpenAI o3-mini (High Reasoning)</td>
             <td><span class="badge-tier">Frontier Cloud API</span></td>
+            <td>Undisclosed (~50B)</td>
             <td style="color: var(--ok);">98.0%</td>
             <td style="color: var(--ok);">96.0%</td>
             <td>72.0%</td>
             <td style="color: var(--ok);">94.2%</td>
             <td style="color: var(--ok);">92.5%</td>
-            <td style="color: var(--danger);">$12.00</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">OpenAI o1 Preview</td>
             <td><span class="badge-tier">Frontier Reasoning API</span></td>
+            <td>Undisclosed (~200B)</td>
             <td style="color: var(--ok);">96.0%</td>
             <td style="color: var(--ok);">94.0%</td>
             <td>70.0%</td>
             <td style="color: var(--ok);">93.5%</td>
             <td>90.0%</td>
-            <td style="color: var(--danger);">$30.00</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">Claude 3.7 Sonnet (Hybrid)</td>
             <td><span class="badge-tier">Frontier Cloud API</span></td>
+            <td>Undisclosed (~100B)</td>
             <td style="color: var(--ok);">98.0%</td>
             <td style="color: var(--ok);">96.0%</td>
             <td>76.0%</td>
             <td style="color: var(--ok);">95.0%</td>
             <td style="color: var(--ok);">93.0%</td>
-            <td style="color: var(--danger);">$24.00</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">Claude 3.5 Sonnet (June/Oct)</td>
             <td><span class="badge-tier">Frontier Cloud API</span></td>
+            <td>Undisclosed (~70B)</td>
             <td style="color: var(--ok);">96.0%</td>
             <td style="color: var(--ok);">92.0%</td>
             <td>74.0%</td>
             <td style="color: var(--ok);">92.8%</td>
             <td>89.5%</td>
-            <td style="color: var(--danger);">$24.00</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">DeepSeek-V3 / R1 (671B MoE)</td>
             <td><span class="badge-tier">Open Frontier MoE</span></td>
+            <td>671B (37B active)</td>
             <td style="color: var(--ok);">95.0%</td>
             <td style="color: var(--ok);">93.0%</td>
             <td>70.0%</td>
             <td style="color: var(--ok);">91.5%</td>
             <td>88.0%</td>
-            <td style="color: var(--warn);">$2.50 (Host)</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">Qwen2.5-Coder-32B-Instruct</td>
             <td><span class="badge-tier">Open Weights</span></td>
+            <td>32.5B</td>
             <td style="color: var(--ok);">94.0%</td>
             <td>90.0%</td>
             <td>66.0%</td>
             <td>89.2%</td>
             <td>85.0%</td>
-            <td style="color: var(--ok);">$0.00 (Self-Host)</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">Mistral Codestral-22B</td>
             <td><span class="badge-tier">Open Weights</span></td>
+            <td>22.2B</td>
             <td>90.0%</td>
             <td>88.0%</td>
             <td>62.0%</td>
             <td>86.4%</td>
             <td>82.0%</td>
-            <td style="color: var(--ok);">$0.00 (Self-Host)</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">Llama-3.1-8B-Instruct</td>
             <td><span class="badge-tier">Commodity 8B</span></td>
+            <td>8.0B</td>
             <td>82.0%</td>
             <td>74.0%</td>
             <td>38.0%</td>
             <td>74.0%</td>
             <td>68.0%</td>
-            <td style="color: var(--ok);">$0.00 (Self-Host)</td>
           </tr>
           <tr>
             <td style="font-weight: 600; color: var(--s1-text);">CodeLlama-7B-Instruct</td>
             <td><span class="badge-tier">Legacy 7B</span></td>
+            <td>6.9B</td>
             <td>76.0%</td>
             <td>68.0%</td>
             <td>32.0%</td>
             <td>68.0%</td>
             <td>62.0%</td>
-            <td style="color: var(--ok);">$0.00 (Self-Host)</td>
           </tr>
         </tbody>
       </table>
