@@ -1,0 +1,29 @@
+{
+  "add_prefix_space": false,
+  "backend": "tokenizers",
+  "bos_token": "<|endoftext|>",
+  "eos_token": "<|endoftext|>",
+  "errors": "replace",
+  "extra_special_tokens": [
+    "<|pad|>",
+    "<|eos|>",
+    "<|im_start|>",
+    "<|im_end|>",
+    "<|sec_source|>",
+    "<|sec_sink|>",
+    "<|sec_flow|>",
+    "<|sec_boundary|>",
+    "<|authn_guard|>",
+    "<|authz_guard|>",
+    "<|sanitizer|>",
+    "<|rate_limit|>",
+    "<|cwe_id|>",
+    "<|finding_start|>",
+    "<|finding_end|>"
+  ],
+  "is_local": false,
+  "model_max_length": 1024,
+  "pad_token": "<|pad|>",
+  "tokenizer_class": "GPT2Tokenizer",
+  "unk_token": "<|endoftext|>"
+}

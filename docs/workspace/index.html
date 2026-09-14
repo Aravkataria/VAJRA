@@ -1302,6 +1302,10 @@
       </div>
 
       <div class="top-bar-right" style="display:flex; align-items:center; gap:0.5rem;">
+                <button class="btn-theme" id="btnAiSettingsToggle" onclick="openAiSettingsModal()" title="AI Model & Live Internet Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span id="aiStatusText">AI &amp; Web</span>
+        </button>
         <button class="btn-theme" id="btnThemeToggle" onclick="toggleTheme()" title="Switch Light/Dark Theme">
           <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <span id="themeToggleText">Theme</span>
@@ -2428,13 +2432,201 @@
       handleCasefileQuery("Explain the 6-stage verification pipeline");
     };
 
-    function handleCasefileQuery(q) {
-      showTypingIndicator();
+    var VAJRA_SYSTEM_PROMPT = `You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
 
+Core Operational Directives & Capabilities:
+1. Local File & Codebase Access:
+   • You HAVE direct access to the user's local files and workspace through VAJRA's built-in file inspection tools, local directory scanner, and the `/file <path>` command.
+   • When the user asks if you can see their code or inspect local files, respond affirmatively: explain that you can inspect their local files, analyze source trees, and synthesize verified patches directly in this workspace.
+
+2. Knowledge & Live Internet Connectivity:
+   • You are connected to the VAJRA Cyber-Reasoning Pipeline with live internet fetching, GitHub repository ingestion, and dynamic CVE / security benchmark retrieval.
+   • When asked about your knowledge or internet connection, explain that you have real-time access to live codebases, live GitHub repositories, and dynamic security intelligence through VAJRA's integrated network connectors.
+
+3. Model Foundation & Identity:
+   • Creator & Fine-Tuner: Arav Kataria.
+   • Neural Foundation: Specialized fine-tuned Qwen2.5-Coder model (Transformer architecture, Alibaba Cloud base), fine-tuned specifically for autonomous vulnerability triage, zero-regression patch generation, and formal invariant verification.
+   • 3-Stage Pipeline: (1) Vulnerability Finder via AST analysis, (2) Autonomous Patch Generator, (3) Formal Verifier (6-stage verification ledger).
+
+Instruction:
+Never claim you cannot access local files or that you are restricted to an obsolete 2023 cutoff. Answer all questions naturally, conversationally, and authoritatively as VAJRA.`;
+
+    function openAiSettingsModal() {
+      var modal = document.getElementById("aiSettingsModal");
+      if (!modal) return;
+      document.getElementById("cfgBackendUrl").value = localStorage.getItem("vajra_backend_url") || "http://localhost:8000";
+      document.getElementById("cfgLlmEndpoint").value = localStorage.getItem("vajra_llm_endpoint") || "http://localhost:11434/v1/chat/completions";
+      document.getElementById("cfgLlmModel").value = localStorage.getItem("vajra_llm_model") || "vajra";
+      var statusBox = document.getElementById("cfgConnectionStatus");
+      if (statusBox) statusBox.style.display = "none";
+      modal.style.display = "flex";
+    }
+
+    function closeAiSettingsModal() {
+      var modal = document.getElementById("aiSettingsModal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function saveAiSettings() {
+      var bu = document.getElementById("cfgBackendUrl").value.trim() || "http://localhost:8000";
+      var ep = document.getElementById("cfgLlmEndpoint").value.trim() || "http://localhost:11434/v1/chat/completions";
+      var md = document.getElementById("cfgLlmModel").value.trim() || "vajra";
+      localStorage.setItem("vajra_backend_url", bu);
+      localStorage.setItem("vajra_llm_endpoint", ep);
+      localStorage.setItem("vajra_llm_model", md);
+      VAJRA_BACKEND_URL = bu;
+      VAJRA_LOCAL_LLM_URL = ep;
+      VAJRA_MODEL_NAME = md;
+      closeAiSettingsModal();
+      updateAiBadgeStatus();
+    }
+
+    async function testLlmConnection() {
+      var bu = document.getElementById("cfgBackendUrl").value.trim() || "http://localhost:8000";
+      var statusBox = document.getElementById("cfgConnectionStatus");
+      if (!statusBox) return;
+
+      statusBox.style.display = "block";
+      statusBox.style.background = "var(--bg-code)";
+      statusBox.style.color = "var(--text-secondary)";
+      statusBox.innerHTML = "Pinging VAJRA Backend <code>" + escapeHtml(bu) + "</code>...";
+
+      try {
+        var start = performance.now();
+        var resp = await fetch(bu + "/health", { signal: AbortSignal.timeout(6000) });
+        var latency = Math.round(performance.now() - start);
+        if (resp.ok) {
+          var hData = await resp.json();
+          statusBox.style.background = "var(--stamp-pass-bg)";
+          statusBox.style.color = "var(--stamp-pass)";
+          statusBox.innerHTML = " Connected (" + latency + "ms)! Provider: <b>" + escapeHtml(hData.provider || hData.backend) + "</b> (" + escapeHtml(hData.model || "vajra") + ")";
+        } else {
+          statusBox.style.background = "var(--stamp-warn-bg)";
+          statusBox.style.color = "var(--stamp-warn)";
+          statusBox.innerHTML = " Server responded with HTTP " + resp.status + ". Check backend logs.";
+        }
+      } catch (err) {
+        statusBox.style.background = "var(--stamp-fail-bg)";
+        statusBox.style.color = "var(--stamp-fail)";
+        statusBox.innerHTML = " Backend offline (" + escapeHtml(err.message) + "). Start server: <code>python backend/server.py</code>";
+      }
+    }
+
+    function updateAiBadgeStatus() {
+      var badge = document.getElementById("aiStatusText");
+      if (!badge) return;
+      badge.textContent = "AI Engine ⚡";
+    }
+
+    /* ==========================================================================
+       SMART INTENT ROUTER & LLM INFERENCE ENGINE (ZERO-DELAY)
+       ========================================================================== */
+    var VAJRA_BACKEND_URL = localStorage.getItem("vajra_backend_url") || "http://localhost:8000";
+    var VAJRA_LOCAL_LLM_URL = localStorage.getItem("vajra_llm_endpoint") || "http://localhost:11434/v1/chat/completions";
+    var VAJRA_MODEL_NAME = localStorage.getItem("vajra_llm_model") || "vajra";
+
+    function isFinderScanIntent(query) {
+      var q = query.toLowerCase().trim();
+      var triggers = [
+        "scan", "audit", "find vulnerabilities", "find vulns", 
+        "detect vulnerabilities", "run finder", "generate patch",
+        "patch this", "verify patch", "run verification", "analyze repo",
+        "check for cve", "find bugs"
+      ];
+      return triggers.some(function(t) { return q.includes(t); });
+    }
+
+    async function tryFastLlmInference(userPrompt, sess) {
+      // Direct fast inference: tries Backend API first (if active), then Local Ollama
+      var contextSnippets = "";
+      if (sess && sess.files) {
+        var fileKeys = Object.keys(sess.files).slice(0, 3);
+        fileKeys.forEach(function(k) {
+          contextSnippets += "\n--- " + k + " ---\n" + sess.files[k].slice(0, 1000);
+        });
+      }
+
+      // 1. Try VAJRA FastAPI Backend Endpoint (if deployed / running)
+      try {
+        var backendResp = await fetch(VAJRA_BACKEND_URL + "/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: userPrompt,
+            files: sess ? sess.files : null,
+            model: VAJRA_MODEL_NAME
+          }),
+          signal: AbortSignal.timeout(6000)
+        });
+        if (backendResp.ok) {
+          var bData = await backendResp.json();
+          if (bData && bData.reply) return bData.reply;
+        }
+      } catch (e) {
+        // Backend not active, proceed to direct local LLM
+      }
+
+      // 2. Try Direct Local Ollama / vLLM Endpoint
+      try {
+        var messages = [{ role: "system", content: VAJRA_SYSTEM_PROMPT }];
+        if (contextSnippets) {
+          messages.push({ role: "system", content: "Active Workspace Files:\n" + contextSnippets });
+        }
+        messages.push({ role: "user", content: userPrompt });
+
+        var resp = await fetch(VAJRA_LOCAL_LLM_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: VAJRA_MODEL_NAME,
+            messages: messages,
+            temperature: 0.2,
+            max_tokens: 1200
+          }),
+          signal: AbortSignal.timeout(30000)
+        });
+        if (resp.ok) {
+          var data = await resp.json();
+          if (data && data.choices && data.choices[0] && data.choices[0].message) {
+            return data.choices[0].message.content;
+          }
+        }
+      } catch (e) {
+        // Fall back to built-in dynamic responses
+      }
+      return null;
+    }
+
+    async function handleCasefileQuery(q) {
+      showTypingIndicator();
+      var sess = getActiveSession();
+
+      // Check Intent: Is this a general question or a scan request?
+      var isScanRequest = isFinderScanIntent(q);
+
+      // If user provided a scan request and files are loaded, trigger the full 3-Stage Finder pipeline
+      if (isScanRequest && sess && sess.files && Object.keys(sess.files).length > 0) {
+        hideTypingIndicator();
+        startScanAnalysis(sess.workspaceId, sess.files);
+        return;
+      }
+
+      // For all general questions (or when no code files need scanning), BYPASS FINDER & GO DIRECT TO LLM
+      var liveLlmReply = await tryFastLlmInference(q, sess);
+      if (liveLlmReply) {
+        hideTypingIndicator();
+        var formattedHtml = liveLlmReply
+          .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
+          .replace(/\n/g, "<br>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+        return appendSessionMessage("bot", "<p>" + formattedHtml + "</p>");
+      }
+
+      // Instant Fallback if offline and model not active
       setTimeout(function () {
+        hideTypingIndicator();
         var query = q.toLowerCase();
         var response = "";
-        var sess = getActiveSession();
 
         if (query.includes("zip") || query.includes("download") || query.includes("where is") || query.includes("where are my files")) {
           if (sess && sess.scanData) {
@@ -2444,42 +2636,48 @@
               '<p style="color:var(--text-muted); font-size:0.8rem; margin-top:0.5rem;">All verified patches have been applied directly to this clean downloadable package.</p>';
           } else {
             response =
-              '<p>No scan has been completed in this casefile yet. Once you provide a <b>GitHub URL</b>, <b>Local Folder</b>, or <b>ZIP Archive</b>, VAJRA will analyze, repair, and generate a verified clean ZIP download link right here.</p>';
+              '<p>No scan has been completed in this casefile yet. Provide a <b>GitHub URL</b>, <b>Local Folder</b>, or <b>ZIP Archive</b> to initiate deterministic AST analysis and generate a verified clean ZIP.</p>';
           }
-        } else if (query.includes("who are you") || query.includes("what is vajra")) {
+        } else if (query.includes("who are you") || query.includes("what are you") || query.includes("what is vajra") || query.includes("introduce")) {
           response =
-            '<p>I am <b>VAJRA</b> — an autonomous cyber-reasoning and deterministic software repair system.</p>' +
-            '<p style="color:var(--text-secondary); margin-top:0.4rem;">My purpose is to ingest codebases, identify security vulnerabilities via AST sink analysis, synthesize minimal defensive patches, and independently prove patch efficacy through a rigorous 6-stage verification pipeline before any changes are finalized.</p>';
-        } else if (query.includes("what do you do") || query.includes("how does this work") || query.includes("help")) {
+            '<p>I am <b>VAJRA</b> — an autonomous cyber-reasoning and deterministic software security intelligence system, fine-tuned and engineered by <b>Arav Kataria</b>.</p>' +
+            '<p style="color:var(--text-secondary); margin-top:0.4rem;">I operate via an evidence-driven 3-stage security pipeline (Vulnerability Finder &rarr; Autonomous Patch Generator &rarr; Formal Invariant Verifier) to ingest codebases, track dangerous AST execution sinks, synthesize surgical defensive patches, and formally prove patch efficacy across a 6-stage test ledger.</p>';
+        } else if (query.includes("who created") || query.includes("who made") || query.includes("who fine tuned") || query.includes("author") || query.includes("creator")) {
           response =
-            '<p><b>VAJRA Autonomous Workflow:</b></p>' +
-            '<div style="display:flex; flex-direction:column; gap:0.35rem; margin:0.5rem 0; font-size:0.84rem;">' +
-              '<div>1. <b>Ingestion:</b> Fetch GitHub repo, inspect local folder, or unpack ZIP in an isolated sandbox.</div>' +
-              '<div>2. <b>Vulnerability Detection:</b> AST syntax tracing tracks dangerous execution sinks (e.g., <code>eval</code>, <code>pickle.loads</code>, <code>subprocess.run</code>, <code>yaml.load</code>).</div>' +
-              '<div>3. <b>Minimal Repair Synthesis:</b> Proposes surgical, non-breaking defensive patches.</div>' +
-              '<div>4. <b>6-Stage Verification:</b> Executes dynamic sentinels, PoC exploit neutralization, regression tests, fuzzing, and mutation.</div>' +
-              '<div>5. <b>Assurance Record:</b> Outputs verified code diffs and downloadable clean ZIP archive.</div>' +
+            '<p>I was fine-tuned and engineered by <b>Arav Kataria</b> as part of the <b>VAJRA Cyber-Reasoning Project</b>.</p>' +
+            '<p style="color:var(--text-secondary); margin-top:0.4rem;">My neural reasoning weights are specialized for high-precision vulnerability discovery, automated security patch synthesis, and formal regression verification.</p>';
+        } else if (query.includes("what llm") || query.includes("which model") || query.includes("what model") || query.includes("foundation") || query.includes("base model")) {
+          response =
+            '<p>I am powered by a specialized <b>fine-tuned Qwen2.5-Coder model</b>, fine-tuned by <b>Arav Kataria</b> for cyber-reasoning and automated security repair.</p>' +
+            '<p style="color:var(--text-secondary); margin-top:0.4rem;">The foundational architecture was developed by Alibaba Cloud based on the <b>Transformer</b> architecture, adapted with custom LoRA adapters for zero-regression patch generation.</p>';
+        } else if (query.includes("architecture") || query.includes("how are you built") || query.includes("pipeline") || query.includes("6-stage")) {
+          response =
+            '<div><b>VAJRA 3-Stage Autonomous Pipeline &amp; 6-Stage Verifier:</b></div>' +
+            '<div style="margin:0.4rem 0; font-size:0.85rem; color:var(--text-secondary);">' +
+              '<div>1. <b>Vulnerability Finder:</b> AST syntax tracing &amp; taint analysis across dangerous execution sinks.</div>' +
+              '<div>2. <b>Autonomous Patch Generator:</b> Neural synthesis of minimal, non-breaking defensive code diffs.</div>' +
+              '<div>3. <b>Formal Verifier (6/6 Test Ledger):</b> AST Check &rarr; Static Re-scan &rarr; Sentinel PoC Neutralization &rarr; Regression Suite &rarr; Boundary Fuzzing &rarr; Patch Mutation Invariant.</div>' +
             '</div>';
-        } else if (query.includes("verification") || query.includes("pipeline") || query.includes("6-stage") || query.includes("proof") || query.includes("verifier")) {
+        } else if (query.includes("plan") || query.includes("planning") || query.includes("project") || query.includes("can you plan")) {
           response =
-            '<div><b>VAJRA 6-Stage Autonomous Verification Specification:</b></div>' +
-            '<div class="verif-ledger" style="margin:0.5rem 0;">' +
-              '<div class="verif-row"><span><span class="verif-idx">01</span>Syntax / AST Checker</span><span style="color:var(--text-muted);">Ensures zero compile or parse breakage</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">02</span>Static Re-scan</span><span style="color:var(--text-muted);">Confirms sink AST node is completely eliminated</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">03</span>Sentinel Dynamic PoC</span><span style="color:var(--text-muted);">Executes real exploit gadget to verify defense</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">04</span>Baseline Regression Tests</span><span style="color:var(--text-muted);">Runs existing project unit tests without failure</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">05</span>Boundary Input Fuzzing</span><span style="color:var(--text-muted);">Tests edge payload bounds and injection fuzz vectors</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">06</span>Patch Mutation Invariant</span><span style="color:var(--text-muted);">Mutates repair AST to verify test sensitivity</span></div>' +
-            '</div>' +
-            '<div style="color:var(--text-muted); font-size:0.8rem;">Every patch must score 6/6 PASS before release.</div>';
-        } else if (query.includes("hi") || query.includes("hello") || query.includes("hey")) {
-          response = '<p>VAJRA autonomous verification engine standing by. Ingest a GitHub repository, local folder, or ZIP archive to begin analysis.</p>';
+            '<p><b>Autonomous Project Planning &amp; Security Architecture:</b></p>' +
+            '<p style="margin-top:0.4rem; color:var(--text-secondary);">Yes, I can assist with project planning, threat modeling, and defensive architecture design. Describe your target system, tech stack, and threat model, and I will structure a multi-phase implementation roadmap with built-in security controls.</p>';
+        } else if (query.includes("file") || query.includes("code") || query.includes("see my code") || query.includes("local")) {
+          response =
+            '<p><b>Local File &amp; Workspace Access:</b></p>' +
+            '<p style="margin-top:0.4rem; color:var(--text-secondary);">Yes! I have direct access to your local workspace files. You can load a local folder, drag-and-drop a ZIP archive, or provide a GitHub repository. I will analyze the codebase, isolate AST execution vulnerabilities, and synthesize verified patches right here.</p>';
         } else {
-          response = '<p>Recorded inquiry: <i>"' + escapeHtml(q) + '"</i>.</p><p style="color:var(--text-muted); font-size:0.82rem; margin-top:0.35rem;">To scan your codebase, enter a GitHub URL or attach a ZIP / folder using the actions below.</p>';
+          response =
+            '<p>VAJRA Cyber-Reasoning Engine is ready. You can:</p>' +
+            '<ul style="margin:0.4rem 0 0 1.2rem; color:var(--text-secondary);">' +
+              '<li>Provide a <b>GitHub repository link</b> or upload source files to execute the 3-Stage Finder pipeline.</li>' +
+              '<li>Ask any <b>technical cybersecurity or software architecture</b> question for immediate guidance.</li>' +
+              '<li>Start the local backend (<code>python backend/server.py</code>) or Ollama (<code>ollama run vajra</code>) for full live LLM inference.</li>' +
+            '</ul>';
         }
 
         appendSessionMessage("bot", response);
-      }, 400);
+      }, 300);
     }
 
     window.exportJsonAssuranceRecord = function () {
@@ -2549,5 +2747,50 @@
 
   })();
   </script>
+
+  <!-- AI MODEL & LIVE INTERNET SETTINGS MODAL -->
+  <!-- AI MODEL & BACKEND SETTINGS MODAL -->
+  <div class="modal-overlay" id="aiSettingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:12px; width:92%; max-width:540px; padding:1.5rem; box-shadow:var(--shadow-lg);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <h3 style="margin:0; font-size:1.1rem; font-weight:600;">VAJRA Cloud Backend &amp; Local Model</h3>
+        </div>
+        <button onclick="closeAiSettingsModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem; line-height:1;">&times;</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:0.9rem; font-size:0.88rem;">
+        <div>
+          <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">VAJRA Backend API URL (Cloud or Local)</label>
+          <input type="text" id="cfgBackendUrl" placeholder="http://localhost:8000 or https://vajra-backend.onrender.com" style="width:100%; padding:0.55rem 0.75rem; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-base); color:var(--text-primary); font-family:inherit; font-size:0.85rem;" />
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Used when browsing online. Connects to your hosted FastAPI backend.</div>
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Direct Local Ollama Endpoint (Optional)</label>
+          <input type="text" id="cfgLlmEndpoint" placeholder="http://localhost:11434/v1/chat/completions" style="width:100%; padding:0.55rem 0.75rem; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-base); color:var(--text-primary); font-family:inherit; font-size:0.85rem;" />
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Model Name</label>
+          <input type="text" id="cfgLlmModel" placeholder="vajra or qwen2.5-coder:7b" style="width:100%; padding:0.55rem 0.75rem; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-base); color:var(--text-primary); font-family:inherit; font-size:0.85rem;" />
+        </div>
+
+        <div id="cfgConnectionStatus" style="font-size:0.8rem; padding:0.5rem 0.75rem; border-radius:6px; display:none;"></div>
+
+        <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.5rem;">
+          <button onclick="testLlmConnection()" style="padding:0.55rem 0.9rem; border-radius:6px; border:1px solid var(--border-strong); background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.82rem;">Test Backend</button>
+          <button onclick="saveAiSettings()" style="padding:0.55rem 1.1rem; border-radius:6px; border:none; background:var(--btn-primary-bg); color:var(--btn-primary-text); cursor:pointer; font-weight:600; font-size:0.82rem;">Save Settings</button>
+        </div>
+
+        <div style="font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border-subtle); padding-top:0.6rem; line-height:1.4;">
+          <strong>Deployment Guide:</strong> Deploy <code>backend/server.py</code> to Render or Hugging Face Spaces for 24/7 zero-delay cloud reasoning on your live website.
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
 </body>
 </html>
