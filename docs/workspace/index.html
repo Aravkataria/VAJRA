@@ -1302,11 +1302,7 @@
       </div>
 
       <div class="top-bar-right" style="display:flex; align-items:center; gap:0.5rem;">
-                <button class="btn-theme" id="btnAiSettingsToggle" onclick="openAiSettingsModal()" title="AI Model & Live Internet Settings">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          <span id="aiStatusText">AI &amp; Web</span>
-        </button>
-        <button class="btn-theme" id="btnThemeToggle" onclick="toggleTheme()" title="Switch Light/Dark Theme">
+                <button class="btn-theme" id="btnThemeToggle" onclick="toggleTheme()" title="Switch Light/Dark Theme">
           <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <span id="themeToggleText">Theme</span>
         </button>
@@ -2451,79 +2447,12 @@ Core Operational Directives & Capabilities:
 Instruction:
 Never claim you cannot access local files or that you are restricted to an obsolete 2023 cutoff. Answer all questions naturally, conversationally, and authoritatively as VAJRA.`;
 
-    function openAiSettingsModal() {
-      var modal = document.getElementById("aiSettingsModal");
-      if (!modal) return;
-      document.getElementById("cfgBackendUrl").value = localStorage.getItem("vajra_backend_url") || "http://localhost:8000";
-      document.getElementById("cfgLlmEndpoint").value = localStorage.getItem("vajra_llm_endpoint") || "http://localhost:11434/v1/chat/completions";
-      document.getElementById("cfgLlmModel").value = localStorage.getItem("vajra_llm_model") || "vajra";
-      var statusBox = document.getElementById("cfgConnectionStatus");
-      if (statusBox) statusBox.style.display = "none";
-      modal.style.display = "flex";
-    }
-
-    function closeAiSettingsModal() {
-      var modal = document.getElementById("aiSettingsModal");
-      if (modal) modal.style.display = "none";
-    }
-
-    function saveAiSettings() {
-      var bu = document.getElementById("cfgBackendUrl").value.trim() || "http://localhost:8000";
-      var ep = document.getElementById("cfgLlmEndpoint").value.trim() || "http://localhost:11434/v1/chat/completions";
-      var md = document.getElementById("cfgLlmModel").value.trim() || "vajra";
-      localStorage.setItem("vajra_backend_url", bu);
-      localStorage.setItem("vajra_llm_endpoint", ep);
-      localStorage.setItem("vajra_llm_model", md);
-      VAJRA_BACKEND_URL = bu;
-      VAJRA_LOCAL_LLM_URL = ep;
-      VAJRA_MODEL_NAME = md;
-      closeAiSettingsModal();
-      updateAiBadgeStatus();
-    }
-
-    async function testLlmConnection() {
-      var bu = document.getElementById("cfgBackendUrl").value.trim() || "http://localhost:8000";
-      var statusBox = document.getElementById("cfgConnectionStatus");
-      if (!statusBox) return;
-
-      statusBox.style.display = "block";
-      statusBox.style.background = "var(--bg-code)";
-      statusBox.style.color = "var(--text-secondary)";
-      statusBox.innerHTML = "Pinging VAJRA Backend <code>" + escapeHtml(bu) + "</code>...";
-
-      try {
-        var start = performance.now();
-        var resp = await fetch(bu + "/health", { signal: AbortSignal.timeout(6000) });
-        var latency = Math.round(performance.now() - start);
-        if (resp.ok) {
-          var hData = await resp.json();
-          statusBox.style.background = "var(--stamp-pass-bg)";
-          statusBox.style.color = "var(--stamp-pass)";
-          statusBox.innerHTML = " Connected (" + latency + "ms)! Provider: <b>" + escapeHtml(hData.provider || hData.backend) + "</b> (" + escapeHtml(hData.model || "vajra") + ")";
-        } else {
-          statusBox.style.background = "var(--stamp-warn-bg)";
-          statusBox.style.color = "var(--stamp-warn)";
-          statusBox.innerHTML = " Server responded with HTTP " + resp.status + ". Check backend logs.";
-        }
-      } catch (err) {
-        statusBox.style.background = "var(--stamp-fail-bg)";
-        statusBox.style.color = "var(--stamp-fail)";
-        statusBox.innerHTML = " Backend offline (" + escapeHtml(err.message) + "). Start server: <code>python backend/server.py</code>";
-      }
-    }
-
-    function updateAiBadgeStatus() {
-      var badge = document.getElementById("aiStatusText");
-      if (!badge) return;
-      badge.textContent = "AI Engine ⚡";
-    }
-
     /* ==========================================================================
-       SMART INTENT ROUTER & LLM INFERENCE ENGINE (ZERO-DELAY)
+       SMART INTENT ROUTER & UNIFIED BACKEND INFERENCE (24/7 HF + LOCAL)
        ========================================================================== */
-    var VAJRA_BACKEND_URL = localStorage.getItem("vajra_backend_url") || "http://localhost:8000";
-    var VAJRA_LOCAL_LLM_URL = localStorage.getItem("vajra_llm_endpoint") || "http://localhost:11434/v1/chat/completions";
-    var VAJRA_MODEL_NAME = localStorage.getItem("vajra_llm_model") || "vajra";
+    var VAJRA_PRIMARY_BACKEND = "https://AravKataria-VAJRA.hf.space";
+    var VAJRA_LOCAL_BACKEND = "http://localhost:8000";
+    var VAJRA_LOCAL_OLLAMA = "http://localhost:11434/v1/chat/completions";
 
     function isFinderScanIntent(query) {
       var q = query.toLowerCase().trim();
@@ -2537,63 +2466,78 @@ Never claim you cannot access local files or that you are restricted to an obsol
     }
 
     async function tryFastLlmInference(userPrompt, sess) {
-      // Direct fast inference: tries Backend API first (if active), then Local Ollama
-      var contextSnippets = "";
-      if (sess && sess.files) {
-        var fileKeys = Object.keys(sess.files).slice(0, 3);
-        fileKeys.forEach(function(k) {
-          contextSnippets += "\n--- " + k + " ---\n" + sess.files[k].slice(0, 1000);
-        });
+      var contextFiles = null;
+      if (sess && sess.files && Object.keys(sess.files).length > 0) {
+        contextFiles = sess.files;
       }
 
-      // 1. Try VAJRA FastAPI Backend Endpoint (if deployed / running)
+      var payload = JSON.stringify({
+        prompt: userPrompt,
+        files: contextFiles,
+        model: "AravKataria/vajra-lora"
+      });
+
+      // 1. Try 24/7 Hugging Face Cloud Backend (Primary)
       try {
-        var backendResp = await fetch(VAJRA_BACKEND_URL + "/api/chat", {
+        var hfResp = await fetch(VAJRA_PRIMARY_BACKEND + "/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: userPrompt,
-            files: sess ? sess.files : null,
-            model: VAJRA_MODEL_NAME
-          }),
-          signal: AbortSignal.timeout(6000)
+          body: payload,
+          signal: AbortSignal.timeout(12000)
         });
-        if (backendResp.ok) {
-          var bData = await backendResp.json();
-          if (bData && bData.reply) return bData.reply;
+        if (hfResp.ok) {
+          var hfData = await hfResp.json();
+          if (hfData && hfData.reply) return hfData.reply;
         }
       } catch (e) {
-        // Backend not active, proceed to direct local LLM
+        // HF space connecting or offline, proceed to local fallbacks
       }
 
-      // 2. Try Direct Local Ollama / vLLM Endpoint
+      // 2. Try Local FastAPI Backend (if running locally on port 8000)
+      try {
+        var localResp = await fetch(VAJRA_LOCAL_BACKEND + "/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          signal: AbortSignal.timeout(4000)
+        });
+        if (localResp.ok) {
+          var lData = await localResp.json();
+          if (lData && lData.reply) return lData.reply;
+        }
+      } catch (e) {}
+
+      // 3. Try Local Ollama Endpoint (if running locally on port 11434)
       try {
         var messages = [{ role: "system", content: VAJRA_SYSTEM_PROMPT }];
-        if (contextSnippets) {
-          messages.push({ role: "system", content: "Active Workspace Files:\n" + contextSnippets });
+        if (contextFiles) {
+          var summary = "";
+          Object.keys(contextFiles).slice(0, 3).forEach(function(k) {
+            summary += "\n--- " + k + " ---\n" + contextFiles[k].slice(0, 1000);
+          });
+          if (summary) messages.push({ role: "system", content: "Workspace Files:\n" + summary });
         }
         messages.push({ role: "user", content: userPrompt });
 
-        var resp = await fetch(VAJRA_LOCAL_LLM_URL, {
+        var ollamaResp = await fetch(VAJRA_LOCAL_OLLAMA, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: VAJRA_MODEL_NAME,
+            model: "vajra",
             messages: messages,
             temperature: 0.2,
             max_tokens: 1200
           }),
-          signal: AbortSignal.timeout(30000)
+          signal: AbortSignal.timeout(15000)
         });
-        if (resp.ok) {
-          var data = await resp.json();
-          if (data && data.choices && data.choices[0] && data.choices[0].message) {
-            return data.choices[0].message.content;
+        if (ollamaResp.ok) {
+          var oData = await ollamaResp.json();
+          if (oData && oData.choices && oData.choices[0] && oData.choices[0].message) {
+            return oData.choices[0].message.content;
           }
         }
-      } catch (e) {
-        // Fall back to built-in dynamic responses
-      }
+      } catch (e) {}
+
       return null;
     }
 
@@ -2601,17 +2545,14 @@ Never claim you cannot access local files or that you are restricted to an obsol
       showTypingIndicator();
       var sess = getActiveSession();
 
-      // Check Intent: Is this a general question or a scan request?
-      var isScanRequest = isFinderScanIntent(q);
-
-      // If user provided a scan request and files are loaded, trigger the full 3-Stage Finder pipeline
-      if (isScanRequest && sess && sess.files && Object.keys(sess.files).length > 0) {
+      // If user asks to scan/audit and files exist, run the 3-Stage Finder pipeline
+      if (isFinderScanIntent(q) && sess && sess.files && Object.keys(sess.files).length > 0) {
         hideTypingIndicator();
         startScanAnalysis(sess.workspaceId, sess.files);
         return;
       }
 
-      // For all general questions (or when no code files need scanning), BYPASS FINDER & GO DIRECT TO LLM
+      // For general questions or non-scan prompts, BYPASS FINDER & CALL LLM DIRECTLY
       var liveLlmReply = await tryFastLlmInference(q, sess);
       if (liveLlmReply) {
         hideTypingIndicator();
@@ -2622,7 +2563,7 @@ Never claim you cannot access local files or that you are restricted to an obsol
         return appendSessionMessage("bot", "<p>" + formattedHtml + "</p>");
       }
 
-      // Instant Fallback if offline and model not active
+      // Instant built-in fallback response
       setTimeout(function () {
         hideTypingIndicator();
         var query = q.toLowerCase();
@@ -2672,7 +2613,7 @@ Never claim you cannot access local files or that you are restricted to an obsol
             '<ul style="margin:0.4rem 0 0 1.2rem; color:var(--text-secondary);">' +
               '<li>Provide a <b>GitHub repository link</b> or upload source files to execute the 3-Stage Finder pipeline.</li>' +
               '<li>Ask any <b>technical cybersecurity or software architecture</b> question for immediate guidance.</li>' +
-              '<li>Start the local backend (<code>python backend/server.py</code>) or Ollama (<code>ollama run vajra</code>) for full live LLM inference.</li>' +
+              '<li>Connected to 24/7 backend at <code>https://AravKataria-VAJRA.hf.space</code>.</li>' +
             '</ul>';
         }
 
@@ -2750,45 +2691,6 @@ Never claim you cannot access local files or that you are restricted to an obsol
 
   <!-- AI MODEL & LIVE INTERNET SETTINGS MODAL -->
   <!-- AI MODEL & BACKEND SETTINGS MODAL -->
-  <div class="modal-overlay" id="aiSettingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:12px; width:92%; max-width:540px; padding:1.5rem; box-shadow:var(--shadow-lg);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-        <div style="display:flex; align-items:center; gap:0.6rem;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          <h3 style="margin:0; font-size:1.1rem; font-weight:600;">VAJRA Cloud Backend &amp; Local Model</h3>
-        </div>
-        <button onclick="closeAiSettingsModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.4rem; line-height:1;">&times;</button>
-      </div>
-
-      <div style="display:flex; flex-direction:column; gap:0.9rem; font-size:0.88rem;">
-        <div>
-          <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">VAJRA Backend API URL (Cloud or Local)</label>
-          <input type="text" id="cfgBackendUrl" placeholder="http://localhost:8000 or https://vajra-backend.onrender.com" style="width:100%; padding:0.55rem 0.75rem; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-base); color:var(--text-primary); font-family:inherit; font-size:0.85rem;" />
-          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Used when browsing online. Connects to your hosted FastAPI backend.</div>
-        </div>
-
-        <div>
-          <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Direct Local Ollama Endpoint (Optional)</label>
-          <input type="text" id="cfgLlmEndpoint" placeholder="http://localhost:11434/v1/chat/completions" style="width:100%; padding:0.55rem 0.75rem; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-base); color:var(--text-primary); font-family:inherit; font-size:0.85rem;" />
-        </div>
-
-        <div>
-          <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Model Name</label>
-          <input type="text" id="cfgLlmModel" placeholder="vajra or qwen2.5-coder:7b" style="width:100%; padding:0.55rem 0.75rem; border-radius:6px; border:1px solid var(--border-medium); background:var(--bg-base); color:var(--text-primary); font-family:inherit; font-size:0.85rem;" />
-        </div>
-
-        <div id="cfgConnectionStatus" style="font-size:0.8rem; padding:0.5rem 0.75rem; border-radius:6px; display:none;"></div>
-
-        <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.5rem;">
-          <button onclick="testLlmConnection()" style="padding:0.55rem 0.9rem; border-radius:6px; border:1px solid var(--border-strong); background:transparent; color:var(--text-primary); cursor:pointer; font-weight:600; font-size:0.82rem;">Test Backend</button>
-          <button onclick="saveAiSettings()" style="padding:0.55rem 1.1rem; border-radius:6px; border:none; background:var(--btn-primary-bg); color:var(--btn-primary-text); cursor:pointer; font-weight:600; font-size:0.82rem;">Save Settings</button>
-        </div>
-
-        <div style="font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border-subtle); padding-top:0.6rem; line-height:1.4;">
-          <strong>Deployment Guide:</strong> Deploy <code>backend/server.py</code> to Render or Hugging Face Spaces for 24/7 zero-delay cloud reasoning on your live website.
-        </div>
-      </div>
-    </div>
   </div>
   </div>
 
