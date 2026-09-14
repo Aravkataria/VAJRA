@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+<link rel="icon" type="image/png" href="../../logo.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VAJRA &mdash; Model 3 (Verifier) Empirical Benchmark Ledger</title>
@@ -150,7 +151,38 @@
     height: 56px; display: flex; align-items: center; justify-content: space-between;
   }
   .nav-left { display: flex; align-items: center; gap: 24px; }
-  .brand { font-size: 17px; font-weight: 700; color: var(--s1-text); display: inline-flex; align-items: center; gap: 8px; }
+    .brand { font-size: 17px; font-weight: 700; color: var(--s1-text); display: inline-flex; align-items: center; gap: 8px; }
+  .brand-logo {
+      height: 28px;
+      width: auto;
+      max-width: 32px;
+      object-fit: contain;
+      display: inline-block;
+      vertical-align: middle;
+      filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.4));
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+    .brand:hover .brand-logo {
+      transform: scale(1.08);
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
+    }
+    [data-theme="light"] .brand-logo {
+      filter: invert(1) brightness(0) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    }
+    
+    
+    [data-theme="light"] 
+    
+    
+    [data-theme="light"] 
+    
+    
+    
+    [data-theme="light"] 
+    
+    
+    
+    [data-theme="light"] 
   .brand-mark { width: 14px; height: 14px; border: 2px solid var(--spark); transform: rotate(45deg); display: inline-block; }
   .slash { color: var(--s1-text-40); }
   .nav-links { display: flex; align-items: center; gap: 20px; }
@@ -349,7 +381,7 @@
 <header class="top">
   <div class="nav-inner">
     <div class="nav-left">
-      <a class="brand" href="../../"><span class="brand-mark"></span> VAJRA</a>
+      <a class="brand" href="../../"><img class="brand-logo" src="../../logo.png" alt="VAJRA Logo"> VAJRA</a>
       <span class="slash">/</span>
       <nav class="nav-links">
         <a href="../../">Main</a>
@@ -533,7 +565,7 @@
   <div class="foot-inner">
     <div class="foot-top">
       <div class="foot-brand">
-        <a href="../../">VAJRA</a>
+        <a href="../../" style="display:inline-flex;align-items:center;gap:10px;"><img class="brand-logo" src="../../logo.png" alt="VAJRA Logo" > VAJRA</a>
         <p>Empirical evidence-driven cyber-reasoning and automated security repair system. Built for verifiable software assurance.</p>
       </div>
       <div class="foot-cols">
