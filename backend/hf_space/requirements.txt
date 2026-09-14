@@ -1,0 +1,8 @@
+torch>=2.0.0
+transformers>=4.40.0
+peft>=0.10.0
+accelerate>=0.28.0
+gradio>=4.20.0
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.6.0

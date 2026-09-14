@@ -1,0 +1,18 @@
+{
+  "model_name": "vajra-model1-security-analyst-from-scratch",
+  "base_model": "None (Initialized From Scratch - Zero Pretrained Weights)",
+  "training_paradigm": "from_scratch_sovereign_causal_transformer",
+  "parameters": "116.5M (0.117B)",
+  "total_samples_trained": 4506,
+  "accuracy": "92.67%",
+  "precision": "77.05%",
+  "recall": "85.45%",
+  "f1_score": "81.03%",
+  "schema": "VAJRA Unified Security Finding Schema",
+  "formats_exported": [
+    "model.safetensors",
+    "config.json",
+    "tokenizer.json",
+    "vajra_model1_exported.zip"
+  ]
+}
