@@ -1,17 +1,24 @@
 # app/api.py
 
+import asyncio
+from contextlib import asynccontextmanager
+import hashlib
 import io
+import json
 import os
 import shutil
+import threading
+import time
+import uuid
 import zipfile
 from collections import Counter
 from dataclasses import replace
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.analysis.analyst import build_default_analyst
@@ -31,23 +38,103 @@ from app.report.builder import build_assurance_report, build_attempt_report, mar
 from app.report.html_renderer import render_assurance_report_html, render_attempt_report_html
 from app.report.models import AssuranceReport, AttemptReport
 from app.repository.manager import RepositoryManager
+from app.services.cache_manager import get_cache
+from app.services.model_manager import get_model_manager
 from app.storage.db import get_db
 from app.verification.verifier import build_default_verifier
+
+# Application-level singletons
+model_manager = get_model_manager()
+cache = get_cache()
+repo = RepositoryManager()
+patch_applier = PatchApplier()
+db = get_db()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI Lifespan: Loads Model 1 & Model 2 ONCE at server startup
+    and maintains them in memory across all requests.
+    """
+    model_manager.initialize()
+    yield
+    model_manager.shutdown()
 
 
 app = FastAPI(
     title="VAJRA",
     description="Autonomous cyber-reasoning and software repair system",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate Limiting & Production Guardrails
+RATE_LIMIT_WINDOW = 60  # seconds
+MAX_REQUESTS_PER_WINDOW = int(os.environ.get("VAJRA_RATE_LIMIT", "120"))
+_ip_request_history: Dict[str, List[float]] = {}
+_history_lock = threading.Lock()
+
+
+@app.middleware("http")
+async def production_security_and_rate_limit(request: Request, call_next):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    now = time.time()
+
+    # Rate Limiting (Sliding Window)
+    with _history_lock:
+        timestamps = _ip_request_history.setdefault(client_ip, [])
+        _ip_request_history[client_ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
+        current_count = len(_ip_request_history[client_ip])
+
+        if current_count >= MAX_REQUESTS_PER_WINDOW:
+            oldest = _ip_request_history[client_ip][0] if _ip_request_history[client_ip] else now
+            reset_in = max(1, int(RATE_LIMIT_WINDOW - (now - oldest)))
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "Rate limit exceeded",
+                    "detail": f"Allowed {MAX_REQUESTS_PER_WINDOW} requests per {RATE_LIMIT_WINDOW}s.",
+                    "code": "RATE_LIMIT_EXCEEDED",
+                },
+                headers={
+                    "X-RateLimit-Limit": str(MAX_REQUESTS_PER_WINDOW),
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": str(reset_in),
+                    "Retry-After": str(reset_in),
+                },
+            )
+        _ip_request_history[client_ip].append(now)
+        remaining = MAX_REQUESTS_PER_WINDOW - len(_ip_request_history[client_ip])
+
+    response: Response = await call_next(request)
+
+    # Security & Rate-limiting headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-RateLimit-Limit"] = str(MAX_REQUESTS_PER_WINDOW)
+    response.headers["X-RateLimit-Remaining"] = str(max(0, remaining))
+
+    # User Workspace Isolation Cookie
+    if "vajra_session" not in request.cookies:
+        session_id = str(uuid.uuid4())
+        response.set_cookie(
+            key="vajra_session",
+            value=session_id,
+            httponly=True,
+            samesite="lax",
+            max_age=86400 * 30,
+        )
+
+    return response
 
 
 def _check_api_auth(x_api_key: Optional[str] = Header(None)):
@@ -69,34 +156,64 @@ class LocalZipRequest(BaseModel):
     path: str
 
 
-repo = RepositoryManager()
-analyst = build_default_analyst()
-repairer = build_default_repairer()
-verifier = build_default_verifier()
-patch_applier = PatchApplier()
-db = get_db()
+class AnalysisOptions(BaseModel):
+    skip_cache: bool = False
+    max_repair_attempts: Optional[int] = None
+
+
+# Backward-compatible references to shared models
+analyst = model_manager.analyst
+repairer = model_manager.repairer
+verifier = model_manager.verifier
 check_model_independence(analyst, repairer)
 
 MAX_REPAIR_ATTEMPTS = int(os.environ.get("VAJRA_MAX_REPAIR_ATTEMPTS", "3"))
 _last_reports: dict[str, AssuranceReport] = {}
 
+# In-memory progress tracking for active workspace analyses
+_workspace_progress: Dict[str, Dict[str, Any]] = {}
+_progress_lock = threading.Lock()
+
+
+def _update_progress(workspace_id: str, stage: str, message: str, percent: int):
+    with _progress_lock:
+        _workspace_progress[workspace_id] = {
+            "stage": stage,
+            "message": message,
+            "percent": percent,
+            "timestamp": time.time(),
+        }
+
 
 def _tool_versions() -> dict[str, str]:
     return {
         "vajra_version": app.version,
-        "analyst": type(analyst).__name__,
-        "repairer_models": "+".join(type(m).__name__ for m in repairer.models),
-        "verifier_stages": "+".join(type(m).__name__ for m in verifier.models),
+        "analyst": type(model_manager.analyst.model).__name__,
+        "model1_version": model_manager.model1_version,
+        "model2_version": model_manager.model2_version,
+        "repairer_models": "+".join(type(m).__name__ for m in model_manager.repairer.models),
+        "verifier_stages": "+".join(type(m).__name__ for m in model_manager.verifier.models),
     }
 
 
 @app.get("/health")
 def health():
+    telemetry = model_manager.get_health_details()
+    cache_stats = cache.stats()
     return {
         "status": "ok",
         "service": "VAJRA",
-        "repair_models": [type(m).__name__ for m in repairer.models],
-        "verifier_stages": [type(m).__name__ for m in verifier.models],
+        "version": app.version,
+        "backend": "ready",
+        "repair_models": telemetry["model2"]["implementations"],
+        "verifier_stages": [type(m).__name__ for m in model_manager.verifier.models],
+        "model1": telemetry["model1"],
+        "model2": telemetry["model2"],
+        "cache": {
+            "status": "available",
+            **cache_stats,
+        },
+        "concurrency": telemetry["concurrency"],
     }
 
 
@@ -316,7 +433,11 @@ def _refresh_decision(decision, workspace_path):
 
     current = min(candidates, key=lambda f: abs(f.line - e.line))
     evidence = build_evidence([current], repository=e.repository, commit=e.commit)[0]
-    assessment = analyst.analyze(evidence)
+    current_analyst = analyst if analyst is not None else model_manager.analyst
+    if current_analyst is model_manager.analyst:
+        assessment = model_manager.analyze(evidence)
+    else:
+        assessment = current_analyst.analyze(evidence)
     refreshed = decide(evidence, assessment)
     return refreshed, assessment
 
@@ -346,19 +467,78 @@ def _classify_findings(initial_findings, final_findings):
     )
 
 
-@app.post("/workspace/{workspace_id}/scan")
-def scan_repository(workspace_id: str):
+def execute_analysis_pipeline(
+    workspace_id: str,
+    skip_cache: bool = False,
+    max_repair_attempts: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Unified end-to-end VAJRA analysis and repair pipeline.
+    Stateless models, isolated workspace artifacts, live progress reporting,
+    and deterministic stage-aware caching.
+    """
     workspace_path = repo.workspaces_dir / workspace_id
     if not workspace_path.is_dir():
         raise HTTPException(status_code=404, detail=f"Workspace not found: {workspace_id}")
 
+    # Set up isolated workspace directory layout
+    dirs = repo.ensure_workspace_layout(workspace_path)
+    effective_max_attempts = max_repair_attempts if max_repair_attempts is not None else MAX_REPAIR_ATTEMPTS
+
+    _update_progress(workspace_id, "indexing", "Indexing repository files & language detection", 10)
+
     try:
+        # Check cache if not skipped
+        hasher = hashlib.sha256()
+        internal_subdirs = {"evidence", "findings", "patches", "verification", "reports", ".git"}
+        for f in sorted(workspace_path.rglob("*")):
+            if f.is_file():
+                parts = f.relative_to(workspace_path).parts
+                if not any(p in internal_subdirs for p in parts[:-1]):
+                    hasher.update(str(f.relative_to(workspace_path)).encode())
+                    hasher.update(f.read_bytes()[:100000])
+        repo_hash = hasher.hexdigest()
+
+        cache_key = cache.compute_key(
+            operation="full_pipeline",
+            input_data=repo_hash,
+            model_version=f"{model_manager.model1_version}+{model_manager.model2_version}",
+            analyzer_version=model_manager.analyzer_version,
+            config={"max_repair_attempts": effective_max_attempts},
+            workspace_id=workspace_id,
+        )
+
+        if not skip_cache:
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                _update_progress(workspace_id, "complete", "Retrieved verified analysis from cache", 100)
+                cached_copy = dict(cached_result)
+                cached_copy["cached"] = True
+                return cached_copy
+
+        # Stage 1: Static AST Analysis
+        _update_progress(workspace_id, "static_analysis", "Static AST analysis in progress", 25)
         initial_findings = scan_workspace(workspace_path)
         initial_summary = summarize_findings(initial_findings)
         initial_finding_dicts = [f.to_dict() for f in initial_findings]
 
+        # Stage 2: Evidence Aggregation
+        _update_progress(workspace_id, "evidence", "Collecting and normalizing AST evidence", 40)
         evidence = build_evidence(initial_findings, repository=workspace_id)
-        assessments = analyst.analyze_all(evidence)
+
+        current_analyst = analyst if analyst is not None else model_manager.analyst
+        current_repairer = repairer if repairer is not None else model_manager.repairer
+        current_verifier = verifier if verifier is not None else model_manager.verifier
+
+        # Stage 3: Model 1 Security Analyst Evaluation
+        _update_progress(workspace_id, "ai_analyst", "Model 1 (Security Analyst) triage active", 55)
+        if current_analyst is model_manager.analyst:
+            assessments = model_manager.analyze_all(evidence)
+        else:
+            assessments = current_analyst.analyze_all(evidence)
+
+        # Stage 4: Decision Engine
+        _update_progress(workspace_id, "decision", "Evaluating Decision Engine routes", 70)
         decisions = [decide(e, a) for e, a in zip(evidence, assessments)]
 
         patches = []
@@ -367,7 +547,9 @@ def scan_repository(workspace_id: str):
         attempts = []
         attempt_reports = []
 
-        for original_decision in decisions:
+        # Stage 5: Model 2 Patch Generation & Verification Loop
+        _update_progress(workspace_id, "repair", "Generating patches and running verification", 85)
+        for idx, original_decision in enumerate(decisions, start=1):
             decision, refreshed_assessment = _refresh_decision(original_decision, workspace_path)
             if decision is None:
                 attempts.append({
@@ -398,18 +580,24 @@ def scan_repository(workspace_id: str):
 
             while True:
                 retry_count += 1
-                patch, model_attempts = repairer.repair_with_trace(current_decision, workspace_path)
+                if current_repairer is model_manager.repairer:
+                    patch, model_attempts = model_manager.repair_with_trace(current_decision, workspace_path)
+                else:
+                    patch, model_attempts = current_repairer.repair_with_trace(current_decision, workspace_path)
                 all_model_attempts.extend(model_attempts)
 
                 if patch is None:
                     stage_results = []
                     break
 
-                verification, stage_results = verifier.verify_with_stages(patch, workspace_path)
+                if current_verifier is model_manager.verifier:
+                    verification, stage_results = model_manager.verify_with_stages(patch, workspace_path)
+                else:
+                    verification, stage_results = current_verifier.verify_with_stages(patch, workspace_path)
                 if verification.verified:
                     break
 
-                if current_decision.route != "reasoning" or retry_count >= MAX_REPAIR_ATTEMPTS:
+                if current_decision.route != "reasoning" or retry_count >= effective_max_attempts:
                     break
 
                 new_feedback = (
@@ -436,6 +624,12 @@ def scan_repository(workspace_id: str):
             application = None
             if patch is not None and verification is not None and verification.verified:
                 application = patch_applier.apply(patch, workspace_path)
+                # Persist patch diff in workspace patches directory
+                try:
+                    patch_file = dirs["patches"] / f"patch_{idx:03d}.diff"
+                    patch_file.write_text(patch.diff or "", encoding="utf-8")
+                except Exception:
+                    pass
 
             att_report = build_attempt_report(
                 decision=current_decision,
@@ -460,6 +654,8 @@ def scan_repository(workspace_id: str):
 
             applications.append(application)
 
+        # Stage 6: Post-Repair Re-Scan
+        _update_progress(workspace_id, "post_scan", "Re-scanning workspace and classifying findings", 95)
         final_findings = scan_workspace(workspace_path)
         final_summary = summarize_findings(final_findings)
         final_finding_dicts = [f.to_dict() for f in final_findings]
@@ -529,7 +725,7 @@ def scan_repository(workspace_id: str):
         dep_findings = DependencyReachabilityAnalyzer().analyze_workspace_dependencies(str(workspace_path))
         dep_dicts = [d.__dict__ for d in dep_findings]
 
-        return {
+        result_payload = {
             "workspace_id": workspace_id,
             "summary": initial_summary,
             "findings": initial_finding_dicts,
@@ -547,12 +743,73 @@ def scan_repository(workspace_id: str):
             },
             "repair_result": repair_result.to_dict(),
             "assurance_report": assurance_report.to_dict(),
+            "cached": False,
         }
 
+        # Persist artifacts into user's isolated workspace directories
+        try:
+            (dirs["evidence"] / "evidence.json").write_text(json.dumps(result_payload["evidence"], indent=2), encoding="utf-8")
+            (dirs["findings"] / "initial_findings.json").write_text(json.dumps(result_payload["findings"], indent=2), encoding="utf-8")
+            (dirs["findings"] / "post_repair_findings.json").write_text(json.dumps(result_payload["post_repair"], indent=2), encoding="utf-8")
+            (dirs["reports"] / "assurance_report.json").write_text(json.dumps(result_payload["assurance_report"], indent=2), encoding="utf-8")
+            (dirs["reports"] / "assurance_report.html").write_text(rendered_html, encoding="utf-8")
+        except Exception:
+            pass
+
+        # Save to deterministic cache
+        cache.set(cache_key, result_payload, workspace_id=workspace_id)
+        _update_progress(workspace_id, "complete", "Analysis and verification complete", 100)
+
+        return result_payload
+
     except HTTPException:
+        _update_progress(workspace_id, "failed", "Analysis failed", 0)
         raise
     except Exception as exc:
+        _update_progress(workspace_id, "failed", str(exc), 0)
         raise HTTPException(status_code=500, detail=f"VAJRA scan failed: {exc}")
+
+
+@app.post("/workspace/{workspace_id}/scan")
+def scan_repository(workspace_id: str):
+    """Legacy backward-compatible endpoint triggering workspace scan."""
+    return execute_analysis_pipeline(workspace_id)
+
+
+@app.post("/workspace/{workspace_id}/analyze")
+def analyze_workspace(workspace_id: str, options: Optional[AnalysisOptions] = None):
+    """
+    Unified end-to-end analysis endpoint for single frontend call.
+    Supports options: skip_cache, max_repair_attempts.
+    """
+    skip = options.skip_cache if options else False
+    max_att = options.max_repair_attempts if options else None
+    return execute_analysis_pipeline(workspace_id, skip_cache=skip, max_repair_attempts=max_att)
+
+
+@app.get("/workspace/{workspace_id}/analyze/progress")
+async def stream_analysis_progress(workspace_id: str):
+    """
+    Server-Sent Events (SSE) streaming progress endpoint.
+    Frontend connects to show live pipeline status without heavy polling.
+    """
+    async def event_generator():
+        last_percent = -1
+        for _ in range(120):  # Stream for up to 60s
+            with _progress_lock:
+                progress_info = _workspace_progress.get(workspace_id)
+
+            if progress_info:
+                if progress_info["percent"] != last_percent:
+                    last_percent = progress_info["percent"]
+                    yield f"data: {json.dumps(progress_info)}\n\n"
+
+                if progress_info["percent"] >= 100 or progress_info["stage"] in ("complete", "failed"):
+                    break
+
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.get("/workspace/{workspace_id}/report.json")

@@ -162,8 +162,13 @@ class RepositoryManager:
             raise FileNotFoundError(f"Workspace not found: {workspace_path}")
 
         files = []
+        internal_dirs = {"evidence", "findings", "patches", "verification", "reports", ".git"}
         for file in workspace_path.rglob("*"):
             if not file.is_file():
+                continue
+
+            parts = file.relative_to(workspace_path).parts
+            if any(p in internal_dirs for p in parts[:-1]):
                 continue
 
             relative_path = file.relative_to(workspace_path)
@@ -178,6 +183,23 @@ class RepositoryManager:
         files.sort(key=lambda item: item["path"].lower())
         return files
 
+    def ensure_workspace_layout(self, workspace_path: Path) -> dict[str, Path]:
+        """
+        Creates user/project-specific isolated workspace subdirectories:
+        evidence/, findings/, patches/, verification/, reports/
+        """
+        workspace_path = Path(workspace_path)
+        dirs = {
+            "evidence": workspace_path / "evidence",
+            "findings": workspace_path / "findings",
+            "patches": workspace_path / "patches",
+            "verification": workspace_path / "verification",
+            "reports": workspace_path / "reports",
+        }
+        for d in dirs.values():
+            d.mkdir(parents=True, exist_ok=True)
+        return dirs
+
     def build_metadata(self, workspace_id: str, workspace_path: Path) -> RepositoryMetadata:
         files = self.scan_repository(workspace_path)
         metadata = RepositoryMetadata(workspace_id=workspace_id)
@@ -187,5 +209,12 @@ class RepositoryManager:
 
     def delete_workspace(self, workspace_path: Path):
         workspace_path = Path(workspace_path)
+        workspace_id = workspace_path.name
         if workspace_path.exists():
             shutil.rmtree(workspace_path, ignore_errors=True)
+
+        try:
+            from app.services.cache_manager import get_cache
+            get_cache().invalidate_workspace(workspace_id)
+        except Exception:
+            pass

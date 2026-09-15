@@ -25,6 +25,10 @@ def scan_workspace(workspace_path):
         if not file.is_file():
             continue
 
+        parts = file.relative_to(workspace_path).parts
+        if any(p in {"evidence", "findings", "patches", "verification", "reports", ".git"} for p in parts[:-1]):
+            continue
+
         relative_path = str(file.relative_to(workspace_path))
 
         findings = analyze_file(str(file))
