@@ -2043,14 +2043,13 @@ CHAT_HTML = r"""<!DOCTYPE html>
 
     function handleCasefileQuery(q) {
       showTypingIndicator();
+      var query = q.toLowerCase();
+      var sess = getActiveSession();
+      var apiBase = getApiBase();
 
-      setTimeout(function () {
-        var query = q.toLowerCase();
-        var response = "";
-        var sess = getActiveSession();
-        var apiBase = getApiBase();
-
-        if (query.includes("zip") || query.includes("download") || query.includes("where is") || query.includes("where are my files")) {
+      if (query.includes("zip") || query.includes("download") || query.includes("where is") || query.includes("where are my files")) {
+        setTimeout(function () {
+          var response = "";
           if (sess && sess.workspaceId) {
             var dl = apiBase + "/workspace/" + sess.workspaceId + "/download-patched";
             response =
@@ -2061,40 +2060,40 @@ CHAT_HTML = r"""<!DOCTYPE html>
             response =
               '<p>No scan has been completed in this casefile yet. Once you provide a <b>GitHub URL</b>, <b>Local Folder</b>, or <b>ZIP Archive</b>, VAJRA will analyze, repair, and generate a verified clean ZIP download link right here.</p>';
           }
-        } else if (query.includes("who are you") || query.includes("what is vajra")) {
-          response =
-            '<p>I am <b>VAJRA</b> — an autonomous cyber-reasoning and deterministic software repair system.</p>' +
-            '<p style="color:var(--text-secondary); margin-top:0.4rem;">My purpose is to ingest codebases, identify security vulnerabilities via AST sink analysis, synthesize minimal defensive patches, and independently prove patch efficacy through a rigorous 6-stage verification pipeline before any changes are finalized.</p>';
-        } else if (query.includes("what do you do") || query.includes("how does this work") || query.includes("help")) {
-          response =
-            '<p><b>VAJRA Autonomous Workflow:</b></p>' +
-            '<div style="display:flex; flex-direction:column; gap:0.35rem; margin:0.5rem 0; font-size:0.84rem;">' +
-              '<div>1. <b>Ingestion:</b> Clone GitHub repo, inspect local directory, or unpack ZIP in an isolated sandbox.</div>' +
-              '<div>2. <b>Vulnerability Detection:</b> AST syntax tracing tracks dangerous execution sinks (e.g., <code>eval</code>, <code>pickle.loads</code>, <code>subprocess.run</code>, <code>yaml.load</code>).</div>' +
-              '<div>3. <b>Minimal Repair Synthesis:</b> Proposes surgical, non-breaking defensive patches.</div>' +
-              '<div>4. <b>6-Stage Verification:</b> Executes dynamic sentinels, PoC exploit neutralization, regression tests, fuzzing, and mutation.</div>' +
-              '<div>5. <b>Assurance Record:</b> Outputs verified code diffs and downloadable clean ZIP archive.</div>' +
-            '</div>';
-        } else if (query.includes("verification") || query.includes("pipeline") || query.includes("6-stage") || query.includes("proof") || query.includes("verifier")) {
-          response =
-            '<div><b>VAJRA 6-Stage Autonomous Verification Specification:</b></div>' +
-            '<div class="verif-ledger" style="margin:0.5rem 0;">' +
-              '<div class="verif-row"><span><span class="verif-idx">01</span>Syntax / AST Checker</span><span style="color:var(--text-muted);">Ensures zero compile or parse breakage</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">02</span>Static Re-scan</span><span style="color:var(--text-muted);">Confirms sink AST node is completely eliminated</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">03</span>Sentinel Dynamic PoC</span><span style="color:var(--text-muted);">Executes real exploit gadget to verify defense</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">04</span>Baseline Regression Tests</span><span style="color:var(--text-muted);">Runs existing project unit tests without failure</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">05</span>Boundary Input Fuzzing</span><span style="color:var(--text-muted);">Tests edge payload bounds and injection fuzz vectors</span></div>' +
-              '<div class="verif-row"><span><span class="verif-idx">06</span>Patch Mutation Invariant</span><span style="color:var(--text-muted);">Mutates repair AST to verify test sensitivity</span></div>' +
-            '</div>' +
-            '<div style="color:var(--text-muted); font-size:0.8rem;">Every patch must score 6/6 PASS before release.</div>';
-        } else if (query.includes("hi") || query.includes("hello") || query.includes("hey")) {
-          response = '<p>VAJRA autonomous verification engine standing by. Ingest a GitHub repository, local folder path, or ZIP archive to begin analysis.</p>';
-        } else {
-          response = '<p>Recorded inquiry: <i>"' + escapeHtml(q) + '"</i>.</p><p style="color:var(--text-muted); font-size:0.82rem; margin-top:0.35rem;">To scan your codebase, enter a GitHub URL, a local directory path, or attach a ZIP file using the actions below.</p>';
-        }
+          appendSessionMessage("bot", response);
+        }, 300);
+        return;
+      }
 
-        appendSessionMessage("bot", response);
-      }, 400);
+      // Query VAJRA fine-tuned model via /api/chat
+      fetch(apiBase + "/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Vajra-Signature": "vajra_sec_2026_auth_sig_9f8d7c6b5a4"
+        },
+        body: JSON.stringify({ prompt: q, model: "AravKataria/vajra-lora" }),
+        signal: AbortSignal.timeout(35000)
+      })
+      .then(function (resp) {
+        if (!resp.ok) throw new Error("API returned status " + resp.status);
+        return resp.json();
+      })
+      .then(function (data) {
+        if (data && data.reply) {
+          var formatted = escapeHtml(data.reply)
+            .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
+            .replace(/\n/g, "<br>")
+            .replace(/`([^`]+)`/g, "<code>$1</code>");
+          appendSessionMessage("bot", "<p>" + formatted + "</p>");
+        } else {
+          throw new Error("Empty response");
+        }
+      })
+      .catch(function (err) {
+        var fallback = '<p><b>VAJRA Cyber-Reasoning Engine:</b> Recorded inquiry: <i>"' + escapeHtml(q) + '"</i>.</p><p style="color:var(--text-muted); font-size:0.82rem; margin-top:0.35rem;">To scan your codebase, enter a GitHub URL, a local directory path, or attach a ZIP file using the actions below.</p>';
+        appendSessionMessage("bot", fallback);
+      });
     }
 
     window.exportJsonAssuranceRecord = function () {
