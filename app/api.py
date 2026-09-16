@@ -280,6 +280,64 @@ def health():
 
 
 VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY", "vajra_sec_2026_auth_sig_9f8d7c6b5a4")
+VAJRA_HF_SPACE_URL = os.environ.get("VAJRA_HF_SPACE_URL", "https://aravkataria-vajra.hf.space")
+
+
+def query_vajra_fine_tuned_model(
+    prompt: str,
+    context_files: Optional[Dict[str, str]] = None,
+    timeout: int = 30,
+) -> Optional[str]:
+    """
+    Direct stateless inference query to VAJRA fine-tuned model (AravKataria/vajra-lora)
+    running on Hugging Face Spaces (ZeroGPU / A100).
+    Uses line-by-line SSE reading for ultra-fast response.
+    """
+    import urllib.error
+    import urllib.request
+
+    try:
+        call_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat"
+        payload = json.dumps({"data": [prompt, []]}).encode("utf-8")
+        req = urllib.request.Request(
+            call_url,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "VAJRA-Cloud-Gateway/2.1",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            event_id = data.get("event_id")
+
+        if not event_id:
+            return None
+
+        stream_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat/{event_id}"
+        stream_req = urllib.request.Request(
+            stream_url,
+            headers={"User-Agent": "VAJRA-Cloud-Gateway/2.1"},
+        )
+
+        with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
+            is_complete = False
+            for raw_line in stream:
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if line.startswith("event: complete"):
+                    is_complete = True
+                elif is_complete and line.startswith("data:"):
+                    raw_data = line[5:].strip()
+                    parsed = json.loads(raw_data)
+                    if isinstance(parsed, list) and len(parsed) > 0 and parsed[0]:
+                        return str(parsed[0]).strip()
+                    break
+                elif line.startswith("event: error"):
+                    break
+        return None
+    except Exception:
+        # Seamless fallback to deterministic cyber-reasoning on network/HF timeout
+        return None
 
 
 class ChatRequest(BaseModel):
@@ -294,6 +352,7 @@ async def chat_api(req: ChatRequest, request: Request):
     """
     Zero-Trust Protected Cyber-Reasoning Chat Endpoint.
     Requires cryptographic signature header: X-Vajra-Signature.
+    Queries the fine-tuned model (AravKataria/vajra-lora) with deterministic fallback.
     """
     sig = request.headers.get("X-Vajra-Signature")
     if sig != VAJRA_SECRET_KEY:
@@ -313,6 +372,18 @@ async def chat_api(req: ChatRequest, request: Request):
                 "model": "VAJRA-Cyber-Reasoning",
             })
 
+    # 1. Query live Fine-Tuned Model (AravKataria/vajra-lora) running on HF Spaces
+    model_reply = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files)
+    if model_reply:
+        return JSONResponse({
+            "success": True,
+            "reply": model_reply,
+            "model": "AravKataria/vajra-lora (Fine-Tuned Qwen2.5-Coder-7B)",
+            "shield": "Zero-Retention Verified",
+            "source": "fine-tuned-model",
+        })
+
+    # 2. Graceful Fallback to Deterministic Cyber-Reasoning Engine
     reply = "🛡️ **VAJRA Cyber-Reasoning System**\n\n"
     if any(k in lowered for k in ["scan", "vulnerabilit", "finding", "cwe", "idor", "audit"]):
         reply += (
@@ -344,6 +415,7 @@ async def chat_api(req: ChatRequest, request: Request):
         "reply": reply,
         "model": "VAJRA-Cyber-Reasoning",
         "shield": "Zero-Retention Verified",
+        "source": "deterministic-fallback",
     })
 
 
