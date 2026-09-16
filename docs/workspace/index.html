@@ -1250,12 +1250,12 @@
        ====================================================================== -->
   <aside class="sidebar" id="appSidebar">
     <div class="sidebar-header">
-      <div class="brand-group">
+      <a href="../" class="brand-group" title="Back to VAJRA Main Site" style="text-decoration:none; color:inherit;">
         <img class="brand-icon-img" src="logo.png" alt="VAJRA Logo">
         <div>
           <div class="brand-title">VAJRA</div>
         </div>
-      </div>
+      </a>
       <span class="brand-badge">PRO</span>
     </div>
 
@@ -1303,9 +1303,17 @@
       </div>
 
       <div class="top-bar-right" style="display:flex; align-items:center; gap:0.5rem;">
+        <button class="btn-theme" onclick="window.location.href='../'" title="Back to VAJRA Overview">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Home</span>
+        </button>
         <button class="btn-theme" onclick="window.open('../404.html', '_blank')" title="View Universal Error Diagnostic Matrix (50+ Error Codes)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span>Error Matrix</span>
+        </button>
+        <button class="btn-theme" onclick="window.location.href='../benchmark/'" title="Open 50-Fixture Benchmark Audit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Benchmark</span>
         </button>
         <button class="btn-theme" id="btnThemeToggle" onclick="toggleTheme()" title="Switch Light/Dark Theme">
           <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -1384,7 +1392,7 @@
         <!-- Composer Terminal -->
         <div class="composer-shell">
           <form class="composer-panel" id="composerForm">
-            <textarea class="composer-input" id="composerInput" placeholder="Enter GitHub URL, local directory, or ask VAJRA..." rows="1"></textarea>
+            <textarea class="composer-input" id="composerInput" placeholder="Ask VAJRA to plan, reason, analyze code, or enter GitHub repo URL..." rows="1"></textarea>
             <div class="composer-toolbar">
               <div class="toolbar-left">
                 <button type="button" class="btn-tool-chip" onclick="document.getElementById('hiddenZipInput').click()">
@@ -1400,9 +1408,9 @@
                   GitHub
                 </button>
               </div>
-              <button type="submit" class="btn-run-scan">
-                Run Scan
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              <button type="submit" class="btn-run-scan" title="Send message, request project plan, or scan repository">
+                Send
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </button>
             </div>
           </form>
@@ -1512,7 +1520,7 @@
       <input type="text" id="inputGithubUrl" class="modal-input" placeholder="https://github.com/owner/repository" value="https://github.com/Aravkataria/VAJRA">
       <div class="modal-actions">
         <button class="btn-tool-chip" onclick="closeModal('githubModal')">Cancel</button>
-        <button class="btn-run-scan" onclick="submitGithubModal()">Run Scan</button>
+        <button class="btn-run-scan" onclick="submitGithubModal()">Scan Repository</button>
       </div>
     </div>
   </div>
