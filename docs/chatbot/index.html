@@ -1303,7 +1303,11 @@
       </div>
 
       <div class="top-bar-right" style="display:flex; align-items:center; gap:0.5rem;">
-                <button class="btn-theme" id="btnThemeToggle" onclick="toggleTheme()" title="Switch Light/Dark Theme">
+        <button class="btn-theme" onclick="window.open('../404.html', '_blank')" title="View Universal Error Diagnostic Matrix (50+ Error Codes)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Error Matrix</span>
+        </button>
+        <button class="btn-theme" id="btnThemeToggle" onclick="toggleTheme()" title="Switch Light/Dark Theme">
           <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <span id="themeToggleText">Theme</span>
         </button>
@@ -2589,6 +2593,24 @@ function appendSessionMessage(role, contentHtml) {
           response =
             '<p><b>Local File &amp; Workspace Access:</b></p>' +
             '<p style="margin-top:0.4rem; color:var(--text-secondary);">Yes! I have direct access to your local workspace files. You can load a local folder, drag-and-drop a ZIP archive, or provide a GitHub repository. I will analyze the codebase, isolate AST execution vulnerabilities, and synthesize verified patches right here.</p>';
+        } else if (query.includes("error") || query.includes("matrix") || query.includes("404") || query.includes("503") || query.includes("401") || query.includes("429") || query.includes("500") || query.includes("offline")) {
+          var errMatch = query.match(/(?:error|code|status|err)?\s*([0-9]{3}|[a-z0-9_]{4,})/i);
+          var code = errMatch ? errMatch[1].toUpperCase() : "404";
+          response =
+            '<div style="border-left: 3px solid var(--stamp-pass); padding-left: 12px; margin: 4px 0;">' +
+              '<p><b>🛡️ VAJRA Universal Error Diagnostic Matrix</b></p>' +
+              '<p style="margin-top:0.3rem; color:var(--text-secondary); font-size:0.85rem;">' +
+                'VAJRA indexes <b>50+ error states</b> across L7 HTTP, transport, ZeroGPU inference, AST reachability, and cryptographic vault security.' +
+              '</p>' +
+              '<div style="margin-top:0.6rem; display:flex; gap:8px; flex-wrap:wrap;">' +
+                '<a href="../404.html?code=' + encodeURIComponent(code) + '" target="_blank" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:rgba(22,163,74,0.12); color:var(--stamp-pass); border:1px solid var(--stamp-pass); border-radius:6px; font-size:0.8rem; font-family:monospace; text-decoration:none; font-weight:600;">' +
+                  '🔍 INSPECT CODE [' + escapeHtml(code) + '] IN MATRIX &rarr;' +
+                '</a>' +
+                '<a href="../404.html" target="_blank" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:var(--bg-elevated); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:6px; font-size:0.8rem; font-family:monospace; text-decoration:none;">' +
+                  'VIEW FULL 50+ ERROR MATRIX &rarr;' +
+                '</a>' +
+              '</div>' +
+            '</div>';
         } else {
           response =
             '<p><b>VAJRA Cyber-Reasoning Engine:</b></p>' +

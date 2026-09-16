@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Anomaly Detected | VAJRA Sovereign Cyber-Defense</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #030712;
+      --bg-panel: #0b0f19;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --bg-card-hover: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text: #f9fafb;
+      --text-muted: rgba(255, 255, 255, 0.65);
+      --text-dim: rgba(255, 255, 255, 0.4);
+      --cyan: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.25);
+      --red: #f43f5e;
+      --red-glow: rgba(244, 63, 94, 0.25);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.25);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.25);
+      --purple: #a855f7;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-panel: #ffffff;
+      --bg-card: rgba(0, 0, 0, 0.02);
+      --bg-card-hover: rgba(0, 0, 0, 0.04);
+      --border: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.16);
+      --text: #0f172a;
+      --text-muted: rgba(15, 23, 42, 0.7);
+      --text-dim: rgba(15, 23, 42, 0.45);
+      --cyan: #0284c7;
+      --cyan-glow: rgba(2, 132, 199, 0.15);
+      --red: #e11d48;
+      --red-glow: rgba(225, 29, 72, 0.15);
+      --amber: #d97706;
+      --amber-glow: rgba(217, 119, 6, 0.15);
+      --green: #059669;
+      --green-glow: rgba(5, 150, 105, 0.15);
+      --purple: #9333ea;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(ellipse at 50% 0%, rgba(0, 240, 255, 0.06), transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(244, 63, 94, 0.04), transparent 40%);
+    }
+
+    /* Top Nav */
+    header.hud-nav {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(3, 7, 18, 0.85);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+    }
+    .brand-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--red-glow);
+      color: var(--red);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-btn {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: var(--bg-card);
+    }
+    .nav-btn:hover {
+      color: var(--text);
+      border-color: var(--cyan);
+      background: var(--bg-card-hover);
+    }
+    .nav-btn.primary {
+      background: var(--cyan);
+      color: #030712;
+      border-color: var(--cyan);
+    }
+    .nav-btn.primary:hover {
+      box-shadow: 0 0 16px var(--cyan-glow);
+      opacity: 0.95;
+    }
+
+    /* Main Container */
+    main.container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+      flex: 1;
+    }
+
+    /* Hero Alert Banner */
+    .hero-alert {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 36px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 40px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .hero-alert::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--red), var(--amber), var(--cyan));
+    }
+
+    .hud-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--red);
+      background: var(--red-glow);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      padding: 4px 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .hero-title {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero-title .glitch-code {
+      color: var(--red);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-desc {
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+
+    /* Diagnostics Telemetry Box */
+    .telemetry-strip {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 32px;
+      color: var(--text-muted);
+    }
+    .telemetry-item strong {
+      color: var(--cyan);
+    }
+
+    /* Navigation Quick Links */
+    .quick-nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .quick-link-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .quick-link-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+    }
+    .quick-link-title {
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .quick-link-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Section Header */
+    .section-head {
+      margin: 50px 0 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .section-head h2 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .section-head p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* Search and Filter Bar */
+    .matrix-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .search-row {
+      display: flex;
+      gap: 12px;
+    }
+    .search-input {
+      flex: 1;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .category-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .cat-tab {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cat-tab:hover {
+      background: var(--bg-card-hover);
+      color: var(--text);
+    }
+    .cat-tab.active {
+      background: var(--cyan);
+      color: #030712;
+      border-color: var(--cyan);
+      font-weight: 700;
+    }
+
+    /* Error Grid */
+    .error-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+    }
+    @media (max-width: 640px) {
+      .error-grid { grid-template-columns: 1fr; }
+    }
+
+    .error-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .error-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .error-card.highlighted {
+      border-color: var(--cyan);
+      box-shadow: 0 0 24px var(--cyan-glow);
+    }
+
+    .error-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .error-code-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .badge-critical { background: var(--red-glow); color: var(--red); border: 1px solid rgba(244, 63, 94, 0.4); }
+    .badge-high { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-medium { background: var(--cyan-glow); color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.4); }
+    .badge-info { background: rgba(168, 85, 247, 0.2); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.4); }
+
+    .layer-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .error-name {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .error-summary {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--text-muted);
+    }
+
+    .diagnostic-drawer {
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .diag-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .diag-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+    .diag-val {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--cyan);
+      word-break: break-all;
+    }
+    .diag-remedy {
+      color: var(--green);
+      line-height: 1.4;
+    }
+
+    /* Live Telemetry Bar */
+    .live-health-bar {
+      margin-top: 50px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .health-status-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+    }
+    .health-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+    }
+    .indicator-lamp {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+    .indicator-lamp.testing {
+      background: var(--amber);
+      box-shadow: 0 0 8px var(--amber);
+    }
+    .indicator-lamp.offline {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+
+    footer.hud-footer {
+      border-top: 1px solid var(--border);
+      padding: 30px 24px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top HUD Nav -->
+  <header class="hud-nav">
+    <a href="index.html" class="brand link-home">
+      <img src="logo.png" alt="VAJRA Logo" class="brand-logo">
+      <span>VAJRA</span>
+      <span class="brand-badge">SOVEREIGN DEFENSE</span>
+    </a>
+    <div class="nav-actions">
+      <a href="chatbot/" class="nav-btn link-chat">Chatbot</a>
+      <a href="workspace/" class="nav-btn link-ws">Workspace</a>
+      <a href="app/" class="nav-btn link-app">Web App</a>
+      <a href="index.html" class="nav-btn primary link-home">Home Terminal</a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Hero 404 Alert Banner -->
+    <section class="hero-alert">
+      <div class="hud-tag">
+        <div class="pulse-dot"></div>
+        <span>ANOMALY DETECTED // SECURITY INTERCEPT</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="glitch-code" id="displayedErrorCode">404</span> — <span id="displayedErrorTitle">Resource Not Found</span>
+      </h1>
+      <p class="hero-desc" id="displayedErrorDesc">
+        The requested endpoint or asset does not exist within the sovereign VAJRA defense registry. The resource may have been decommissioned, reclaimed under Zero-Retention protocol, or the URI path contains a syntax deviation.
+      </p>
+
+      <!-- Live Client Telemetry -->
+      <div class="telemetry-strip">
+        <div class="telemetry-item">REQUESTED URI: <strong id="telemetryPath">/</strong></div>
+        <div class="telemetry-item">SIGNATURE STATUS: <strong id="telemetrySig">CRYPTOGRAPHIC LOCK ACTIVE</strong></div>
+        <div class="telemetry-item">TIMESTAMP: <strong id="telemetryTime">...</strong></div>
+        <div class="telemetry-item">EDGE NODE: <strong>CLOUDFLARE_GLOBAL</strong></div>
+      </div>
+
+      <!-- Quick Nav Hub -->
+      <div class="quick-nav-grid">
+        <a href="index.html" class="quick-link-card link-home">
+          <div class="quick-link-title">🏠 Home Terminal</div>
+          <div class="quick-link-desc">Return to system overview, evidence ledger, &amp; metrics</div>
+        </a>
+        <a href="chatbot/" class="quick-link-card link-chat">
+          <div class="quick-link-title">🛡️ Cyber Chatbot</div>
+          <div class="quick-link-desc">Query fine-tuned Qwen2.5-Coder-7B security model</div>
+        </a>
+        <a href="workspace/" class="quick-link-card link-ws">
+          <div class="quick-link-title">🔬 Security Workspace</div>
+          <div class="quick-link-desc">Inspect AST reachability graphs &amp; verified patches</div>
+        </a>
+        <a href="app/" class="quick-link-card link-app">
+          <div class="quick-link-title">💻 Desktop Web App</div>
+          <div class="quick-link-desc">Ingest repository ZIP archives for automated repair</div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Master Error Diagnostic Matrix -->
+    <div class="section-head">
+      <div>
+        <h2>VAJRA Universal Error Diagnostic Matrix</h2>
+        <p>Exhaustive registry of all 50+ HTTP, transport, AI inference, AST reachability, cryptographic, and future federation error states.</p>
+      </div>
+    </div>
+
+    <!-- Matrix Search & Filter Controls -->
+    <div class="matrix-controls">
+      <div class="search-row">
+        <input type="text" id="matrixSearch" class="search-input" placeholder="🔍 Search any error code (e.g. 404, 503, CORS, GPU, signature, timeout)...">
+      </div>
+      <div class="category-tabs" id="categoryTabs">
+        <button class="cat-tab active" data-cat="all">ALL ERRORS (<span id="countAll">0</span>)</button>
+        <button class="cat-tab" data-cat="4xx">4XX CLIENT (<span id="count4xx">0</span>)</button>
+        <button class="cat-tab" data-cat="5xx">5XX SERVER (<span id="count5xx">0</span>)</button>
+        <button class="cat-tab" data-cat="net">NETWORK / DOM (<span id="countNet">0</span>)</button>
+        <button class="cat-tab" data-cat="ai">AI INFERENCE (<span id="countAi">0</span>)</button>
+        <button class="cat-tab" data-cat="sec">AST &amp; SECURITY (<span id="countSec">0</span>)</button>
+        <button class="cat-tab" data-cat="patch">PATCH VERIFICATION (<span id="countPatch">0</span>)</button>
+        <button class="cat-tab" data-cat="crypto">CRYPTOGRAPHY (<span id="countCrypto">0</span>)</button>
+        <button class="cat-tab" data-cat="future">FUTURE FEDERATION (<span id="countFuture">0</span>)</button>
+      </div>
+    </div>
+
+    <!-- Error Cards Grid -->
+    <div class="error-grid" id="errorGrid">
+      <!-- Dynamically Populated by JavaScript -->
+    </div>
+
+    <!-- Live System Telemetry Status -->
+    <div class="live-health-bar">
+      <div>
+        <strong style="font-size: 15px;">Live Gateway Health Probe</strong>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Automated 24/7 background keep-alive telemetry</p>
+      </div>
+      <div class="health-status-group">
+        <div class="health-indicator">
+          <div class="indicator-lamp testing" id="lampRender"></div>
+          <span>RENDER GATEWAY: <strong id="statusRender">CHECKING...</strong></span>
+        </div>
+        <div class="health-indicator">
+          <div class="indicator-lamp testing" id="lampHf"></div>
+          <span>HF ZERO-GPU (A100): <strong id="statusHf">CHECKING...</strong></span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="hud-footer">
+    <p>VAJRA Sovereign Cyber-Reasoning &amp; Software Repair Architecture &bull; Engineered by Arav Kataria</p>
+    <p style="margin-top: 6px; font-size: 11.5px; opacity: 0.6;">Zero-Retention Volatile Memory &bull; Cryptographic Vault Locked &bull; Formal 6/6 Verification</p>
+  </footer>
+
+  <!-- Master Error Catalog & Interactive Logic -->
+  <script>
+    // Master Registry of Every Current and Future VAJRA Error State (50+ Entries)
+    const VAJRA_ERROR_CATALOG = [
+      // --- 4xx Client Violations ---
+      {
+        code: "400",
+        name: "Bad Request / Malformed Syntax",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "L7_INGESTION",
+        summary: "The incoming HTTP payload violated protocol specifications, contained malformed JSON, or had unparseable parameters.",
+        cause: "Request body serialization failure, invalid JSON nesting, or missing mandatory boundary markers.",
+        safeguard: "Strict Parser Quarantine",
+        remediation: "Verify client JSON payload against OpenAPI schema; sanitize string encodings."
+      },
+      {
+        code: "401",
+        name: "Unauthorized / Signature Lock Failure",
+        cat: "4xx",
+        severity: "CRITICAL",
+        layer: "VAULT_SECURITY",
+        summary: "Cryptographic vault signature mismatch. The X-Vajra-Signature HMAC header was missing or corrupted.",
+        cause: "Unauthorized caller or forged request attempted without sovereign HMAC handshake credentials.",
+        safeguard: "(Cryptographic Signature Lock) Enforcement",
+        remediation: "Ensure X-Vajra-Signature is dynamically synthesized with authorized HMAC key."
+      },
+      {
+        code: "402",
+        name: "Payment Required / Quota Exceeded",
+        cat: "4xx",
+        severity: "INFO",
+        layer: "BILLING_GOVERNANCE",
+        summary: "Reserved enterprise feature or dedicated high-frequency compute tier quota limit reached.",
+        cause: "Autonomous verification exceeds unmetered public quota tier.",
+        safeguard: "Zero-Cost Minor Governance (No Credit Card Requirement)",
+        remediation: "Switch to unmetered community inference route or local Ollama engine."
+      },
+      {
+        code: "403",
+        name: "Forbidden / Sovereign Policy Violation",
+        cat: "4xx",
+        severity: "CRITICAL",
+        layer: "SOVEREIGN_ACCESS",
+        summary: "Access denied by sovereign security policy. Target resource or action is restricted.",
+        cause: "Attempt to modify root workspace, breach isolation boundary, or execute privileged diagnostic.",
+        safeguard: "Zero-Trust Sovereign Boundary Enforcement",
+        remediation: "Verify endpoint permissions. Sovereign operations require elevated admin clearance."
+      },
+      {
+        code: "404",
+        name: "Not Found / Sector Unreachable",
+        cat: "4xx",
+        severity: "MEDIUM",
+        layer: "ROUTING_REGISTRY",
+        summary: "The requested cyber-reasoning endpoint, casefile, or static asset does not exist in registry.",
+        cause: "Invalid route, decommissioned casefile ID, or volatile memory reclaimed under Zero-Retention.",
+        safeguard: "Defensive Registry Redirection",
+        remediation: "Check URL syntax; navigate via Home Terminal or verify available endpoints at /docs."
+      },
+      {
+        code: "405",
+        name: "Method Not Allowed",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "L7_INGESTION",
+        summary: "HTTP method (e.g. GET, PUT, DELETE) is disallowed on the requested defense endpoint.",
+        cause: "Attempting GET request on write-only inference or patch verification endpoint.",
+        safeguard: "HTTP Verb Restriction Filter",
+        remediation: "Check endpoint definition; use POST for inference and analysis pipelines."
+      },
+      {
+        code: "406",
+        name: "Not Acceptable",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "CONTENT_NEGOTIATION",
+        summary: "Server cannot produce response matching Accept headers requested by client.",
+        cause: "Client requested unsupported MIME format (e.g. application/xml instead of application/json).",
+        safeguard: "Format Conformance Filter",
+        remediation: "Set Accept: application/json or Accept: text/event-stream in client headers."
+      },
+      {
+        code: "407",
+        name: "Proxy Authentication Required",
+        cat: "4xx",
+        severity: "MEDIUM",
+        layer: "CORPORATE_PROXY",
+        summary: "Client must authenticate through an upstream corporate defense proxy before accessing VAJRA.",
+        cause: "Intermediary firewall or enterprise proxy intercepted connection.",
+        safeguard: "Egress Proxy Verification",
+        remediation: "Configure proxy credentials or whitelist VAJRA edge gateway domains."
+      },
+      {
+        code: "408",
+        name: "Request Timeout / Client Lag",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "TRANSPORT_WATCHDOG",
+        summary: "The defense gateway terminated connection because client took too long to complete transmission.",
+        cause: "Slow upstream network or interrupted file upload stream.",
+        safeguard: "Slowloris Denial-of-Service Defense",
+        remediation: "Compress casefile archives before ingestion; ensure stable network transmission."
+      },
+      {
+        code: "409",
+        name: "Conflict / Concurrent Modification",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "WORKSPACE_STATE",
+        summary: "Conflict in target state. Another AST scan or patch synthesis is actively operating on workspace.",
+        cause: "Simultaneous patch application colliding with active Git archaeologist transaction.",
+        safeguard: "Workspace Mutex Lock",
+        remediation: "Wait for active analysis pipeline to finalize or execute clean workspace reset."
+      },
+      {
+        code: "410",
+        name: "Gone / Volatile Memory Purged",
+        cat: "4xx",
+        severity: "INFO",
+        layer: "ZERO_RETENTION",
+        summary: "The target casefile or scan artifact has been permanently purged from volatile RAM.",
+        cause: "Zero-Retention privacy engine triggered gc.collect() after analysis completed.",
+        safeguard: "Zero-Retention Privacy Decontamination",
+        remediation: "Re-ingest repository or upload code archive to initiate fresh analysis."
+      },
+      {
+        code: "411",
+        name: "Length Required",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "L7_INGESTION",
+        summary: "Request omitted mandatory Content-Length header required for code ingestion.",
+        cause: "Raw HTTP request sent without specifying body byte size.",
+        safeguard: "Buffer Allocation Guard",
+        remediation: "Include Content-Length header in custom client requests."
+      },
+      {
+        code: "412",
+        name: "Precondition Failed",
+        cat: "4xx",
+        severity: "MEDIUM",
+        layer: "INVARIANT_CHECK",
+        summary: "Pre-scan invariant precondition failed before entering synthesis pipeline.",
+        cause: "Working directory is in a dirty or untracked state preventing clean AST delta generation.",
+        safeguard: "State Precondition Assertion",
+        remediation: "Ensure repository has a clean commit head or clean working tree."
+      },
+      {
+        code: "413",
+        name: "Payload Too Large / Quota Exceeded",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "INGESTION_QUOTA",
+        summary: "Uploaded code archive or casefile exceeds maximum ingestion threshold (50MB).",
+        cause: "Attempt to upload massive repository containing node_modules, .git history, or large binaries.",
+        safeguard: "Denial-of-Storage Shield",
+        remediation: "Exclude .git, node_modules, venv, and binary artifacts before archiving."
+      },
+      {
+        code: "414",
+        name: "URI Too Long",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "URL_ROUTING",
+        summary: "Request URI length exceeds security boundary buffer.",
+        cause: "Query parameters encoded excessive data into GET URL.",
+        safeguard: "Buffer Overflow Intercept",
+        remediation: "Send large payloads via POST request body instead of URL query parameters."
+      },
+      {
+        code: "415",
+        name: "Unsupported Media Type",
+        cat: "4xx",
+        severity: "MEDIUM",
+        layer: "ARCHIVE_PARSER",
+        summary: "Uploaded file format is not supported by the VAJRA ingestion engine.",
+        cause: "Uploaded .rar, .7z, or executable binary instead of supported .zip, .py, .c, .js archives.",
+        safeguard: "File Ingestion Filter",
+        remediation: "Submit files in standard .zip archives or plain text source files."
+      },
+      {
+        code: "416",
+        name: "Range Not Satisfiable",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "STREAM_HANDLER",
+        summary: "Client requested a byte range outside the available size of the artifact.",
+        cause: "Resume download attempted on modified or purged report.",
+        safeguard: "Range Boundary Check",
+        remediation: "Download artifact from offset 0 or regenerate report."
+      },
+      {
+        code: "417",
+        name: "Expectation Failed",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "HTTP_COMPLIANCE",
+        summary: "Gateway cannot satisfy expectations specified in client Expect header.",
+        cause: "Expect: 100-continue header sent to endpoint that terminates connection immediately.",
+        safeguard: "Header Policy Compliance",
+        remediation: "Omit Expect: 100-continue in automated client scripts."
+      },
+      {
+        code: "418",
+        name: "I'm a Teapot (Security Canary)",
+        cat: "4xx",
+        severity: "INFO",
+        layer: "HONEYPOT_CANARY",
+        summary: "Easter egg and active security honeypot canary. Triggered by automated vulnerability probes.",
+        cause: "Automated vulnerability scanner hit honeypot trap route.",
+        safeguard: "Sovereign Threat Intelligence Logging",
+        remediation: "Harmless canary. Avoid scanning internal honey-tokens."
+      },
+      {
+        code: "421",
+        name: "Misdirected Request",
+        cat: "4xx",
+        severity: "MEDIUM",
+        layer: "EDGE_ROUTING",
+        summary: "Request routed to an edge node unable to produce response for requested host.",
+        cause: "DNS routing mismatch between Cloudflare worker and Render backend.",
+        safeguard: "Host Verification Guard",
+        remediation: "Verify DNS records and Host header routing."
+      },
+      {
+        code: "422",
+        name: "Unprocessable Entity / Schema Validation Error",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "SCHEMA_VERIFIER",
+        summary: "Request parameters failed strict Pydantic structural validation.",
+        cause: "Missing mandatory fields (e.g. prompt, workspace_id) or incorrect data types.",
+        safeguard: "Deterministic Schema Boundary",
+        remediation: "Check parameter names and types against API schema documentation."
+      },
+      {
+        code: "423",
+        name: "Locked / AST Mutex Engaged",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "AST_ENGINE",
+        summary: "Target AST file or casefile is locked by an active background reasoning thread.",
+        cause: "Concurrent repair cycle attempting to rewrite a file currently under AST mutation testing.",
+        safeguard: "Thread Concurrency Safe Mutex",
+        remediation: "Wait 2-5 seconds for AST analysis thread to release lock."
+      },
+      {
+        code: "424",
+        name: "Failed Dependency",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "PIPELINE_ORCHESTRATOR",
+        summary: "The requested pipeline step failed because an upstream prerequisite dependency failed.",
+        cause: "Patch synthesis was requested for a finding that failed reachability analysis.",
+        safeguard: "Dependency Chain Enforcement",
+        remediation: "Execute complete workspace scan before requesting targeted patch synthesis."
+      },
+      {
+        code: "425",
+        name: "Too Early / Replay Attack Guard",
+        cat: "4xx",
+        severity: "CRITICAL",
+        layer: "REPLAY_SHIELD",
+        summary: "Request rejected due to potential replay attack on 0-RTT TLS early data.",
+        cause: "Repeated cryptographic nonce detected in signature handshake.",
+        safeguard: "Anti-Replay Nonce Ledger",
+        remediation: "Regenerate unique cryptographic timestamp nonce on client before resending."
+      },
+      {
+        code: "426",
+        name: "Upgrade Required",
+        cat: "4xx",
+        severity: "MEDIUM",
+        layer: "TRANSPORT_SECURITY",
+        summary: "Client must upgrade transport protocol to TLS 1.3 or HTTP/2.",
+        cause: "Legacy unencrypted or obsolete TLS protocol attempted.",
+        safeguard: "Sovereign Transport Hardening",
+        remediation: "Upgrade client software to support modern TLS 1.3 encryption."
+      },
+      {
+        code: "428",
+        name: "Precondition Required",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "INTEGRITY_SHIELD",
+        summary: "Origin server requires request to be conditional to prevent lost update collisions.",
+        cause: "Patch application submitted without If-Match or base commit hash.",
+        safeguard: "Lost-Update Prevention",
+        remediation: "Supply base commit hash or current AST revision ID."
+      },
+      {
+        code: "429",
+        name: "Too Many Requests / Rate Limit Exceeded",
+        cat: "4xx",
+        severity: "HIGH",
+        layer: "ANTI_DDOS",
+        summary: "Security threshold triggered. Request rate exceeds 120 req/min (or 30/min for deep scans).",
+        cause: "Automated loop or burst traffic exceeding sliding-window defense threshold.",
+        safeguard: "Sliding-Window Anti-DDoS Rate Limiter",
+        remediation: "Respect Retry-After header (wait 30-60s) before retransmitting."
+      },
+      {
+        code: "431",
+        name: "Request Header Fields Too Large",
+        cat: "4xx",
+        severity: "LOW",
+        layer: "EDGE_SECURITY",
+        summary: "HTTP header size exceeds security buffer (16KB limit).",
+        cause: "Oversized cookies, excessive JWT payloads, or corrupted auth headers.",
+        safeguard: "Header Overflow Shield",
+        remediation: "Clear browser cookies or reduce custom header overhead."
+      },
+      {
+        code: "451",
+        name: "Unavailable For Legal Reasons / Sovereign Embargo",
+        cat: "4xx",
+        severity: "INFO",
+        layer: "COMPLIANCE_ENGINE",
+        summary: "Resource access prohibited by sovereign jurisdiction compliance policies.",
+        cause: "Restricted cryptographic key export or compliance embargo.",
+        safeguard: "Sovereign Compliance Filter",
+        remediation: "Operate within authorized sovereign jurisdictions."
+      },
+
+      // --- 5xx Infrastructure & Server Faults ---
+      {
+        code: "500",
+        name: "Internal Server Fault / Reasoning Engine Panic",
+        cat: "5xx",
+        severity: "CRITICAL",
+        layer: "REASONING_CORE",
+        summary: "Internal reasoning engine encountered an unhandled exception. Sovereign safety circuit engaged.",
+        cause: "Unexpected AST parsing exception, memory allocation fault, or thread panic.",
+        safeguard: "Sovereign Circuit Breaker & Error Isolation",
+        remediation: "Check server logs; report AST trigger to engineer; fallback heuristics active."
+      },
+      {
+        code: "501",
+        name: "Not Implemented / Future Capability",
+        cat: "5xx",
+        severity: "INFO",
+        layer: "FEATURE_ROADMAP",
+        summary: "The requested feature or protocol extension is planned but not yet deployed in active build.",
+        cause: "Invocation of future API route (e.g. quantum-resistant post-quantum proof ledger).",
+        safeguard: "Graceful Roadmap Stub",
+        remediation: "Check changelog and roadmap for feature release schedule."
+      },
+      {
+        code: "502",
+        name: "Bad Gateway / AI Bridge Severed",
+        cat: "5xx",
+        severity: "HIGH",
+        layer: "INFERENCE_GATEWAY",
+        summary: "The gateway received an invalid or terminated response from upstream AI inference container.",
+        cause: "Hugging Face Space container restarting or network bridge dropped.",
+        safeguard: "Automatic Client-Side Direct Space Fallback",
+        remediation: "Client automatically falls back to direct Hugging Face ZeroGPU or local Ollama."
+      },
+      {
+        code: "503",
+        name: "Service Unavailable / ZeroGPU Cold Boot",
+        cat: "5xx",
+        severity: "HIGH",
+        layer: "ZEROGPU_SCHEDULER",
+        summary: "Inference container is waking up from standby or undergoing scheduled deployment.",
+        cause: "ZeroGPU Space container cold booting after idle period (takes ~15-30 seconds).",
+        safeguard: "Dual-Route Cloud Redundancy + Cloudflare 24/7 Pinger",
+        remediation: "Allow 15-20 seconds for container to initialize, then retry request."
+      },
+      {
+        code: "504",
+        name: "Gateway Timeout / Deep Synthesis Limit",
+        cat: "5xx",
+        severity: "HIGH",
+        layer: "WATCHDOG_TIMER",
+        summary: "Upstream reasoning cluster took longer than 35s to synthesize patch and AST proof.",
+        cause: "Extremely complex cyclomatic graph or large multi-file vulnerability analysis.",
+        safeguard: "35-Second Hard Inference Deadline",
+        remediation: "Scope analysis to smaller modules or run analysis in segmented batches."
+      },
+      {
+        code: "505",
+        name: "HTTP Version Not Supported",
+        cat: "5xx",
+        severity: "LOW",
+        layer: "PROTOCOL_STACK",
+        summary: "Server does not support the HTTP protocol version used in the request.",
+        cause: "Attempt to connect using obsolete HTTP/1.0 or non-standard protocol.",
+        safeguard: "Protocol Version Validation",
+        remediation: "Use standard HTTP/1.1 or HTTP/2 client."
+      },
+      {
+        code: "506",
+        name: "Variant Also Negotiates",
+        cat: "5xx",
+        severity: "MEDIUM",
+        layer: "CONTENT_NEGOTIATOR",
+        summary: "Internal configuration error: chosen variant resource is configured to engage in transparent negotiation.",
+        cause: "Circular content negotiation loop in proxy configuration.",
+        safeguard: "Circular Routing Breaker",
+        remediation: "Check reverse proxy header rewriting rules."
+      },
+      {
+        code: "507",
+        name: "Insufficient Storage / Volatile Cache Full",
+        cat: "5xx",
+        severity: "HIGH",
+        layer: "SYSTEM_MEMORY",
+        summary: "Server RAM or temporary scratch disk exhausted during heavy AST mutation synthesis.",
+        cause: "Multi-gigabyte AST cache saturated volatile memory.",
+        safeguard: "Emergency Cache Eviction & Garbage Collection",
+        remediation: "Trigger cache purge or reduce concurrent parallel scan jobs."
+      },
+      {
+        code: "508",
+        name: "Loop Detected / AST Callgraph Cycle",
+        cat: "5xx",
+        severity: "HIGH",
+        layer: "REACHABILITY_ENGINE",
+        summary: "Infinite recursion or cyclical dependency loop detected in target repository callgraph.",
+        cause: "Pathological circular import or recursive dynamic dispatch in analyzed code.",
+        safeguard: "Graph Cycle Breaker (Depth Limit = 64)",
+        remediation: "Inspect circular imports in analyzed code; cycle isolated automatically."
+      },
+      {
+        code: "510",
+        name: "Not Extended",
+        cat: "5xx",
+        severity: "LOW",
+        layer: "POLICY_GOVERNANCE",
+        summary: "Further extensions to the request are required for the server to fulfill it.",
+        cause: "Missing mandatory enterprise policy extension header.",
+        safeguard: "Mandatory Extension Check",
+        remediation: "Attach required policy descriptor."
+      },
+      {
+        code: "511",
+        name: "Network Authentication Required",
+        cat: "5xx",
+        severity: "MEDIUM",
+        layer: "PERIMETER_DEFENSE",
+        summary: "Client must authenticate to gain network access (captive portal or zero-trust gate).",
+        cause: "Corporate Wi-Fi or zero-trust perimeter intercept.",
+        safeguard: "Perimeter Intercept Warning",
+        remediation: "Complete captive portal or zero-trust perimeter login."
+      },
+
+      // --- Network & Transport / DOM Faults ---
+      {
+        code: "ERR_OFFLINE",
+        name: "Sovereign Node Disconnected (Offline)",
+        cat: "net",
+        severity: "HIGH",
+        layer: "L1_PHYSICAL / L3_IP",
+        summary: "No internet connection detected on client machine. Local network adapter is disconnected.",
+        cause: "Wi-Fi disconnected, Ethernet unplugged, or local DNS failure.",
+        safeguard: "Local Heuristic Offline Mode Active",
+        remediation: "Check local network adapter; VAJRA offline deterministic rules still operate."
+      },
+      {
+        code: "ERR_CONNECTION_REFUSED",
+        name: "Connection Refused / Port Offline",
+        cat: "net",
+        severity: "HIGH",
+        layer: "L4_TRANSPORT",
+        summary: "Target host refused TCP handshake. Local backend (port 8000) or Ollama (port 11434) is down.",
+        cause: "Local service not started or firewall blocking local socket binding.",
+        safeguard: "Automatic Cloud Gateway Fallback",
+        remediation: "Start local backend (`py run.py`) or Ollama (`ollama run qwen2.5-coder:7b`)."
+      },
+      {
+        code: "ERR_CONNECTION_TIMED_OUT",
+        name: "TCP Connection Timed Out",
+        cat: "net",
+        severity: "HIGH",
+        layer: "L4_TRANSPORT",
+        summary: "TCP SYN packets dropped or unanswered by target host.",
+        cause: "Intermediary ISP packet drop or firewall silent drop.",
+        safeguard: "Multi-Route Resilient Handshake",
+        remediation: "Verify internet route; check corporate firewall packet filtering."
+      },
+      {
+        code: "ERR_NAME_NOT_RESOLVED",
+        name: "DNS Resolution Failure",
+        cat: "net",
+        severity: "HIGH",
+        layer: "DNS_TRANSPORT",
+        summary: "Client could not resolve IP address for API or Hugging Face Space hostname.",
+        cause: "DNS server failure, misconfigured /etc/hosts, or network hijacking.",
+        safeguard: "DNS Cache Redundancy",
+        remediation: "Check DNS settings (use 1.1.1.1 or 8.8.8.8); verify domain spelling."
+      },
+      {
+        code: "ERR_SSL_PROTOCOL_ERROR",
+        name: "SSL / TLS Handshake Failure",
+        cat: "net",
+        severity: "CRITICAL",
+        layer: "TLS_LAYER",
+        summary: "TLS negotiation terminated due to cipher suite incompatibility or certificate error.",
+        cause: "Outdated browser TLS capabilities or middlebox SSL inspection proxy.",
+        safeguard: "Strict Transport Security (HSTS) Enforcement",
+        remediation: "Disable SSL middlebox interception; ensure system date/time is accurate."
+      },
+      {
+        code: "ERR_BLOCKED_BY_CORS",
+        name: "Cross-Origin Request Blocked (CORS)",
+        cat: "net",
+        severity: "HIGH",
+        layer: "BROWSER_SECURITY",
+        summary: "Browser blocked API response because request origin is not in the server whitelist.",
+        cause: "Calling API from unauthorized domain or rogue iframe.",
+        safeguard: "Strict Domain Origin Whitelist Enforcement",
+        remediation: "Access VAJRA from authorized origin (aravkataria.github.io, localhost:8000)."
+      },
+      {
+        code: "ERR_ABORTED",
+        name: "Client Transaction Aborted",
+        cat: "net",
+        severity: "LOW",
+        layer: "DOM_CLIENT",
+        summary: "HTTP fetch transaction was explicitly cancelled by user action or client watchdog.",
+        cause: "User navigated away, pressed Stop, or AbortController fired.",
+        safeguard: "Clean Resource Tear-Down",
+        remediation: "Normal client termination. Resubmit when ready."
+      },
+      {
+        code: "ERR_CERT_AUTHORITY_INVALID",
+        name: "Untrusted Certificate Authority",
+        cat: "net",
+        severity: "CRITICAL",
+        layer: "PKI_TRUST",
+        summary: "Remote SSL certificate was signed by an untrusted or self-signed authority.",
+        cause: "Potential man-in-the-middle attack or missing enterprise root certificate.",
+        safeguard: "Strict Certificate Verification",
+        remediation: "Ensure valid certificate from trusted CA (Let's Encrypt, Cloudflare)."
+      },
+
+      // --- AI Reasoning & LLM Inference Errors ---
+      {
+        code: "AI_MODEL_COLD_BOOT",
+        name: "Fine-Tuned Model Cold Booting",
+        cat: "ai",
+        severity: "MEDIUM",
+        layer: "LLM_INFERENCE",
+        summary: "The AravKataria/vajra-lora 7B model container on ZeroGPU is warming up from sleep.",
+        cause: "Hugging Face Space container wakes up after inactivity (15-30s boot duration).",
+        safeguard: "24/7 Cloudflare Keep-Alive Pinger Active",
+        remediation: "Wait 15-20 seconds. Client automatically polls and streams response upon readiness."
+      },
+      {
+        code: "AI_GPU_OOM_SATURATED",
+        name: "ZeroGPU VRAM Saturated (OOM)",
+        cat: "ai",
+        severity: "HIGH",
+        layer: "HARDWARE_ACCELERATION",
+        summary: "Inference request exceeded 80GB VRAM on Nvidia A100 cluster.",
+        cause: "Input prompt + source context exceeded maximum tensor activation budget.",
+        safeguard: "Automatic Context Chunking & Local AST Fallback",
+        remediation: "VAJRA automatically prunes irrelevant AST nodes to fit within tensor budget."
+      },
+      {
+        code: "AI_ZERO_GPU_QUOTA_EXHAUSTED",
+        name: "ZeroGPU Daily Quota Depleted",
+        cat: "ai",
+        severity: "HIGH",
+        layer: "QUOTA_GOVERNANCE",
+        summary: "Hugging Face community ZeroGPU allocation exhausted for current 24-hour cycle.",
+        cause: "Heavy continuous multi-user inference on community GPU tier.",
+        safeguard: "Seamless Fallback to Deterministic Cyber-Reasoning Engine",
+        remediation: "System automatically switches to local AST rule synthesis and local Ollama."
+      },
+      {
+        code: "AI_PROMPT_INJECTION_DETECTED",
+        name: "Adversarial Prompt Injection Intercepted",
+        cat: "ai",
+        severity: "CRITICAL",
+        layer: "GUARDRAILS",
+        summary: "Input matched adversarial jailbreak, system prompt extraction, or privilege override heuristic.",
+        cause: "Malicious user prompt attempting to override sovereign system constraints.",
+        safeguard: "Multi-Stage Neural Guardrail Intercept",
+        remediation: "Input sanitized and logged; system prompt confidentiality strictly preserved."
+      },
+      {
+        code: "AI_CONTEXT_WINDOW_EXCEEDED",
+        name: "Context Window Overflow (>128k Tokens)",
+        cat: "ai",
+        severity: "MEDIUM",
+        layer: "TOKENIZER",
+        summary: "Input repository code exceeds model maximum attention context window.",
+        cause: "Ingesting un-minified vendor bundles or large datasets into single reasoning pass.",
+        safeguard: "AST Dependency Pruner & Vector Embedding Slicing",
+        remediation: "Use VAJRA targeted workspace analysis to focus on affected callgraphs."
+      },
+      {
+        code: "AI_HALLUCINATION_GUARD_REJECT",
+        name: "AI Patch Hallucination Guard Tripped",
+        cat: "ai",
+        severity: "HIGH",
+        layer: "VERIFICATION_ENGINE",
+        summary: "Model generated a patch containing fictitious APIs, unimported symbols, or invalid types.",
+        cause: "Generative model hallucinated non-existent function signature.",
+        safeguard: "Formal 6/6 Invariant Proof Rejection",
+        remediation: "Patch automatically rejected by compiler; synthesis re-prompted with AST constraints."
+      },
+      {
+        code: "AI_INDEPENDENCE_VIOLATION",
+        name: "Tier-3 Sovereign Model Independence Breach",
+        cat: "ai",
+        severity: "CRITICAL",
+        layer: "MODEL_GOVERNANCE",
+        summary: "Model 1 (Analyst) and Model 2 (Repairer) shared un-isolated inference state.",
+        cause: "Internal memory leakage between analysis and synthesis pipelines.",
+        safeguard: "Strict 3-Tier Sovereign Independence Isolation Check",
+        remediation: "Inference pipelines cleanly separated into independent processes."
+      },
+      {
+        code: "AI_MODEL_STREAM_TERMINATED",
+        name: "SSE Inference Stream Severed",
+        cat: "ai",
+        severity: "MEDIUM",
+        layer: "STREAM_READER",
+        summary: "Server-Sent Events (SSE) stream closed before receiving 'event: complete'.",
+        cause: "Network hiccup or GPU worker node preempted mid-generation.",
+        safeguard: "Line-by-Line SSE Reader Auto-Recovery",
+        remediation: "Client automatically initiates retry from last verified token buffer."
+      },
+      {
+        code: "AI_KAGGLE_OFFLINE",
+        name: "Kaggle Worker Node Standby",
+        cat: "ai",
+        severity: "INFO",
+        layer: "DISTRIBUTED_WORKERS",
+        summary: "Kaggle Model 1 / Model 2 dual worker node is currently offline or sleeping.",
+        cause: "Kaggle 12-hour session quota elapsed.",
+        safeguard: "Active Hugging Face ZeroGPU Primary Route",
+        remediation: "Primary inference seamlessly routed through Hugging Face Space."
+      },
+
+      // --- Security Analysis & AST Engine Errors ---
+      {
+        code: "SEC_AST_PARSE_FAILURE",
+        name: "AST Syntax Tree Parsing Failure",
+        cat: "sec",
+        severity: "HIGH",
+        layer: "AST_PARSER",
+        summary: "Source code contains fatal syntax errors preventing construction of abstract syntax tree.",
+        cause: "Incomplete code snippet, unsupported language version, or pre-processor macros.",
+        safeguard: "Fault-Tolerant Tree-Sitter Parser",
+        remediation: "Ensure source code compiles or is syntactically valid in target language."
+      },
+      {
+        code: "SEC_REACHABILITY_UNRESOLVABLE",
+        name: "Callgraph Reachability Unresolvable",
+        cat: "sec",
+        severity: "MEDIUM",
+        layer: "CALLGRAPH_ENGINE",
+        summary: "Vulnerability cannot be traced to an active public execution entrypoint.",
+        cause: "Dynamic reflection, runtime eval(), or un-inspectable indirect function pointers.",
+        safeguard: "Dynamic Symbolic Execution Fallback",
+        remediation: "Annotate dynamic dispatch entrypoints or provide integration test driver."
+      },
+      {
+        code: "SEC_DEPENDENCY_CYCLE",
+        name: "Circular Import Explosion",
+        cat: "sec",
+        severity: "HIGH",
+        layer: "DEPENDENCY_GRAPH",
+        summary: "Circular dependency detected between modules causing topological sort recursion.",
+        cause: "Mutually dependent modules in target repository.",
+        safeguard: "Tarjan Strongly Connected Component Partitioning",
+        remediation: "Decouple circular module dependencies in target source code."
+      },
+      {
+        code: "SEC_EXPLOIT_POC_EXEC_TIMEOUT",
+        name: "PoC Sandbox Execution Timeout (>30s)",
+        cat: "sec",
+        severity: "HIGH",
+        layer: "EXPLOIT_HARNESS",
+        summary: "Sandboxed proof-of-concept verification execution exceeded safety runtime limit.",
+        cause: "Infinite loop or blocking I/O in user exploit reproducer script.",
+        safeguard: "Sandboxed Process Watchdog Kill",
+        remediation: "Optimize PoC harness script to terminate deterministically within 5s."
+      },
+      {
+        code: "SEC_MUTATION_VERIFIER_FAILED",
+        name: "Mutation Verifier Score Below Threshold",
+        cat: "sec",
+        severity: "HIGH",
+        layer: "MUTATION_TESTING",
+        summary: "Synthesized security test suite failed to kill required percentage of code mutants.",
+        cause: "Weak assertion checks in synthesized regression tests.",
+        safeguard: "Mutation Test Quality Filter",
+        remediation: "System generates tighter assertions and negative invariant checks."
+      },
+      {
+        code: "SEC_ZERO_RETENTION_BREACH",
+        name: "Zero-Retention Decontamination Warning",
+        cat: "sec",
+        severity: "CRITICAL",
+        layer: "PRIVACY_ENCLAVE",
+        summary: "Residual artifact detected in temporary scratch storage after pipeline completion.",
+        cause: "Process crashed before finally: cleanup block executed.",
+        safeguard: "Automated Garbage Collector Scavenger & Shredder",
+        remediation: "Scratch disk securely shredded with DoD 5220.22-M zero-overwrite."
+      },
+      {
+        code: "SEC_UNTRUSTED_BINARY_DETECTED",
+        name: "Untrusted Binary File Ingestion Blocked",
+        cat: "sec",
+        severity: "CRITICAL",
+        layer: "INGESTION_FILTER",
+        summary: "Compiled executable binary (ELF/PE/Mach-O) detected in uploaded repository.",
+        cause: "User uploaded build directory containing compiled .exe, .dll, or .so binaries.",
+        safeguard: "Binary Quarantine & Execution Shield",
+        remediation: "Only source code files are permitted for ingestion. Remove pre-compiled binaries."
+      },
+      {
+        code: "SEC_SANDBOX_ESCAPE_ATTEMPT",
+        name: "Sandbox Boundary Violation Intercepted",
+        cat: "sec",
+        severity: "CRITICAL",
+        layer: "ISOLATION_HARNESS",
+        summary: "Exploit harness detected syscall attempt outside container boundary (chroot escape, ptrace).",
+        cause: "PoC script attempted unauthorized kernel privilege escalation.",
+        safeguard: "Seccomp-BPF Syscall Filter Intercept",
+        remediation: "Sandboxed execution immediately killed and client IP quarantined."
+      },
+
+      // --- Patch Generation & Verification Errors ---
+      {
+        code: "PATCH_SYNTAX_INVALID",
+        name: "Synthesized Unified Diff Syntax Invalid",
+        cat: "patch",
+        severity: "HIGH",
+        layer: "PATCH_APPLIER",
+        summary: "Generated unified diff hunk contains invalid line offset markers or corrupted syntax.",
+        cause: "Model generated truncated git diff headers.",
+        safeguard: "AST-Aware Patch Regenerator",
+        remediation: "System reparses diff and re-synthesizes clean hunk using Abstract Syntax Tree."
+      },
+      {
+        code: "PATCH_REPAIR_REGRESSION",
+        name: "Regression Detected in Existing Tests",
+        cat: "patch",
+        severity: "CRITICAL",
+        layer: "REGRESSION_VERIFIER",
+        summary: "The synthesized security patch broke previously passing unit or integration tests.",
+        cause: "Overly restrictive security check broke legitimate application business logic.",
+        safeguard: "Regression Verifier Test Gate",
+        remediation: "Patch rejected; repair retry loop initiated with regression failure trace."
+      },
+      {
+        code: "PATCH_POC_UNRESOLVED",
+        name: "Vulnerability Still Exploitable After Patch",
+        cat: "patch",
+        severity: "CRITICAL",
+        layer: "POC_VERIFIER",
+        summary: "Exploit harness successfully reproduced vulnerability even after patch was applied.",
+        cause: "Superficial patch that failed to eliminate underlying root cause.",
+        safeguard: "PoC Neutralization Gate",
+        remediation: "System analyzes exploit payload reachability and generates surgical fix."
+      },
+      {
+        code: "PATCH_GIT_MERGE_CONFLICT",
+        name: "Git Working Tree Merge Conflict",
+        cat: "patch",
+        severity: "MEDIUM",
+        layer: "GIT_ARCHAEOLOGIST",
+        summary: "Patch cannot be applied cleanly to working tree due to upstream line divergences.",
+        cause: "Working tree modified concurrently during analysis pass.",
+        safeguard: "3-Way Merge Archaeological Resolver",
+        remediation: "Synchronize working tree with latest commit head and re-apply."
+      },
+      {
+        code: "PATCH_INVARIANT_ASSERTION_FAILED",
+        name: "Post-Condition Invariant Assertion Failed",
+        cat: "patch",
+        severity: "HIGH",
+        layer: "FORMAL_VERIFIER",
+        summary: "Code state violated formal safety assertions after patch was injected.",
+        cause: "Variable nullability, range, or concurrency invariant violated.",
+        safeguard: "Formal 6/6 Invariant Proof Verification",
+        remediation: "System injects defensive null-guards and bounds checking."
+      },
+      {
+        code: "PATCH_SAFETY_GUARD_TRIPPED",
+        name: "Secondary Vulnerability Introduced by Patch",
+        cat: "patch",
+        severity: "CRITICAL",
+        layer: "ANALYSIS_FEEDBACK",
+        summary: "Security scan of proposed patch revealed introduction of a new CWE vulnerability.",
+        cause: "Patch attempted to fix SQLi by introducing unsafe dynamic string formatting.",
+        safeguard: "Pre-Commit Double-Scan Verification",
+        remediation: "Patch quarantined immediately. Zero-tolerance policy enforces new synthesis."
+      },
+
+      // --- Cryptographic & Vault Security Errors ---
+      {
+        code: "CRYPTO_HMAC_SIGNATURE_INVALID",
+        name: "HMAC Signature Verification Failed",
+        cat: "crypto",
+        severity: "CRITICAL",
+        layer: "VAULT_CRYPTO",
+        summary: "Computed request HMAC-SHA256 signature did not match X-Vajra-Signature header.",
+        cause: "Payload altered in transit or incorrect shared secret key used.",
+        safeguard: "Cryptographic Vault Tamper Shield",
+        remediation: "Verify secret key synchronization; ensure payload bytes are unaltered."
+      },
+      {
+        code: "CRYPTO_NONCE_REPLAY_DETECTED",
+        name: "Cryptographic Nonce Replay Attack Detected",
+        cat: "crypto",
+        severity: "CRITICAL",
+        layer: "VAULT_CRYPTO",
+        summary: "Request utilized a cryptographic nonce identifier that was previously processed.",
+        cause: "Replay attack attempt intercepted by edge defense ledger.",
+        safeguard: "Sliding Nonce Bloom Filter",
+        remediation: "Generate a cryptographically secure random nonce for every transaction."
+      },
+      {
+        code: "CRYPTO_ENCRYPTION_KEY_MISMATCH",
+        name: "Frontend XOR/Base64 Key Mismatch",
+        cat: "crypto",
+        severity: "HIGH",
+        layer: "FRONTEND_CIPHER",
+        summary: "In-memory frontend decryption failed to unscramble protected API endpoint strings.",
+        cause: "Obfuscation key mismatch between frontend bundle and client execution environment.",
+        safeguard: "Dual-Layer In-Memory Decryption Integrity",
+        remediation: "Hard-refresh browser cache (Ctrl+Shift+R) to load synchronized cipher bundle."
+      },
+      {
+        code: "CRYPTO_TIME_SKEW_EXCEEDED",
+        name: "Cryptographic Timestamp Drift Exceeded (>300s)",
+        cat: "crypto",
+        severity: "HIGH",
+        layer: "VAULT_CRYPTO",
+        summary: "Client system clock deviates by more than 5 minutes from atomic time server.",
+        cause: "Local machine clock desynchronized, invalidating time-based HMAC signatures.",
+        safeguard: "Timestamp Window Verification (+-300s)",
+        remediation: "Synchronize local operating system clock with NTP server."
+      },
+      {
+        code: "CRYPTO_CERT_PINNING_FAILED",
+        name: "SSL Certificate Pinning Mismatch",
+        cat: "crypto",
+        severity: "CRITICAL",
+        layer: "TRANSPORT_SECURITY",
+        summary: "Public key extracted from edge certificate does not match pinned sovereign hash.",
+        cause: "Potential TLS interception proxy or forged intermediate certificate.",
+        safeguard: "Edge Public Key Pinning (HPKP)",
+        remediation: "Ensure un-intercepted direct connection to VAJRA edge gateway."
+      },
+
+      // --- Future Enterprise & Cloud Federation Errors ---
+      {
+        code: "FED_MULTI_CLUSTER_SPLIT_BRAIN",
+        name: "Multi-Region Cluster Desynchronization",
+        cat: "future",
+        severity: "CRITICAL",
+        layer: "DISTRIBUTED_CONSENSUS",
+        summary: "Split-brain state detected between geographic defense clusters.",
+        cause: "Trans-oceanic fiber link partition between edge consensus nodes.",
+        safeguard: "Raft Quorum Sovereign Master Election",
+        remediation: "Majority quorum takes exclusive write lock until network re-converges."
+      },
+      {
+        code: "CLOUD_K8S_POD_EVICTED",
+        name: "Kubernetes Spot Instance Pod Evicted",
+        cat: "future",
+        severity: "HIGH",
+        layer: "CONTAINER_ORCHESTRATION",
+        summary: "Deep analysis worker pod terminated prematurely due to cloud spot instance reclamation.",
+        cause: "Cloud provider preempted spot compute node during peak demand.",
+        safeguard: "State Checkpoint & Pod Auto-Rescheduling",
+        remediation: "Pipeline automatically resumes from last verified AST analysis checkpoint."
+      },
+      {
+        code: "FED_CONSENSUS_TIMEOUT",
+        name: "Distributed Proof Consensus Timeout",
+        cat: "future",
+        severity: "HIGH",
+        layer: "CONSENSUS_LEDGER",
+        summary: "Byzantine fault-tolerant proof ledger failed to reach 66% validation consensus.",
+        cause: "Network latency or validator node desynchronization.",
+        safeguard: "Optimistic Asynchronous Ledger Finalization",
+        remediation: "Consensus round automatically re-broadcasts to fallback validator nodes."
+      },
+      {
+        code: "CLOUD_STORAGE_IMMUTABLE_LOCKED",
+        name: "Audit Trail WORM Ledger Violation",
+        cat: "future",
+        severity: "CRITICAL",
+        layer: "AUDIT_COMPLIANCE",
+        summary: "Attempt to overwrite or alter immutable Write-Once-Read-Many (WORM) audit ledger.",
+        cause: "Unauthorized attempt to purge security breach forensic trail.",
+        safeguard: "Hardware Cryptographic Immutability Enclave",
+        remediation: "Audit trails are cryptographically immutable by sovereign law and cannot be altered."
+      },
+      {
+        code: "FED_SOVEREIGN_DATA_BORDER",
+        name: "Cross-Border Sovereign Residency Embargo",
+        cat: "future",
+        severity: "HIGH",
+        layer: "DATA_SOVEREIGNTY",
+        summary: "Source code ingestion blocked by cross-border data residency compliance policy.",
+        cause: "Customer repository designated for EU/India residency attempted ingestion in US cluster.",
+        safeguard: "Geo-Fenced Sovereign Compute Router",
+        remediation: "Route analysis request through regional sovereign compute enclave."
+      }
+    ];
+
+    // Category Counts Calculation
+    function updateCategoryCounts() {
+      document.getElementById("countAll").textContent = VAJRA_ERROR_CATALOG.length;
+      document.getElementById("count4xx").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "4xx").length;
+      document.getElementById("count5xx").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "5xx").length;
+      document.getElementById("countNet").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "net").length;
+      document.getElementById("countAi").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "ai").length;
+      document.getElementById("countSec").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "sec").length;
+      document.getElementById("countPatch").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "patch").length;
+      document.getElementById("countCrypto").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "crypto").length;
+      document.getElementById("countFuture").textContent = VAJRA_ERROR_CATALOG.filter(e => e.cat === "future").length;
+    }
+
+    // Render Matrix Grid
+    function renderErrorGrid(filterCat = "all", searchQuery = "") {
+      const grid = document.getElementById("errorGrid");
+      grid.innerHTML = "";
+
+      const query = searchQuery.trim().toLowerCase();
+      const filtered = VAJRA_ERROR_CATALOG.filter(item => {
+        const matchesCat = (filterCat === "all" || item.cat === filterCat);
+        const matchesQuery = !query || (
+          item.code.toLowerCase().includes(query) ||
+          item.name.toLowerCase().includes(query) ||
+          item.summary.toLowerCase().includes(query) ||
+          item.cause.toLowerCase().includes(query) ||
+          item.layer.toLowerCase().includes(query) ||
+          item.remediation.toLowerCase().includes(query)
+        );
+        return matchesCat && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 48px 20px; background: var(--bg-panel); border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted);">
+            <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+            <strong style="font-size: 16px;">No Matching Cyber Errors Found</strong>
+            <p style="font-size: 13px; margin-top: 4px;">Try searching for a different code (e.g. 404, 503, CORS, OOM) or select a category tab.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(err => {
+        let badgeClass = "badge-info";
+        if (err.severity === "CRITICAL") badgeClass = "badge-critical";
+        else if (err.severity === "HIGH") badgeClass = "badge-high";
+        else if (err.severity === "MEDIUM") badgeClass = "badge-medium";
+
+        const card = document.createElement("div");
+        card.className = "error-card";
+        card.id = "card-" + err.code;
+
+        card.innerHTML = `
+          <div class="error-card-top">
+            <span class="error-code-badge ${badgeClass}">${err.code}</span>
+            <span class="layer-tag">${err.layer} &bull; ${err.severity}</span>
+          </div>
+          <h3 class="error-name">${err.name}</h3>
+          <p class="error-summary">${err.summary}</p>
+          <div class="diagnostic-drawer">
+            <div class="diag-row">
+              <span class="diag-label">ROOT CAUSE</span>
+              <span class="diag-val">${err.cause}</span>
+            </div>
+            <div class="diag-row">
+              <span class="diag-label">SOVEREIGN SAFEGUARD</span>
+              <span class="diag-val" style="color: var(--amber);">${err.safeguard}</span>
+            </div>
+            <div class="diag-row">
+              <span class="diag-label">RECOMMENDED REMEDIATION</span>
+              <span class="diag-remedy">${err.remediation}</span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // URL Parameter & Error Profile Switcher
+    function checkUrlErrorCode() {
+      const params = new URLSearchParams(window.location.search);
+      const requestedCode = params.get("code") || params.get("status") || "404";
+      
+      const found = VAJRA_ERROR_CATALOG.find(e => e.code.toLowerCase() === requestedCode.toLowerCase());
+      if (found) {
+        document.getElementById("displayedErrorCode").textContent = found.code;
+        document.getElementById("displayedErrorTitle").textContent = found.name;
+        document.getElementById("displayedErrorDesc").textContent = found.summary + " " + found.cause;
+        document.title = `${found.code} — ${found.name} | VAJRA Sovereign Cyber-Defense`;
+
+        // Highlight in matrix if loaded
+        setTimeout(() => {
+          const targetCard = document.getElementById("card-" + found.code);
+          if (targetCard) {
+            targetCard.classList.add("highlighted");
+            targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 300);
+      }
+    }
+
+    // Client Telemetry Readouts
+    function initTelemetry() {
+      document.getElementById("telemetryPath").textContent = window.location.pathname || "/unknown";
+      document.getElementById("telemetryTime").textContent = new Date().toISOString();
+    }
+
+    // Live Gateway Health Pingers
+    async function pingServices() {
+      // 1. Render FastAPI Backend Gateway
+      try {
+        const renderResp = await fetch("https://vajra-7aue.onrender.com/health", {
+          signal: AbortSignal.timeout(8000)
+        });
+        if (renderResp.ok) {
+          document.getElementById("lampRender").className = "indicator-lamp";
+          document.getElementById("statusRender").textContent = "ONLINE (200 OK)";
+          document.getElementById("statusRender").style.color = "var(--green)";
+        } else {
+          throw new Error("HTTP " + renderResp.status);
+        }
+      } catch (e) {
+        document.getElementById("lampRender").className = "indicator-lamp offline";
+        document.getElementById("statusRender").textContent = "STANDBY / SPINNING UP";
+        document.getElementById("statusRender").style.color = "var(--amber)";
+      }
+
+      // 2. Hugging Face ZeroGPU Space
+      try {
+        const hfResp = await fetch("https://aravkataria-vajra.hf.space", {
+          mode: "no-cors",
+          signal: AbortSignal.timeout(8000)
+        });
+        document.getElementById("lampHf").className = "indicator-lamp";
+        document.getElementById("statusHf").textContent = "WARM & ACTIVE (A100 READY)";
+        document.getElementById("statusHf").style.color = "var(--green)";
+      } catch (e) {
+        document.getElementById("lampHf").className = "indicator-lamp offline";
+        document.getElementById("statusHf").textContent = "COLD STANDBY";
+        document.getElementById("statusHf").style.color = "var(--amber)";
+      }
+    function fixNavigationLinks() {
+      const isGithubPages = window.location.hostname.includes("github.io");
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const repoName = isGithubPages && pathParts.length > 0 ? "/" + pathParts[0] : "";
+      
+      const homeUrl = repoName ? repoName + "/index.html" : "index.html";
+      const chatUrl = repoName ? repoName + "/chatbot/" : "chatbot/";
+      const wsUrl = repoName ? repoName + "/workspace/" : "workspace/";
+      const appUrl = repoName ? repoName + "/app/" : "app/";
+      const logoUrl = repoName ? repoName + "/logo.png" : "logo.png";
+
+      document.querySelectorAll(".link-home").forEach(a => a.href = homeUrl);
+      document.querySelectorAll(".link-chat").forEach(a => a.href = chatUrl);
+      document.querySelectorAll(".link-ws").forEach(a => a.href = wsUrl);
+      document.querySelectorAll(".link-app").forEach(a => a.href = appUrl);
+      document.querySelectorAll(".brand-logo").forEach(img => img.src = logoUrl);
+    }
+
+    // Event Listeners
+    document.addEventListener("DOMContentLoaded", () => {
+      fixNavigationLinks();
+      initTelemetry();
+      updateCategoryCounts();
+      renderErrorGrid("all", "");
+      checkUrlErrorCode();
+      pingServices();
+
+      // Category Tabs
+      document.getElementById("categoryTabs").addEventListener("click", (e) => {
+        const tab = e.target.closest(".cat-tab");
+        if (!tab) return;
+        document.querySelectorAll(".cat-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        const cat = tab.dataset.cat;
+        const query = document.getElementById("matrixSearch").value;
+        renderErrorGrid(cat, query);
+      });
+
+      // Search Input
+      document.getElementById("matrixSearch").addEventListener("input", (e) => {
+        const activeTab = document.querySelector(".cat-tab.active");
+        const cat = activeTab ? activeTab.dataset.cat : "all";
+        renderErrorGrid(cat, e.target.value);
+      });
+    });
+  </script>
+</body>
+</html>

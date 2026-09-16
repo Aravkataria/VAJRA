@@ -17,9 +17,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.analysis.analyst import build_default_analyst
 from app.analysis.workspace_scan import scan_workspace, summarize_findings
@@ -181,21 +183,359 @@ async def production_security_and_rate_limit(request: Request, call_next):
     return response
 
 
+VAJRA_ERROR_REGISTRY: Dict[int, Dict[str, str]] = {
+    400: {
+        "name": "Bad Request / Malformed Syntax",
+        "message": "The incoming request violated protocol syntax or contained unparseable parameters.",
+        "remediation": "Verify request payload matches OpenAPI specification at /docs.",
+    },
+    401: {
+        "name": "Unauthorized / Cryptographic Signature Lock Failed",
+        "message": "Vault cryptographic signature mismatch or missing authentication token.",
+        "remediation": "Ensure requests supply valid X-Vajra-Signature HMAC or X-API-Key credentials.",
+    },
+    402: {
+        "name": "Payment Required / Quota Exceeded",
+        "message": "Reserved compute tier quota reached. Zero-cost community routes active.",
+        "remediation": "Operate within unmetered public tier or local Ollama engine.",
+    },
+    403: {
+        "name": "Forbidden / Sovereign Policy Violation",
+        "message": "Access prohibited by Sovereign Security Policy. Clearance insufficient.",
+        "remediation": "Target resource is protected. Verify administrative credentials.",
+    },
+    404: {
+        "name": "Resource Not Found / Route Unregistered",
+        "message": "The requested cyber-reasoning endpoint, casefile, or asset does not exist.",
+        "remediation": "Verify URL path against available routes at /docs or /dashboard.",
+    },
+    405: {
+        "name": "Method Not Allowed",
+        "message": "The HTTP method is not permitted on this defense endpoint.",
+        "remediation": "Review allowed HTTP methods in API documentation at /docs.",
+    },
+    406: {
+        "name": "Not Acceptable",
+        "message": "Server cannot produce response matching client Accept headers.",
+        "remediation": "Set Accept: application/json or Accept: text/html in request headers.",
+    },
+    408: {
+        "name": "Request Timeout",
+        "message": "The gateway or client transmission timed out.",
+        "remediation": "Check network stability and retry request.",
+    },
+    409: {
+        "name": "State Conflict / Concurrent Modification",
+        "message": "Target resource is undergoing concurrent AST analysis or patch synthesis.",
+        "remediation": "Wait for active analysis to finalize or reset workspace state.",
+    },
+    410: {
+        "name": "Gone / Volatile Memory Reclaimed",
+        "message": "The target casefile or scan artifact has been permanently purged under Zero-Retention.",
+        "remediation": "Re-ingest repository archive to initiate fresh analysis cycle.",
+    },
+    413: {
+        "name": "Payload Too Large / Quota Exceeded",
+        "message": "Uploaded file or casefile archive exceeds maximum ingestion limit (50MB).",
+        "remediation": "Exclude binary files, .git directory, and cache artifacts before uploading.",
+    },
+    415: {
+        "name": "Unsupported Media Type",
+        "message": "Uploaded format is not supported by the ingestion engine.",
+        "remediation": "Upload valid ZIP archives or supported plain-text source files.",
+    },
+    422: {
+        "name": "Unprocessable Entity / Schema Validation Error",
+        "message": "Parameters failed strict Pydantic structural schema validation.",
+        "remediation": "Check parameter names, formats, and mandatory fields in request body.",
+    },
+    429: {
+        "name": "Too Many Requests / Rate Limit Exceeded",
+        "message": "Security threshold exceeded. Anti-DDoS sliding rate limiter engaged.",
+        "remediation": "Cool down requests. Respect Retry-After header before re-attempting.",
+    },
+    500: {
+        "name": "Internal System Fault / Reasoning Panic",
+        "message": "Internal reasoning engine encountered an unhandled exception. Safeguards active.",
+        "remediation": "Inspect server logs. Fallback deterministic rules remain operative.",
+    },
+    501: {
+        "name": "Not Implemented / Future Capability",
+        "message": "The requested capability is planned but not yet deployed in active release.",
+        "remediation": "Check feature roadmap and release notes.",
+    },
+    502: {
+        "name": "Bad Gateway / AI Bridge Severed",
+        "message": "Upstream AI inference container or model bridge is unreachable.",
+        "remediation": "Automatic fallback initiated. ZeroGPU container may be rebooting.",
+    },
+    503: {
+        "name": "Service Unavailable / Model Standby",
+        "message": "ZeroGPU or inference cluster is currently warming up or undergoing maintenance.",
+        "remediation": "Allow 15-30 seconds for cold container boot, then retry.",
+    },
+    504: {
+        "name": "Gateway Timeout / Deep Synthesis Limit",
+        "message": "Upstream reasoning cluster took longer than maximum allowed deadline (35s).",
+        "remediation": "Scope analysis to smaller modules or run in batch mode.",
+    },
+}
+
+
+def render_vajra_error_html(
+    status_code: int,
+    name: str,
+    message: str,
+    detail: str,
+    remediation: str,
+    path: str,
+) -> str:
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{status_code} — {name} | VAJRA Sovereign Cyber-Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      background: #030712;
+      color: #f9fafb;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background-image: radial-gradient(ellipse at 50% 20%, rgba(244, 63, 94, 0.08), transparent 60%);
+    }}
+    .error-card {{
+      max-width: 680px;
+      width: 100%;
+      background: #0b0f19;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 40px 36px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      position: relative;
+      overflow: hidden;
+    }}
+    .error-card::before {{
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #f43f5e, #f59e0b, #00f0ff);
+    }}
+    .badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #f43f5e;
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }}
+    h1 {{
+      font-size: clamp(30px, 4vw, 40px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }}
+    .desc {{
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }}
+    .telemetry {{
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 28px;
+    }}
+    .tele-row {{ display: flex; justify-content: space-between; }}
+    .tele-label {{ color: rgba(255, 255, 255, 0.4); text-transform: uppercase; }}
+    .tele-val {{ color: #00f0ff; }}
+    .tele-remedy {{ color: #10b981; margin-top: 4px; line-height: 1.4; }}
+    .actions {{ display: flex; flex-wrap: wrap; gap: 12px; }}
+    .btn {{
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }}
+    .btn-primary {{ background: #00f0ff; color: #030712; }}
+    .btn-primary:hover {{ box-shadow: 0 0 16px rgba(0, 240, 255, 0.35); }}
+    .btn-sec {{ background: rgba(255, 255, 255, 0.05); color: #f9fafb; border: 1px solid rgba(255, 255, 255, 0.12); }}
+    .btn-sec:hover {{ background: rgba(255, 255, 255, 0.1); border-color: #00f0ff; }}
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <div class="badge">&#9888; VAJRA DEFENSE INTERCEPT // CODE {status_code}</div>
+    <h1>{name}</h1>
+    <p class="desc">{message}</p>
+    <div class="telemetry">
+      <div class="tele-row">
+        <span class="tele-label">REQUEST PATH:</span>
+        <span class="tele-val">{path}</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-label">DETAIL:</span>
+        <span class="tele-val" style="color:#f43f5e;">{detail}</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-label">REMEDIATION:</span>
+        <span class="tele-remedy">{remediation}</span>
+      </div>
+    </div>
+    <div class="actions">
+      <a href="/dashboard" class="btn btn-primary">&#128737; Sovereign Dashboard</a>
+      <a href="/docs" class="btn btn-sec">&#128214; API Documentation</a>
+      <a href="https://aravkataria.github.io/VAJRA/404.html?code={status_code}" class="btn btn-sec">&#128269; View In Error Matrix</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+@app.exception_handler(StarletteHTTPException)
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+async def http_exception_handler(request: Request, exc: Any):
+    status_code = getattr(exc, "status_code", 500)
+    detail_str = str(getattr(exc, "detail", exc))
+    meta = VAJRA_ERROR_REGISTRY.get(status_code, {
+        "name": f"HTTP {status_code}",
+        "message": detail_str,
+        "remediation": "Verify request parameters and API documentation at /docs."
+    })
+    
+    accept_header = request.headers.get("accept", "").lower()
+    is_browser_req = "text/html" in accept_header and not request.url.path.startswith("/api/")
+    
+    if is_browser_req:
+        html_body = render_vajra_error_html(
+            status_code=status_code,
+            name=meta["name"],
+            message=meta["message"],
+            detail=detail_str,
+            remediation=meta["remediation"],
+            path=request.url.path,
+        )
+        return HTMLResponse(content=html_body, status_code=status_code)
+    
     return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": exc.detail, "status_code": exc.status_code},
+        status_code=status_code,
+        content={
+            "success": False,
+            "status_code": status_code,
+            "error": detail_str if getattr(exc, "detail", None) else meta["name"],
+            "code": f"ERR_E{status_code}",
+            "name": meta["name"],
+            "message": meta["message"],
+            "detail": detail_str,
+            "path": request.url.path,
+            "remediation": meta["remediation"],
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for err in exc.errors():
+        field = " -> ".join(str(loc) for loc in err.get("loc", []))
+        msg = err.get("msg", "Invalid value")
+        errors.append(f"{field}: {msg}")
+    
+    summary = "; ".join(errors) if errors else "Schema validation failed."
+    meta = VAJRA_ERROR_REGISTRY[422]
+    
+    accept_header = request.headers.get("accept", "").lower()
+    if "text/html" in accept_header and not request.url.path.startswith("/api/"):
+        html_body = render_vajra_error_html(
+            status_code=422,
+            name=meta["name"],
+            message=meta["message"],
+            detail=summary,
+            remediation=meta["remediation"],
+            path=request.url.path,
+        )
+        return HTMLResponse(content=html_body, status_code=422)
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "status_code": 422,
+            "error": "Validation Error",
+            "code": "ERR_E422",
+            "name": meta["name"],
+            "message": meta["message"],
+            "detail": summary,
+            "validation_errors": exc.errors(),
+            "path": request.url.path,
+            "remediation": meta["remediation"],
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
     )
 
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    # Prevent stack trace leakage in production
-    detail = str(exc) if IS_DEBUG else "Internal processing error. Check server logs."
+    meta = VAJRA_ERROR_REGISTRY[500]
+    detail_str = str(exc) if IS_DEBUG else "Internal processing error. Safeguards active."
+    
+    accept_header = request.headers.get("accept", "").lower()
+    if "text/html" in accept_header and not request.url.path.startswith("/api/"):
+        html_body = render_vajra_error_html(
+            status_code=500,
+            name=meta["name"],
+            message=meta["message"],
+            detail=detail_str,
+            remediation=meta["remediation"],
+            path=request.url.path,
+        )
+        return HTMLResponse(content=html_body, status_code=500)
+
     return JSONResponse(
         status_code=500,
-        content={"error": "Internal Server Error", "detail": detail},
+        content={
+            "success": False,
+            "status_code": 500,
+            "error": "Internal Server Error",
+            "code": "ERR_E500",
+            "name": meta["name"],
+            "message": meta["message"],
+            "detail": detail_str,
+            "path": request.url.path,
+            "remediation": meta["remediation"],
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
     )
 
 
