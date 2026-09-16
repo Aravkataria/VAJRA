@@ -187,7 +187,7 @@
     font-weight: 600; padding: 4px 14px; border-radius: 9999px; background: var(--s2-card-strong);
     border: 1px solid var(--s2-border); text-transform: uppercase; letter-spacing: 0.05em;
   }
-  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 8px rgba(244,63,94,0.6); }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--spark); box-shadow: 0 0 8px rgba(245,180,0,0.5); }
   h1.hero-h {
     font-size: clamp(34px, 5.5vw, 56px); font-weight: 600; line-height: 1.1; letter-spacing: -0.03em;
   }
@@ -297,7 +297,7 @@
     border-color: var(--s1-border-strong); transform: translateY(-2px);
   }
   .error-card.highlighted {
-    border-color: var(--spark); box-shadow: 0 0 20px rgba(245, 180, 0, 0.25);
+    border-color: var(--spark);
   }
 
   .error-card-top {
@@ -306,11 +306,8 @@
   .error-code-badge {
     font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700;
     display: inline-flex; align-items: center; gap: 6px;
+    color: var(--s1-text);
   }
-  .error-code-badge.badge-critical { color: var(--danger); }
-  .error-code-badge.badge-high { color: var(--warn); }
-  .error-code-badge.badge-medium { color: var(--spark); }
-  .error-code-badge.badge-info { color: var(--info); }
 
   .layer-tag {
     font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
@@ -333,7 +330,7 @@
   .diag-row { display: flex; flex-direction: column; gap: 2px; }
   .diag-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--s1-text-40); font-weight: 600; }
   .diag-val { color: var(--s1-text-70); line-height: 1.4; word-break: break-word; }
-  .diag-remedy { color: var(--ok); line-height: 1.4; word-break: break-word; font-weight: 500; }
+  .diag-remedy { color: var(--s1-text-70); line-height: 1.4; word-break: break-word; font-weight: 500; }
 
   /* Live Health Probe Panel */
   .live-health-strip {
@@ -385,6 +382,30 @@
     .live-health-strip { flex-direction: column; align-items: flex-start; }
     .foot-top { flex-direction: column; gap: 28px; }
     .foot-cols { gap: 36px; }
+  }
+  @media (max-width: 600px) {
+    .btn-get { display: none; }
+    .shell { margin: 4px 8px 12px; border-radius: 14px; }
+    .hero { padding: 40px 14px 28px; }
+    .hero-code { font-size: clamp(56px, 16vw, 84px); }
+    .hero-title { font-size: 22px; }
+    .hero-actions { flex-direction: column; width: 100%; gap: 10px; }
+    .hero-actions a { width: 100%; justify-content: center; }
+    .stats-strip { flex-wrap: wrap; gap: 8px; }
+    .search-box { font-size: 13.5px; padding: 12px 14px 12px 38px; }
+    .cat-tabs { justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; flex-wrap: nowrap; }
+    .cat-tab { white-space: nowrap; flex-shrink: 0; padding: 6px 11px; font-size: 11px; }
+    .error-card { padding: 16px; border-radius: 12px; }
+    .diagnostic-drawer { padding: 10px 12px; font-size: 11.5px; }
+    .test-box { flex-direction: column; }
+    .test-box button { width: 100%; justify-content: center; }
+    .foot-inner { padding: 28px 16px 40px; }
+    .foot-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .foot-bottom { flex-direction: column; text-align: center; gap: 8px; }
+  }
+  @media (max-width: 400px) {
+    .foot-cols { grid-template-columns: 1fr; }
+    .error-code-badge { font-size: 17px; }
   }
 </style>
 </head>
@@ -457,7 +478,7 @@
       <!-- Live Telemetry Strip -->
       <div class="telemetry-strip">
         <div>REQUESTED URI: <strong id="telemetryPath" style="color:var(--spark);">/</strong></div>
-        <div>STATUS: <strong id="telemetrySig" style="color:var(--ok);">CRYPTOGRAPHIC LOCK ACTIVE</strong></div>
+        <div>STATUS: <strong id="telemetrySig">CRYPTOGRAPHIC LOCK ACTIVE</strong></div>
         <div>TIMESTAMP: <strong id="telemetryTime">...</strong></div>
         <div>EDGE NODE: <strong>CLOUDFLARE_GLOBAL</strong></div>
       </div>
@@ -1531,18 +1552,13 @@ function renderErrorGrid(filterCat = "all", searchQuery = "") {
   }
 
   filtered.forEach(err => {
-    let badgeClass = "badge-info";
-    if (err.severity === "CRITICAL") badgeClass = "badge-critical";
-    else if (err.severity === "HIGH") badgeClass = "badge-high";
-    else if (err.severity === "MEDIUM") badgeClass = "badge-medium";
-
     const card = document.createElement("div");
     card.className = "error-card";
     card.id = "card-" + err.code;
 
     card.innerHTML = `
       <div class="error-card-top">
-        <span class="error-code-badge ${badgeClass}">${err.code}</span>
+        <span class="error-code-badge">${err.code}</span>
         <span class="layer-tag">${err.layer} &bull; ${err.severity}</span>
       </div>
       <h3 class="error-name">${err.name}</h3>
@@ -1554,7 +1570,7 @@ function renderErrorGrid(filterCat = "all", searchQuery = "") {
         </div>
         <div class="diag-row">
           <span class="diag-label">SOVEREIGN SAFEGUARD</span>
-          <span class="diag-val" style="color: var(--warn);">${err.safeguard}</span>
+          <span class="diag-val">${err.safeguard}</span>
         </div>
         <div class="diag-row">
           <span class="diag-label">RECOMMENDED REMEDIATION</span>
@@ -1569,6 +1585,7 @@ function renderErrorGrid(filterCat = "all", searchQuery = "") {
 // URL Parameter & Error Profile Switcher
 function checkUrlErrorCode() {
   const params = new URLSearchParams(window.location.search);
+  const hasSpecificParam = params.has("code") || params.has("status");
   const requestedCode = params.get("code") || params.get("status") || "404";
   
   const found = VAJRA_ERROR_CATALOG.find(e => e.code.toLowerCase() === requestedCode.toLowerCase());
@@ -1578,13 +1595,16 @@ function checkUrlErrorCode() {
     document.getElementById("displayedErrorDesc").textContent = found.summary + " " + found.cause;
     document.title = `${found.code} — ${found.name} | VAJRA Sovereign Cyber-Defense`;
 
-    setTimeout(() => {
-      const targetCard = document.getElementById("card-" + found.code);
-      if (targetCard) {
-        targetCard.classList.add("highlighted");
-        targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 300);
+    // Only auto-scroll to the card if specifically requested via URL parameter
+    if (hasSpecificParam) {
+      setTimeout(() => {
+        const targetCard = document.getElementById("card-" + found.code);
+        if (targetCard) {
+          targetCard.classList.add("highlighted");
+          targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 300);
+    }
   }
 }
 
