@@ -129,7 +129,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
     with torch.no_grad():
         generated_ids = model.generate(
             **model_inputs,
-            max_new_tokens=512,
+            max_new_tokens=2048,
             temperature=0.2,
             top_p=0.9,
             repetition_penalty=1.1,
