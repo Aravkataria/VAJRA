@@ -803,7 +803,30 @@ async def chat_api(req: ChatRequest, request: Request):
 
     # 2. Graceful Fallback to Deterministic Cyber-Reasoning Engine
     reply = "🛡️ **VAJRA Cyber-Reasoning System**\n\n"
-    if any(k in lowered for k in ["scan", "vulnerabilit", "finding", "cwe", "idor", "audit"]):
+    if any(k in lowered for k in ["hello", "hi", "hey", "greetings", "good morning", "good evening", "howdy"]):
+        reply += (
+            "Hello! I am **VAJRA**, an Autonomous Cyber-Reasoning and Software Security Intelligence System "
+            "engineered and fine-tuned by **Arav Kataria**.\n\n"
+            "How can I assist you with your codebase today? You can:\n"
+            "• **Audit Code**: Provide a GitHub URL or upload files/folders to trace dangerous AST execution sinks\n"
+            "• **Synthesize Patches**: Generate minimal, non-breaking surgical repairs for CWE-89, CWE-78, CWE-502, IDOR, etc.\n"
+            "• **Explore Architecture**: Inquire about our 3-stage autonomous pipeline and 6-stage formal verification ledger"
+        )
+    elif "kaggle" in lowered:
+        reply += (
+            "**Kaggle** is the world's premier platform for data science competitions, machine learning benchmarks, and datasets (a subsidiary of Google).\n\n"
+            "In VAJRA, our automated verification pipelines and ML benchmarks adhere to Kaggle-grade empirical evaluation standards, "
+            "including confusion matrices, 17-stage verification pipelines, and empirical AST reachability scoring."
+        )
+    elif any(k in lowered for k in ["help", "what can you do", "commands", "features"]):
+        reply += (
+            "Here is what I can do for you:\n\n"
+            "1. **AST Vulnerability Analysis**: Ingest code repositories or files and trace dangerous execution sinks (SQL injection, command injection, unsafe deserialization, IDOR).\n"
+            "2. **Autonomous Patch Synthesis**: Generate minimal, non-breaking surgical code fixes.\n"
+            "3. **6-Stage Proof Ledger**: Formally prove every repair with AST check, static re-scan, exploit sentinels, regression suite, boundary fuzzing, and mutation invariant proofs.\n"
+            "4. **Interactive File Ingestion & Preview**: Live responsive preview for HTML/DOM apps and code artifact inspection."
+        )
+    elif any(k in lowered for k in ["scan", "vulnerabilit", "finding", "cwe", "idor", "audit"]):
         reply += (
             "I have indexed your inquiry against VAJRA's Multi-Tier Security Taxonomy (CWE-89, CWE-78, CWE-502, CWE-639 IDOR). "
             "To run static AST triage, dual-path verification, and zero-regression patch synthesis, "
@@ -815,18 +838,31 @@ async def chat_api(req: ChatRequest, request: Request):
             "Syntax Verification → Static Re-scan → Exploit Sentinels → Regression Verification → "
             "Fuzzing → Mutation Testing → Formal Invariant Proofs. Only patches achieving 100% verification pass rate are applied."
         )
-    elif any(k in lowered for k in ["model", "architecture", "who are you", "what are you"]):
+    elif any(k in lowered for k in ["model", "architecture", "who are you", "what are you", "creator", "author", "who made", "who created"]):
         reply += (
             "I am **VAJRA**, an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered by Arav Kataria. "
             "I operate on an application-level shared inference architecture: Model 1 provides multilingual security analysis, "
             "and Model 2 synthesizes verified surgical patches under strict 3-tier sovereign independence."
         )
     else:
-        reply += (
+        retry_sec = 60
+        limit_msg = (
+            f"🛡️ **VAJRA Cyber-Reasoning System**\n\n"
             f"Analyzing technical request: *\"{prompt_clean[:120]}\"*\n\n"
-            f"The neural inference engine is currently busy or warming up. Please wait a moment and try again, "
-            f"or submit source files to run AST security triage with Zero-Retention Privacy."
+            f"⚠️ **Inference Engine Warming Up**\n\n"
+            f"The neural inference engine is currently spinning up GPU compute resources. "
+            f"Please wait approximately **{retry_sec} seconds** before sending your next request.\n\n"
+            f"💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
         )
+        return JSONResponse({
+            "success": False,
+            "rate_limited": True,
+            "reply": limit_msg,
+            "retry_after": retry_sec,
+            "model": "VAJRA-Cyber-Reasoning",
+            "shield": "Rate-Limit-Guard",
+            "source": "quota-limit"
+        }, status_code=429)
 
     return JSONResponse({
         "success": True,

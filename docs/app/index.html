@@ -3286,10 +3286,21 @@ function appendSessionMessage(role, contentHtml) {
             return {
               isRateLimited: true,
               reply: hfData.reply,
-              retryAfter: hfData.retry_after || 120
+              retryAfter: hfData.retry_after || 60
             };
           }
           if (hfData && hfData.reply) {
+            var rStr = hfData.reply;
+            if (rStr.includes("neural inference engine is currently busy") ||
+                rStr.includes("warming up") ||
+                rStr.includes("Inference Limit Reached") ||
+                rStr.includes("Inference Quota Reached")) {
+              return {
+                isRateLimited: true,
+                reply: rStr,
+                retryAfter: hfData.retry_after || 60
+              };
+            }
             return { reply: hfData.reply };
           }
         }
@@ -3322,12 +3333,32 @@ function appendSessionMessage(role, contentHtml) {
           return {
             isRateLimited: true,
             reply: localLimit.reply,
-            retryAfter: localLimit.retry_after || 120
+            retryAfter: localLimit.retry_after || 60
           };
         }
         if (localResp.ok) {
           var lData = await localResp.json();
-          if (lData && lData.reply) return { reply: lData.reply };
+          if (lData && lData.rate_limited) {
+            return {
+              isRateLimited: true,
+              reply: lData.reply,
+              retryAfter: lData.retry_after || 60
+            };
+          }
+          if (lData && lData.reply) {
+            var lrStr = lData.reply;
+            if (lrStr.includes("neural inference engine is currently busy") ||
+                lrStr.includes("warming up") ||
+                lrStr.includes("Inference Limit Reached") ||
+                lrStr.includes("Inference Quota Reached")) {
+              return {
+                isRateLimited: true,
+                reply: lrStr,
+                retryAfter: lData.retry_after || 60
+              };
+            }
+            return { reply: lData.reply };
+          }
         }
       } catch (e) {}
 
@@ -3814,6 +3845,31 @@ function appendSessionMessage(role, contentHtml) {
           });
         }
 
+        // 3. Fast Conversational & Greeting Intent (Instant Response, Zero-Latency, Zero False-Busy)
+        var qLower = (q || "").toLowerCase().trim();
+        var isPureGreeting = qLower === "hello" || qLower === "hi" || qLower === "hey" ||
+          qLower === "hello vajra" || qLower === "hi vajra" || qLower === "hey vajra" ||
+          qLower.startsWith("hello ") || qLower.startsWith("hi ") || qLower.startsWith("hey ") ||
+          qLower === "good morning" || qLower === "good evening" || qLower === "greetings" ||
+          qLower === "who are you" || qLower === "what is vajra" || qLower === "what are you";
+
+        if (isPureGreeting && (!extraFiles || Object.keys(extraFiles).length === 0)) {
+          removeTypingIndicator();
+          var greetingHtml =
+            '<p>Hello! I am <b>VAJRA</b> — your autonomous cyber-reasoning and deterministic software security intelligence system, engineered and fine-tuned by <b>Arav Kataria</b>.</p>' +
+            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
+              'How can I assist you with your codebase today? You can:' +
+            '</p>' +
+            '<ul style="margin:0.4rem 0 0 1.2rem; font-size:0.86rem; color:var(--text-secondary); line-height:1.6;">' +
+              '<li>Ask about my <b>Architecture</b> or 8-layer sovereign security model</li>' +
+              '<li>Provide a GitHub URL or upload files/folders to run deep <b>AST vulnerability audits</b></li>' +
+              '<li>Request verified surgical <b>security patch synthesis</b> (CWE-89, CWE-78, CWE-502, IDOR)</li>' +
+              '<li>Ask general software engineering, threat modeling, or technical programming questions</li>' +
+            '</ul>';
+          appendSessionMessage("bot", greetingHtml);
+          return;
+        }
+
         var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles);
         if (inferenceRes) {
           removeTypingIndicator();
@@ -3829,12 +3885,12 @@ function appendSessionMessage(role, contentHtml) {
               "<div class='rate-limit-alert' style='border: 1px solid var(--spark); background: rgba(245, 180, 0, 0.08); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5; color: var(--text-primary);'>" +
                 "<p>" + formattedHtml + "</p>" +
                 "<div id='cooldownTimerBox' style='margin-top: 10px; font-family: monospace; font-size: 0.8rem; color: var(--spark); font-weight: 600;'>" +
-                  "⏱️ Cooldown active: <span id='cooldownSeconds'>" + (inferenceRes.retryAfter || 120) + "</span>s remaining" +
+                  "⏱️ Cooldown active: <span id='cooldownSeconds'>" + (inferenceRes.retryAfter || 60) + "</span>s remaining" +
                 "</div>" +
               "</div>"
             );
 
-            startRateLimitCooldown(inferenceRes.retryAfter || 120);
+            startRateLimitCooldown(inferenceRes.retryAfter || 60);
             return;
           }
 
@@ -3921,6 +3977,14 @@ function appendSessionMessage(role, contentHtml) {
           response =
             '<p><b>Local File &amp; Workspace Access:</b></p>' +
             '<p style="margin-top:0.4rem; color:var(--text-secondary);">Yes! I have direct access to your local workspace files. You can load a local folder, drag-and-drop a ZIP archive, or provide a GitHub repository. I will analyze the codebase, isolate AST execution vulnerabilities, and synthesize verified patches right here.</p>';
+        } else if (query.includes("kaggle")) {
+          response =
+            '<p><b>Kaggle &amp; VAJRA Evaluation Benchmarks:</b></p>' +
+            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
+              '<b>Kaggle</b> is the world’s premier community and platform for data science and machine learning competitions, benchmarks, and datasets (a subsidiary of Google). ' +
+              'In VAJRA, our automated vulnerability discovery and repair models are benchmarked against Kaggle-grade empirical evaluation suites, ' +
+              'featuring multi-stage test ledgers, confusion matrix scoring, and AST reachability verification.' +
+            '</p>';
         } else if (query.includes("error") || query.includes("matrix") || query.includes("404") || query.includes("503") || query.includes("401") || query.includes("429") || query.includes("500") || query.includes("offline")) {
           var errMatch = query.match(/(?:error|code|status|err)?\s*([0-9]{3}|[a-z0-9_]{4,})/i);
           var code = errMatch ? errMatch[1].toUpperCase() : "404";
