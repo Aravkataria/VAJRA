@@ -33,8 +33,12 @@ ALLOWED_ORIGINS = [
 
 # Anti-DoS Rate Limiting
 RATE_LIMIT_WINDOW = 60
-MAX_REQUESTS_PER_WINDOW = 30
+MAX_REQUESTS_PER_WINDOW = 120
 ip_request_history: Dict[str, list] = {}
+
+# In-Memory Inference Cache (Saves GPU quota for repeat/common queries)
+_query_cache: Dict[str, Tuple[float, str]] = {}
+CACHE_TTL = 600  # 10 minutes
 
 def check_rate_limit(client_ip: str) -> bool:
     now = time.time()
@@ -106,6 +110,15 @@ Operational Directives:
 
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
     prompt = sanitize_and_check_injection(prompt)
+    cache_key = prompt.lower().strip()
+    now = time.time()
+    
+    # 1. Return cached response if available without file context
+    if not context_files and cache_key in _query_cache:
+        ts, cached_reply = _query_cache[cache_key]
+        if now - ts < CACHE_TTL:
+            return cached_reply
+
     messages = [{"role": "system", content: VAJRA_SYSTEM_PROMPT}]
     
     if context_files:
@@ -126,6 +139,15 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
     
     model_inputs = tokenizer([text_input], return_tensors="pt").to(model.device)
     
+    # Precise stopping criteria: stop on either default eos or Qwen2.5 <|im_end|>
+    eos_token_ids = [tokenizer.eos_token_id]
+    try:
+        im_end_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
+        if im_end_id is not None and im_end_id != tokenizer.unk_token_id:
+            eos_token_ids.append(im_end_id)
+    except Exception:
+        pass
+
     with torch.no_grad():
         generated_ids = model.generate(
             **model_inputs,
@@ -134,6 +156,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             top_p=0.9,
             repetition_penalty=1.1,
             do_sample=True,
+            eos_token_id=eos_token_ids,
             pad_token_id=tokenizer.eos_token_id
         )
         
@@ -141,13 +164,17 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
     ]
     
-    response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
     
+    # Cache result for 10 minutes to save GPU quota
+    if not context_files and response:
+        _query_cache[cache_key] = (now, response)
+
     # Explicit Zero-Retention Memory Cleanup
     del model_inputs, generated_ids
     gc.collect()
     
-    return response.strip()
+    return response
 
 # =====================================================================
 # 3. FASTAPI BACKEND API

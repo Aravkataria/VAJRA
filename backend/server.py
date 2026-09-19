@@ -182,6 +182,25 @@ async def chat_endpoint(req: ChatRequest):
                 "model": target_model,
                 "bypassed_finder": not is_finder_intent(req.prompt)
             })
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            retry_header = e.headers.get("Retry-After")
+            retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
+            wait_min = max(1, round(retry_seconds / 60))
+            wait_text = f"{retry_seconds} seconds" if retry_seconds < 60 else f"~{wait_min} minute{'s' if wait_min > 1 else ''}"
+            return JSONResponse({
+                "success": False,
+                "rate_limited": True,
+                "retry_after": retry_seconds,
+                "reply": f"⚠️ **Inference Limit Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait **{wait_text}** before sending your next chat request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
+            }, status_code=429)
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "fallback": True,
+            "provider": cfg["provider"],
+            "message": "Upstream LLM unavailable; local fallback triggered."
+        }, status_code=502)
     except Exception as e:
         return JSONResponse({
             "success": False,

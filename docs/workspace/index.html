@@ -2401,6 +2401,42 @@ function appendSessionMessage(role, contentHtml) {
       return triggers.some(function(t) { return q.includes(t); });
     }
 
+    var rateLimitInterval = null;
+    function startRateLimitCooldown(totalSeconds) {
+      var remaining = totalSeconds;
+      var composer = document.getElementById("composerInput");
+      var originalPlaceholder = "Ask VAJRA to reason about a vulnerability, design patches, or drop repo/files...";
+
+      if (rateLimitInterval) clearInterval(rateLimitInterval);
+
+      if (composer) {
+        composer.placeholder = "Rate limited. Inference resumes in " + remaining + "s...";
+      }
+
+      rateLimitInterval = setInterval(function() {
+        remaining--;
+        var cdSpan = document.getElementById("cooldownSeconds");
+        if (cdSpan) cdSpan.textContent = remaining;
+
+        if (composer) {
+          composer.placeholder = "Rate limited. Inference resumes in " + remaining + "s...";
+        }
+
+        if (remaining <= 0) {
+          clearInterval(rateLimitInterval);
+          rateLimitInterval = null;
+          if (composer) {
+            composer.placeholder = originalPlaceholder;
+          }
+          var timerBox = document.getElementById("cooldownTimerBox");
+          if (timerBox) {
+            timerBox.innerHTML = "✅ <b>Cooldown Complete</b>: AI inference engine is ready for your next request!";
+            timerBox.style.color = "var(--ok, #5fbf7a)";
+          }
+        }
+      }, 1000);
+    }
+
     async function tryDirectHfSpace(userPrompt) {
       try {
         var hfEndpoint = VAJRA_HF_SPACE_URL;
@@ -2413,6 +2449,13 @@ function appendSessionMessage(role, contentHtml) {
           body: JSON.stringify({ data: [userPrompt, []] }),
           signal: AbortSignal.timeout(12000)
         });
+        if (callResp.status === 429) {
+          return {
+            isRateLimited: true,
+            reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
+            retryAfter: 120
+          };
+        }
         if (!callResp.ok) return null;
         var callData = await callResp.json();
         var eventId = callData.event_id;
@@ -2424,11 +2467,19 @@ function appendSessionMessage(role, contentHtml) {
           },
           signal: AbortSignal.timeout(35000)
         });
+        if (streamResp.status === 429) {
+          return {
+            isRateLimited: true,
+            reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
+            retryAfter: 120
+          };
+        }
         if (!streamResp.ok || !streamResp.body) return null;
         var reader = streamResp.body.getReader();
         var decoder = new TextDecoder("utf-8");
         var buffer = "";
         var isComplete = false;
+        var isError = false;
 
         while (true) {
           var chunk = await reader.read();
@@ -2445,11 +2496,17 @@ function appendSessionMessage(role, contentHtml) {
               var payload = JSON.parse(line.substring(5).trim());
               if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
                 reader.cancel();
-                return payload[0];
+                return { reply: payload[0] };
               }
             } else if (line.startsWith("event: error")) {
+              isError = true;
+            } else if (isError && line.startsWith("data:")) {
               reader.cancel();
-              return null;
+              return {
+                isRateLimited: true,
+                reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
+                retryAfter: 120
+              };
             }
           }
         }
@@ -2481,9 +2538,26 @@ function appendSessionMessage(role, contentHtml) {
           body: payload,
           signal: AbortSignal.timeout(35000)
         });
+        if (hfResp.status === 429) {
+          var limitData = await hfResp.json();
+          return {
+            isRateLimited: true,
+            reply: limitData.reply || "⚠️ **Inference Limit Reached**: Please wait before sending your next request.",
+            retryAfter: limitData.retry_after || 120
+          };
+        }
         if (hfResp.ok) {
           var hfData = await hfResp.json();
-          if (hfData && hfData.reply) return hfData.reply;
+          if (hfData && hfData.rate_limited) {
+            return {
+              isRateLimited: true,
+              reply: hfData.reply,
+              retryAfter: hfData.retry_after || 120
+            };
+          }
+          if (hfData && hfData.reply && hfData.source !== "deterministic-fallback") {
+            return { reply: hfData.reply };
+          }
         }
       } catch (e) {
         // Backend starting or timeout, proceed to direct Hugging Face Space fallback
@@ -2491,8 +2565,11 @@ function appendSessionMessage(role, contentHtml) {
 
       // 2. Try Direct Hugging Face Space (Runs fine-tuned AravKataria/vajra-lora 7B model)
       try {
-        var directReply = await tryDirectHfSpace(userPrompt);
-        if (directReply) return directReply;
+        var directRes = await tryDirectHfSpace(userPrompt);
+        if (directRes) {
+          if (directRes.isRateLimited) return directRes;
+          if (directRes.reply) return directRes;
+        }
       } catch (e) {}
 
       // 3. Try Local FastAPI Backend (if running locally on port 8000)
@@ -2506,9 +2583,17 @@ function appendSessionMessage(role, contentHtml) {
           body: payload,
           signal: AbortSignal.timeout(3000)
         });
+        if (localResp.status === 429) {
+          var localLimit = await localResp.json();
+          return {
+            isRateLimited: true,
+            reply: localLimit.reply,
+            retryAfter: localLimit.retry_after || 120
+          };
+        }
         if (localResp.ok) {
           var lData = await localResp.json();
-          if (lData && lData.reply) return lData.reply;
+          if (lData && lData.reply) return { reply: lData.reply };
         }
       } catch (e) {}
 
@@ -2538,7 +2623,7 @@ function appendSessionMessage(role, contentHtml) {
         if (ollamaResp.ok) {
           var oData = await ollamaResp.json();
           if (oData && oData.choices && oData.choices[0] && oData.choices[0].message) {
-            return oData.choices[0].message.content;
+            return { reply: oData.choices[0].message.content };
           }
         }
       } catch (e) {}
@@ -2559,15 +2644,38 @@ function appendSessionMessage(role, contentHtml) {
         }
 
         // For general questions or non-scan prompts, BYPASS FINDER & CALL LLM
-        var liveLlmReply = await tryFastLlmInference(q, sess);
-        if (liveLlmReply) {
+        var inferenceRes = await tryFastLlmInference(q, sess);
+        if (inferenceRes) {
           removeTypingIndicator();
-          var formattedHtml = liveLlmReply
-            .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
-            .replace(/\n/g, "<br>")
-            .replace(/`([^`]+)`/g, "<code>$1</code>");
-          appendSessionMessage("bot", "<p>" + formattedHtml + "</p>");
-          return;
+          if (inferenceRes.isRateLimited) {
+            var formattedHtml = inferenceRes.reply
+              .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
+              .replace(/\n/g, "<br>")
+              .replace(/`([^`]+)`/g, "<code>$1</code>")
+              .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+              .replace(/\*([^*]+)\*/g, "<i>$1</i>");
+
+            appendSessionMessage("bot",
+              "<div class='rate-limit-alert' style='border: 1px solid var(--spark); background: rgba(245, 180, 0, 0.08); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5; color: var(--text-primary);'>" +
+                "<p>" + formattedHtml + "</p>" +
+                "<div id='cooldownTimerBox' style='margin-top: 10px; font-family: monospace; font-size: 0.8rem; color: var(--spark); font-weight: 600;'>" +
+                  "⏱️ Cooldown active: <span id='cooldownSeconds'>" + (inferenceRes.retryAfter || 120) + "</span>s remaining" +
+                "</div>" +
+              "</div>"
+            );
+
+            startRateLimitCooldown(inferenceRes.retryAfter || 120);
+            return;
+          }
+
+          if (inferenceRes.reply) {
+            var formattedHtml = inferenceRes.reply
+              .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
+              .replace(/\n/g, "<br>")
+              .replace(/`([^`]+)`/g, "<code>$1</code>");
+            appendSessionMessage("bot", "<p>" + formattedHtml + "</p>");
+            return;
+          }
         }
 
         // Rich Dynamic Technical Intelligence Engine (Instant Offline / Cloud Fallback)
