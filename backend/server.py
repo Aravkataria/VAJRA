@@ -104,6 +104,7 @@ class ChatRequest(BaseModel):
     files: Optional[Dict[str, str]] = None
     model: Optional[str] = None
     temperature: Optional[float] = 0.2
+    max_tokens: Optional[int] = 4096
 
 @app.get("/")
 def root():
@@ -161,7 +162,7 @@ async def chat_endpoint(req: ChatRequest):
         "model": target_model,
         "messages": messages,
         "temperature": req.temperature or 0.2,
-        "max_tokens": 1200
+        "max_tokens": req.max_tokens or 4096
     }).encode("utf-8")
     
     try:
