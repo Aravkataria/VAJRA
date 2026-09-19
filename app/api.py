@@ -1,4 +1,5 @@
 # app/api.py
+from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -14,7 +15,7 @@ import zipfile
 from collections import Counter
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -650,8 +651,21 @@ def query_vajra_fine_tuned_model(
             return {"reply": cached_reply, "rate_limited": False, "retry_after": 0, "error": None}
 
     try:
+        full_prompt = prompt
+        if context_files:
+            files_summary = "\n\nWorkspace Files:\n"
+            for fname, fcontent in list(context_files.items())[:3]:
+                if len(fcontent) > 4000:
+                    head = fcontent[:2500]
+                    tail = fcontent[-800:]
+                    safe_snippet = f"{head}\n\n[... content chunked ({len(fcontent)} bytes total) ...]\n\n{tail}"
+                else:
+                    safe_snippet = fcontent
+                files_summary += f"--- File: {fname} ---\n{safe_snippet}\n"
+            full_prompt = files_summary + "\nUser Request:\n" + prompt
+
         call_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat"
-        payload = json.dumps({"data": [prompt, []]}).encode("utf-8")
+        payload = json.dumps({"data": [full_prompt, []]}).encode("utf-8")
         req = urllib.request.Request(
             call_url,
             data=payload,
