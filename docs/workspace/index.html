@@ -1135,53 +1135,149 @@
       background: #d4d4d8;
     }
 
-    /* Live Site Preview & Code Viewer Modal (Image 3) */
-    .live-preview-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.78);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      padding: 24px;
-      box-sizing: border-box;
-      animation: fadeInModal 0.15s ease-out;
-    }
-    .live-preview-overlay.active {
+    /* Claude-style Docked Split Side Panel (Images 3 & 4) */
+    .viewport {
+      flex: 1;
       display: flex;
-    }
-    @keyframes fadeInModal {
-      from { opacity: 0; transform: scale(0.98); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    .live-preview-window {
+      flex-direction: row;
+      position: relative;
+      overflow: hidden;
       width: 100%;
-      max-width: 1180px;
-      height: 88vh;
-      background: #111113;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
+      height: 100%;
+    }
+
+    .chat-column {
+      flex: 1 1 100%;
+      height: 100%;
+      min-width: 320px;
+      position: relative;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
-      transition: all 0.2s ease;
+      transition: flex 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .live-preview-window.fullscreen {
-      max-width: 100vw;
-      height: 100vh;
-      border-radius: 0;
+
+    .viewport.with-side-panel .chat-column {
+      flex: 1 1 50%;
+      max-width: 55%;
+    }
+
+    .artifact-side-panel {
+      flex: 1 1 50%;
+      min-width: 360px;
+      max-width: 55%;
+      height: 100%;
+      background: var(--bg-surface-1, #111113);
+      border-left: 1px solid var(--border-medium, rgba(255, 255, 255, 0.14));
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      z-index: 40;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .artifact-side-panel.active {
+      display: flex !important;
+    }
+
+    .artifact-side-panel.dock-left {
+      order: -1;
+      border-left: none;
+      border-right: 1px solid var(--border-medium, rgba(255, 255, 255, 0.14));
+      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .artifact-side-panel.fullscreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      z-index: 500;
       border: none;
     }
-    [data-theme="light"] .live-preview-window {
+
+    [data-theme="light"] .artifact-side-panel {
       background: #ffffff;
-      border-color: rgba(0, 0, 0, 0.15);
+      border-color: rgba(0, 0, 0, 0.14);
+      box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
     }
+
+    [data-theme="light"] .artifact-side-panel.dock-left {
+      box-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+    }
+
+    @media (max-width: 850px) {
+      .viewport.with-side-panel .chat-column {
+        display: none;
+      }
+      .artifact-side-panel {
+        flex: 1 1 100%;
+        max-width: 100%;
+        min-width: 100%;
+        border-left: none;
+      }
+    }
+
+    /* Claude-style Left Sidebar Navigation (Image 4) */
+    .sidebar-nav-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0.35rem 0.55rem 0.25rem 0.55rem;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 0.35rem;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.42rem 0.65rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+
+    .sidebar-nav-item:hover {
+      background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+      color: var(--text-primary);
+    }
+
+    .sidebar-nav-item.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    [data-theme="light"] .sidebar-nav-item.active {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    .sidebar-nav-badge {
+      font-size: 0.65rem;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .sidebar-nav-badge {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
     .live-preview-header {
       height: 48px;
       background: #18181b;
@@ -1769,17 +1865,39 @@
       </button>
     </div>
 
-    <div class="sidebar-section-title">Audit History</div>
-    <div class="session-list" id="sessionList">
-      <!-- Dynamically rendered -->
+    <div class="sidebar-nav-group">
+      <button type="button" class="sidebar-nav-item active" id="btnNavChat" onclick="closeLivePreviewModal()">
+        <span style="display:flex; align-items:center; gap:0.45rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat
+        </span>
+      </button>
+      <button type="button" class="sidebar-nav-item" id="btnNavCode" onclick="openActiveCodeInSidePanel('code')">
+        <span style="display:flex; align-items:center; gap:0.45rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Code
+        </span>
+        <span class="sidebar-nav-badge" id="sidebarCodeCount">0</span>
+      </button>
+      <button type="button" class="sidebar-nav-item" id="btnNavArtifacts" onclick="openActiveCodeInSidePanel('preview')">
+        <span style="display:flex; align-items:center; gap:0.45rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Artifacts
+        </span>
+      </button>
     </div>
 
-    <div class="sidebar-section-title" id="sidebarArtifactsTitle" style="margin-top:0.85rem; display:flex; align-items:center; justify-content:space-between;">
-      <span>Artifacts &amp; Code</span>
+    <div class="sidebar-section-title" id="sidebarArtifactsTitle" style="margin-top:0.4rem; display:flex; align-items:center; justify-content:space-between;">
+      <span>Active Files &amp; Code</span>
       <span id="sidebarArtifactsCount" style="font-size:0.65rem; background:rgba(255,255,255,0.08); padding:1px 6px; border-radius:10px; font-weight:600;">0</span>
     </div>
     <div class="sidebar-artifacts" id="sidebarArtifactsList">
-      <div style="font-size:0.75rem; color:var(--text-muted); padding:4px 8px; font-style:italic;">No files generated yet</div>
+      <div style="font-size:0.75rem; color:var(--text-muted); padding:4px 8px; font-style:italic;">No files uploaded yet</div>
+    </div>
+
+    <div class="sidebar-section-title" style="margin-top:0.85rem;">Audit History</div>
+    <div class="session-list" id="sessionList">
+      <!-- Dynamically rendered -->
     </div>
 
     <div class="sidebar-footer">
@@ -1916,6 +2034,45 @@
           </form>
         </div>
       </div>
+
+      <!-- Claude-Style Docked Split Side Panel (Images 3 & 4) -->
+      <aside class="artifact-side-panel dock-left" id="artifactSidePanel" aria-label="Code and Preview Panel">
+        <div class="live-preview-header">
+          <div class="live-preview-header-left">
+            <div class="preview-mode-switch">
+              <button type="button" class="preview-tab-btn" id="btnModePreview" onclick="setPreviewModalMode('preview')" title="Live Interactive Site Preview">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span class="preview-tab-label">Preview</span>
+              </button>
+              <button type="button" class="preview-tab-btn active" id="btnModeCode" onclick="setPreviewModalMode('code')" title="Source Code">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span class="preview-tab-label">Code</span>
+              </button>
+            </div>
+            <span class="live-preview-title-tag" id="livePreviewTitle">code.py</span>
+          </div>
+          <div class="live-preview-header-right">
+            <button type="button" class="btn-preview-action" onclick="toggleSidePanelDock()" id="btnDockToggle" title="Toggle Dock Side (Left / Right)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3m8-18h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3M16 12H8m4-4l-4 4 4 4"/></svg>
+              <span id="dockSideLabel">Dock Left</span>
+            </button>
+            <button type="button" class="btn-preview-action" onclick="copyPreviewCode()" id="btnCopyPreviewCode" title="Copy Code">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copy</span>
+            </button>
+            <button type="button" class="btn-preview-icon" onclick="toggleFullscreenPreview()" id="btnSidePanelFullscreen" title="Toggle Fullscreen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </button>
+            <button type="button" class="btn-preview-icon" onclick="closeLivePreviewModal()" title="Close Side Panel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="live-preview-body" id="livePreviewBody">
+          <iframe class="live-preview-iframe" id="livePreviewIframe" sandbox="allow-scripts allow-same-origin allow-modals allow-forms"></iframe>
+          <pre class="live-preview-code-pane" id="livePreviewCodePane"></pre>
+        </div>
+      </aside>
 
     </div>
   </main>
@@ -2463,6 +2620,15 @@
       state.isRunning = true;
       state.currentFiles = filesMap;
 
+      var firstFileId = null;
+      Object.keys(filesMap).forEach(function (fname) {
+        var id = registerArtifactFile(fname, filesMap[fname]);
+        if (!firstFileId) firstFileId = id;
+      });
+      if (firstFileId) {
+        openLivePreviewModal(firstFileId, "code");
+      }
+
       appendSessionMessage("user", "Ingested codebase source: <b>" + escapeHtml(targetName) + "</b> (" + Object.keys(filesMap).length + " files)");
       var tracker = createPipelineTracker();
 
@@ -2542,6 +2708,14 @@
         state.currentFiles = filesMap;
         var res = analyzeAndRepairCodebase(filesMap);
         state.currentPatchedFiles = res.patchedFiles;
+        var firstFileId = null;
+        Object.keys(filesMap).slice(0, 10).forEach(function (fname) {
+          var id = registerArtifactFile(fname, filesMap[fname]);
+          if (!firstFileId) firstFileId = id;
+        });
+        if (firstFileId) {
+          openLivePreviewModal(firstFileId, "code");
+        }
         handleScanCompleted("ws_" + Date.now(), res, repo);
       })
       .catch(function (err) {
@@ -2579,6 +2753,14 @@
         state.currentFiles = filesMap;
         var res = analyzeAndRepairCodebase(filesMap);
         state.currentPatchedFiles = res.patchedFiles;
+        var firstFileId = null;
+        Object.keys(filesMap).forEach(function (fname) {
+          var id = registerArtifactFile(fname, filesMap[fname]);
+          if (!firstFileId) firstFileId = id;
+        });
+        if (firstFileId) {
+          openLivePreviewModal(firstFileId, "code");
+        }
         handleScanCompleted("ws_" + Date.now(), res, file.name);
       })
       .catch(function (err) {
@@ -3160,30 +3342,33 @@ function appendSessionMessage(role, contentHtml) {
     function renderSidebarArtifacts() {
       var list = document.getElementById("sidebarArtifactsList");
       var countBadge = document.getElementById("sidebarArtifactsCount");
+      var codeBadge = document.getElementById("sidebarCodeCount");
       if (!list) return;
 
       var sess = getActiveSession();
       var artifacts = (sess && sess.artifacts) || [];
       if (countBadge) countBadge.textContent = artifacts.length;
+      if (codeBadge) codeBadge.textContent = artifacts.length;
 
       if (artifacts.length === 0) {
-        list.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:4px 8px; font-style:italic;">No files generated yet</div>';
+        list.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:4px 8px; font-style:italic;">No files uploaded yet</div>';
         return;
       }
 
       var html = "";
-      artifacts.forEach(function(art) {
+      var reversed = artifacts.slice().reverse();
+      reversed.forEach(function(art) {
         var isHtml = (art.type || "").toUpperCase() === "HTML" || art.name.endsWith(".html");
         var iconSvg = isHtml
-          ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
+          ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
           : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
 
-        html += '<div class="sidebar-artifact-item" onclick="openLivePreviewModal(\'' + escapeHtml(art.id) + '\')" title="Inspect ' + escapeHtml(art.name) + '">' +
-          '<div class="sidebar-artifact-name">' +
-            '<span style="color:#fb7185;">' + iconSvg + '</span>' +
-            '<span>' + escapeHtml(art.name) + '</span>' +
+        html += '<div class="sidebar-artifact-item" onclick="openLivePreviewModal(\'' + escapeHtml(art.id) + '\', \'' + (isHtml ? 'preview' : 'code') + '\')" title="Inspect ' + escapeHtml(art.name) + '">' +
+          '<div class="sidebar-artifact-name" style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' +
+            '<span style="color:var(--text-secondary);">' + iconSvg + '</span>' +
+            '<span style="overflow:hidden; text-overflow:ellipsis;">' + escapeHtml(art.name) + '</span>' +
           '</div>' +
-          '<span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">' + escapeHtml(art.type || "FILE") + '</span>' +
+          '<span style="font-size:0.65rem; background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:4px; font-weight:600; text-transform:uppercase;">' + escapeHtml(art.type || "FILE") + '</span>' +
         '</div>';
       });
       list.innerHTML = html;
@@ -3198,7 +3383,7 @@ function appendSessionMessage(role, contentHtml) {
       var displayName = fileName.replace(/\.[^/.]+$/, "");
       var subType = "Code · " + (fileType || (isHtml ? "HTML" : "Source"));
 
-      return '<div class="file-artifact-card" onclick="openLivePreviewModal(\'' + escapeHtml(fileId) + '\')">' +
+      return '<div class="file-artifact-card" onclick="openLivePreviewModal(\'' + escapeHtml(fileId) + '\', \'' + (isHtml ? 'preview' : 'code') + '\')">' +
         '<div class="file-artifact-left">' +
           '<div class="file-artifact-icon-wrap">' + iconSvg + '</div>' +
           '<div class="file-artifact-info">' +
@@ -3212,41 +3397,59 @@ function appendSessionMessage(role, contentHtml) {
       '</div>';
     }
 
-    window.openLivePreviewModal = function(fileId) {
+    window.openLivePreviewModal = function(fileId, preferredMode) {
       var sess = getActiveSession();
       var art = null;
-      if (sess && sess.artifacts) {
-        art = sess.artifacts.find(function(a) { return a.id === fileId || a.name === fileId; });
+      if (sess && sess.artifacts && sess.artifacts.length > 0) {
+        if (fileId) {
+          art = sess.artifacts.find(function(a) { return a.id === fileId || a.name === fileId; });
+        }
+        if (!art) {
+          art = sess.artifacts[sess.artifacts.length - 1];
+        }
       }
-      if (!art) return;
+
+      if (!art) {
+        if (currentComposerAttachments && currentComposerAttachments.length > 0) {
+          var att = currentComposerAttachments[0];
+          var newId = registerArtifactFile(att.name, att.content, att.badge || "CODE");
+          return window.openLivePreviewModal(newId, preferredMode || "code");
+        }
+        return;
+      }
 
       currentPreviewArtifact = art;
-      var modal = document.getElementById("livePreviewModal");
+      var panel = document.getElementById("artifactSidePanel");
+      var viewport = document.querySelector(".viewport");
       var title = document.getElementById("livePreviewTitle");
       var iframe = document.getElementById("livePreviewIframe");
       var codePane = document.getElementById("livePreviewCodePane");
 
-      var isHtml = (art.type || "").toUpperCase() === "HTML" || art.name.endsWith(".html");
+      var isHtml = (art.type || "").toUpperCase() === "HTML" || art.name.endsWith(".html") || (art.content && (art.content.includes("<!DOCTYPE") || art.content.includes("<html")));
 
-      if (title) title.textContent = (art.name.replace(/\.[^/.]+$/, "") || "Document") + " · " + (art.type || "HTML");
-      if (codePane) codePane.textContent = art.content;
+      if (title) title.textContent = (art.name || "Document") + " · " + (art.type || (isHtml ? "HTML" : "CODE"));
+      if (codePane) codePane.textContent = art.content || "";
       if (iframe) {
-        iframe.srcdoc = isHtml ? art.content : "<html><body style='font-family:sans-serif;padding:20px;'><pre>" + escapeHtml(art.content) + "</pre></body></html>";
+        if (isHtml) {
+          iframe.srcdoc = art.content || "";
+        } else {
+          iframe.srcdoc = "<!DOCTYPE html><html><head><meta charset='utf-8'><style>body{margin:0;padding:16px;background:#0d0d10;color:#e4e4e7;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.5;}pre{white-space:pre-wrap;word-break:break-word;margin:0;}</style></head><body><pre>" + escapeHtml(art.content || "") + "</pre></body></html>";
+        }
       }
 
-      setPreviewModalMode(isHtml ? "preview" : "code");
-      if (modal) modal.classList.add("active");
+      var mode = preferredMode || (isHtml ? "preview" : "code");
+      setPreviewModalMode(mode);
+
+      if (viewport) viewport.classList.add("with-side-panel");
+      if (panel) panel.classList.add("active");
     };
 
     window.closeLivePreviewModal = function() {
-      var modal = document.getElementById("livePreviewModal");
-      if (modal) modal.classList.remove("active");
-    };
-
-    window.handlePreviewOverlayClick = function(e) {
-      if (e.target && e.target.id === "livePreviewModal") {
-        closeLivePreviewModal();
-      }
+      var panel = document.getElementById("artifactSidePanel");
+      var viewport = document.querySelector(".viewport");
+      if (panel) panel.classList.remove("active");
+      if (viewport) viewport.classList.remove("with-side-panel");
+      updateSidebarNavHighlight("chat");
     };
 
     window.setPreviewModalMode = function(mode) {
@@ -3259,16 +3462,57 @@ function appendSessionMessage(role, contentHtml) {
         body.classList.add("mode-code");
         if (btnPrev) btnPrev.classList.remove("active");
         if (btnCode) btnCode.classList.add("active");
+        updateSidebarNavHighlight("code");
       } else {
         body.classList.remove("mode-code");
         if (btnPrev) btnPrev.classList.add("active");
         if (btnCode) btnCode.classList.remove("active");
+        updateSidebarNavHighlight("preview");
+      }
+    };
+
+    window.toggleSidePanelDock = function() {
+      var panel = document.getElementById("artifactSidePanel");
+      var label = document.getElementById("dockSideLabel");
+      if (!panel) return;
+      panel.classList.toggle("dock-left");
+      var isLeft = panel.classList.contains("dock-left");
+      if (label) {
+        label.textContent = isLeft ? "Dock Left" : "Dock Right";
       }
     };
 
     window.toggleFullscreenPreview = function() {
-      var win = document.getElementById("livePreviewWindow");
-      if (win) win.classList.toggle("fullscreen");
+      var panel = document.getElementById("artifactSidePanel");
+      if (panel) {
+        panel.classList.toggle("fullscreen");
+      }
+    };
+
+    window.updateSidebarNavHighlight = function(tab) {
+      var btnChat = document.getElementById("btnNavChat");
+      var btnCode = document.getElementById("btnNavCode");
+      var btnArt = document.getElementById("btnNavArtifacts");
+      if (btnChat) btnChat.classList.toggle("active", tab === "chat");
+      if (btnCode) btnCode.classList.toggle("active", tab === "code");
+      if (btnArt) btnArt.classList.toggle("active", tab === "preview");
+    };
+
+    window.openActiveCodeInSidePanel = function(mode) {
+      var sess = getActiveSession();
+      var arts = (sess && sess.artifacts) || [];
+      if (arts.length > 0) {
+        var target = currentPreviewArtifact || arts[arts.length - 1];
+        openLivePreviewModal(target.id, mode || "code");
+      } else if (currentComposerAttachments && currentComposerAttachments.length > 0) {
+        var att = currentComposerAttachments[0];
+        var newId = registerArtifactFile(att.name, att.content, att.badge || "CODE");
+        openLivePreviewModal(newId, mode || "code");
+      } else {
+        var sampleContent = "# Welcome to VAJRA Code & Artifacts\n\nUpload code files, ZIP archives, or paste code snippets.\nThey will immediately appear in this docked side panel side-by-side with your chat.";
+        var sid = registerArtifactFile("welcome.py", sampleContent, "PYTHON");
+        openLivePreviewModal(sid, mode || "code");
+      }
     };
 
     window.copyPreviewCode = function() {
@@ -3729,11 +3973,27 @@ function appendSessionMessage(role, contentHtml) {
       if (!att || !att.content) return;
       currentComposerAttachments.push(att);
       renderComposerAttachments();
+
+      // Immediately register as file artifact and open in left slidebar in code mode
+      var fileId = registerArtifactFile(att.name, att.content, att.badge || "CODE");
+      if (typeof openLivePreviewModal === "function") {
+        openLivePreviewModal(fileId, "code");
+      }
     };
 
     window.removeComposerAttachment = function(id) {
       currentComposerAttachments = currentComposerAttachments.filter(function(a) { return a.id !== id; });
       renderComposerAttachments();
+    };
+
+    window.openAttachmentInSidePanel = function(attId) {
+      var att = currentComposerAttachments.find(function(a) { return a.id === attId; });
+      if (att) {
+        var fileId = registerArtifactFile(att.name, att.content, att.badge || "CODE");
+        if (typeof openLivePreviewModal === "function") {
+          openLivePreviewModal(fileId, "code");
+        }
+      }
     };
 
     function renderComposerAttachments() {
@@ -3753,8 +4013,8 @@ function appendSessionMessage(role, contentHtml) {
         var lines = rawSnippet.split("\n").slice(0, 6).join("\n");
         var preview = lines.length > 150 ? lines.slice(0, 150) + "..." : lines;
 
-        html += '<div class="attachment-card" data-id="' + escapeHtml(att.id) + '">' +
-          '<button type="button" class="attachment-remove" onclick="removeComposerAttachment(\'' + escapeHtml(att.id) + '\')" title="Remove attachment">&times;</button>' +
+        html += '<div class="attachment-card" data-id="' + escapeHtml(att.id) + '" onclick="openAttachmentInSidePanel(\'' + escapeHtml(att.id) + '\')" title="Click to view full code in left slidebar">' +
+          '<button type="button" class="attachment-remove" onclick="event.stopPropagation(); removeComposerAttachment(\'' + escapeHtml(att.id) + '\')" title="Remove attachment">&times;</button>' +
           '<div class="attachment-preview">' + escapeHtml(preview) + '</div>' +
           '<div class="attachment-bottom">' +
             '<span class="attachment-badge">' + escapeHtml(att.badge || "PASTED") + '</span>' +
@@ -3898,41 +4158,5 @@ function appendSessionMessage(role, contentHtml) {
 
   })();
   </script>
-
-  <!-- Live Site Preview & Code Viewer Modal (Image 3) -->
-  <div class="live-preview-overlay" id="livePreviewModal" onclick="handlePreviewOverlayClick(event)">
-    <div class="live-preview-window" id="livePreviewWindow">
-      <div class="live-preview-header">
-        <div class="live-preview-header-left">
-          <div class="preview-mode-switch">
-            <button type="button" class="preview-tab-btn active" id="btnModePreview" onclick="setPreviewModalMode('preview')" title="Live Interactive Site Preview">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-            <button type="button" class="preview-tab-btn" id="btnModeCode" onclick="setPreviewModalMode('code')" title="Source Code">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-            </button>
-          </div>
-          <span class="live-preview-title-tag" id="livePreviewTitle">404 · HTML</span>
-        </div>
-        <div class="live-preview-header-right">
-          <button type="button" class="btn-preview-action" onclick="copyPreviewCode()" id="btnCopyPreviewCode" title="Copy Code">
-            <span>Copy</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <button type="button" class="btn-preview-icon" onclick="toggleFullscreenPreview()" title="Toggle Fullscreen">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-          </button>
-          <button type="button" class="btn-preview-icon" onclick="closeLivePreviewModal()" title="Close Viewer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="live-preview-body" id="livePreviewBody">
-        <iframe class="live-preview-iframe" id="livePreviewIframe" sandbox="allow-scripts allow-same-origin allow-modals allow-forms"></iframe>
-        <pre class="live-preview-code-pane" id="livePreviewCodePane"></pre>
-      </div>
-    </div>
-  </div>
-
 </body>
 </html>
