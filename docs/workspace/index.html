@@ -691,12 +691,43 @@
     .msg-header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 0.5rem;
       font-size: 0.7rem;
       font-family: "JetBrains Mono", monospace;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.04em;
+    }
+
+    .btn-copy-msg {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--text-muted, #71717a);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .btn-copy-msg:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.12);
+      color: var(--text-primary, #ffffff);
+    }
+
+    [data-theme="light"] .btn-copy-msg:hover {
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #18181b;
     }
 
     .msg-card {
@@ -2046,7 +2077,7 @@
       </div>
 
       <!-- Claude-Style Docked Split Side Panel (Images 3 & 4) -->
-      <aside class="artifact-side-panel dock-left" id="artifactSidePanel" aria-label="Code and Preview Panel">
+      <aside class="artifact-side-panel" id="artifactSidePanel" aria-label="Code and Preview Panel">
         <div class="live-preview-header">
           <div class="live-preview-header-left">
             <div class="preview-mode-switch">
@@ -2605,7 +2636,16 @@
           group.className = "msg-group " + m.role;
           var label = m.role === "user" ? "USER INSTRUCTION" : "VAJRA REASONING AUDIT";
           group.innerHTML =
-            '<div class="msg-header"><span>[' + label + ']</span> <span>' + (m.time || '') + '</span></div>' +
+            '<div class="msg-header">' +
+              '<div style="display:flex; align-items:center; gap:8px;">' +
+                '<span>[' + label + ']</span>' +
+                '<span style="color:var(--text-muted);">' + escapeHtml(m.time || '') + '</span>' +
+              '</div>' +
+              '<button type="button" class="btn-copy-msg" onclick="copyMessageText(this)" title="Copy message text" aria-label="Copy message">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+                '<span>Copy</span>' +
+              '</button>' +
+            '</div>' +
             '<div class="msg-card">' + m.html + '</div>';
           stream.appendChild(group);
         });
@@ -3011,9 +3051,17 @@ function appendSessionMessage(role, contentHtml) {
       var group = document.createElement("div");
       group.className = "msg-group " + role;
 
-      var label = role === "user" ? "USER INSTRUCTION" : "VAJRA REASONING AUDIT";
       group.innerHTML =
-        '<div class="msg-header"><span>[' + label + ']</span> <span>' + timeStr + '</span></div>' +
+        '<div class="msg-header">' +
+          '<div style="display:flex; align-items:center; gap:8px;">' +
+            '<span>[' + label + ']</span>' +
+            '<span style="color:var(--text-muted);">' + timeStr + '</span>' +
+          '</div>' +
+          '<button type="button" class="btn-copy-msg" onclick="copyMessageText(this)" title="Copy message text" aria-label="Copy message">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '<span>Copy</span>' +
+          '</button>' +
+        '</div>' +
         '<div class="msg-card">' + contentHtml + '</div>';
 
       stream.appendChild(group);
@@ -3178,12 +3226,18 @@ function appendSessionMessage(role, contentHtml) {
             } else if (line.startsWith("event: error")) {
               isError = true;
             } else if (isError && line.startsWith("data:")) {
+              var errData = line.substring(5).trim();
+              var lowerErr = errData.toLowerCase();
+              var isQuota = lowerErr.includes("quota") || lowerErr.includes("rate limit") || lowerErr.includes("too many") || lowerErr.includes("exceeded") || lowerErr.includes("429");
               reader.cancel();
-              return {
-                isRateLimited: true,
-                reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-                retryAfter: 120
-              };
+              if (isQuota) {
+                return {
+                  isRateLimited: true,
+                  reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
+                  retryAfter: 120
+                };
+              }
+              return null;
             }
           }
         }
@@ -3234,7 +3288,7 @@ function appendSessionMessage(role, contentHtml) {
               retryAfter: hfData.retry_after || 120
             };
           }
-          if (hfData && hfData.reply && hfData.source !== "deterministic-fallback") {
+          if (hfData && hfData.reply) {
             return { reply: hfData.reply };
           }
         }
@@ -3531,6 +3585,26 @@ function appendSessionMessage(role, contentHtml) {
           btn.innerHTML = '<span>Copied!</span>';
           setTimeout(function() { btn.innerHTML = orig; }, 1800);
         }
+      });
+    };
+
+    window.copyMessageText = function(btn) {
+      if (!btn) return;
+      var group = btn.closest(".msg-group");
+      if (!group) return;
+      var card = group.querySelector(".msg-card");
+      if (!card) return;
+      var textToCopy = (card.innerText || card.textContent || "").trim();
+      if (!textToCopy) return;
+
+      navigator.clipboard.writeText(textToCopy).then(function() {
+        var origHtml = btn.innerHTML;
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Copied!</span>';
+        btn.style.color = "var(--ok, #5fbf7a)";
+        setTimeout(function() {
+          btn.innerHTML = origHtml;
+          btn.style.color = "";
+        }, 1800);
       });
     };
 
@@ -3864,6 +3938,12 @@ function appendSessionMessage(role, contentHtml) {
                 '</a>' +
               '</div>' +
             '</div>';
+        } else if (query === "hello" || query === "hi" || query === "hey" || query.startsWith("hello") || query.startsWith("hi ") || query.startsWith("hey ")) {
+          response =
+            '<p>Hello! I am <b>VAJRA</b>, your autonomous cyber-reasoning and deterministic security intelligence assistant.</p>' +
+            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
+              'How can I help you today? You can ask me about my architecture, security verification, upload code to inspect, or ask technical software engineering questions.' +
+            '</p>';
         } else {
           response =
             '<p><b>VAJRA Cyber-Reasoning Engine:</b></p>' +
