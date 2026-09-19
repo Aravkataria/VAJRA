@@ -845,24 +845,20 @@ async def chat_api(req: ChatRequest, request: Request):
             "and Model 2 synthesizes verified surgical patches under strict 3-tier sovereign independence."
         )
     else:
-        retry_sec = 60
-        limit_msg = (
-            f"🛡️ **VAJRA Cyber-Reasoning System**\n\n"
-            f"Analyzing technical request: *\"{prompt_clean[:120]}\"*\n\n"
-            f"⚠️ **Inference Engine Warming Up**\n\n"
-            f"The neural inference engine is currently spinning up GPU compute resources. "
-            f"Please wait approximately **{retry_sec} seconds** before sending your next request.\n\n"
-            f"💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
+        # General question that didn't match any keyword — answer gracefully with 200 OK
+        # (NOT 429, because that would incorrectly trigger a frontend cooldown timer)
+        reply += (
+            f"Analyzing your request: *\"{prompt_clean[:200]}\"*\n\n"
+            "I am VAJRA — a specialized **cyber-security reasoning system** fine-tuned by Arav Kataria. "
+            "While I specialize in AST vulnerability discovery, surgical patch synthesis, and formal security verification, "
+            "I can assist with general technical and software engineering questions.\n\n"
+            "For the best results, you can:\n"
+            "• **Upload code or a GitHub URL** for deep AST security analysis\n"
+            "• **Ask about security topics**: SQL injection, XSS, IDOR, command injection, secure coding\n"
+            "• **Ask about my architecture**: 3-stage pipeline, 6/6 verification ledger, LoRA fine-tuning\n\n"
+            "*Note: The live AI inference engine (fine-tuned Qwen2.5-Coder-7B) may be warming up. "
+            "Complex questions will get richer answers once the GPU is active.*"
         )
-        return JSONResponse({
-            "success": False,
-            "rate_limited": True,
-            "reply": limit_msg,
-            "retry_after": retry_sec,
-            "model": "VAJRA-Cyber-Reasoning",
-            "shield": "Rate-Limit-Guard",
-            "source": "quota-limit"
-        }, status_code=429)
 
     return JSONResponse({
         "success": True,
