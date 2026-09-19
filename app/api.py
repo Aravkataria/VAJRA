@@ -632,15 +632,18 @@ BACKEND_CACHE_TTL = 600
 def query_vajra_fine_tuned_model(
     prompt: str,
     context_files: Optional[Dict[str, str]] = None,
-    timeout: int = 30,
+    hf_token: Optional[str] = None,
+    timeout: int = 45,
 ) -> Dict[str, Any]:
     """
     Direct stateless inference query to VAJRA fine-tuned model (AravKataria/vajra-lora)
     running on Hugging Face Spaces (ZeroGPU / A100).
+    Uses the Gradio queue protocol and supports authenticated queries via hf_token.
     Returns dict: {"reply": str, "rate_limited": bool, "retry_after": int, "error": str}
     """
     import urllib.error
     import urllib.request
+    import uuid
     import re
 
     cache_key = prompt.lower().strip()
@@ -650,88 +653,68 @@ def query_vajra_fine_tuned_model(
         if now - ts < BACKEND_CACHE_TTL:
             return {"reply": cached_reply, "rate_limited": False, "retry_after": 0, "error": None}
 
+    full_prompt = prompt
+    if context_files:
+        files_summary = "\n\nWorkspace Files:\n"
+        for fname, fcontent in list(context_files.items())[:3]:
+            safe_c = fcontent[:2500] if len(fcontent) > 4000 else fcontent
+            files_summary += f"--- File: {fname} ---\n{safe_c}\n"
+        full_prompt = files_summary + "\nUser Request:\n" + prompt
+
+    token = hf_token or os.environ.get("HF_TOKEN")
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "VAJRA-Cloud-Gateway/2.1",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    session_hash = uuid.uuid4().hex
+    join_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/queue/join"
+    payload = json.dumps({
+        "data": [full_prompt, []],
+        "event_data": None,
+        "fn_index": 9,
+        "session_hash": session_hash,
+        "trigger_id": 12,
+    }).encode("utf-8")
+
     try:
-        full_prompt = prompt
-        if context_files:
-            files_summary = "\n\nWorkspace Files:\n"
-            for fname, fcontent in list(context_files.items())[:3]:
-                if len(fcontent) > 4000:
-                    head = fcontent[:2500]
-                    tail = fcontent[-800:]
-                    safe_snippet = f"{head}\n\n[... content chunked ({len(fcontent)} bytes total) ...]\n\n{tail}"
-                else:
-                    safe_snippet = fcontent
-                files_summary += f"--- File: {fname} ---\n{safe_snippet}\n"
-            full_prompt = files_summary + "\nUser Request:\n" + prompt
+        req = urllib.request.Request(join_url, data=payload, headers=headers)
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            pass
 
-        call_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat"
-        payload = json.dumps({"data": [full_prompt, []]}).encode("utf-8")
-        req = urllib.request.Request(
-            call_url,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": "VAJRA-Cloud-Gateway/2.1",
-            },
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=12) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                event_id = data.get("event_id")
-        except urllib.error.HTTPError as http_err:
-            if http_err.code == 429:
-                retry_header = http_err.headers.get("Retry-After")
-                retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
-                return {"reply": None, "rate_limited": True, "retry_after": retry_seconds, "error": "HTTP 429 Too Many Requests"}
-            raise
-
-        if not event_id:
-            return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "No event_id"}
-
-        stream_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat/{event_id}"
-        stream_req = urllib.request.Request(
-            stream_url,
-            headers={"User-Agent": "VAJRA-Cloud-Gateway/2.1"},
-        )
-
-        with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
-            is_complete = False
-            is_error = False
+        data_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/queue/data?session_hash={session_hash}"
+        data_req = urllib.request.Request(data_url, headers=headers)
+        with urllib.request.urlopen(data_req, timeout=timeout) as stream:
             for raw_line in stream:
                 line = raw_line.decode("utf-8", errors="replace").strip()
-                if line.startswith("event: complete"):
-                    is_complete = True
-                elif is_complete and line.startswith("data:"):
-                    raw_data = line[5:].strip()
-                    parsed = json.loads(raw_data)
-                    if isinstance(parsed, list) and len(parsed) > 0 and parsed[0]:
-                        ans = str(parsed[0]).strip()
-                        if not context_files and ans:
-                            _backend_query_cache[cache_key] = (now, ans)
-                        return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
-                    break
-                elif line.startswith("event: error"):
-                    is_error = True
-                elif is_error and line.startswith("data:"):
-                    err_msg = line[5:].strip()
-                    lower_err = err_msg.lower()
-                    retry_sec = 120
-                    m_min = re.search(r'(\d+)\s*(?:min|minute)', lower_err)
-                    m_sec = re.search(r'(\d+)\s*(?:sec|second)', lower_err)
-                    if m_min:
-                        retry_sec = int(m_min.group(1)) * 60
-                    elif m_sec:
-                        retry_sec = int(m_sec.group(1))
-                    
-                    is_quota = any(w in lower_err for w in ["quota", "rate limit", "too many", "exceeded", "gpu"])
-                    return {"reply": None, "rate_limited": is_quota, "retry_after": retry_sec, "error": err_msg}
-
-        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "Stream ended"}
+                if line.startswith("data:"):
+                    msg_obj = json.loads(line[5:].strip())
+                    msg_type = msg_obj.get("msg")
+                    if msg_type == "process_completed":
+                        output = msg_obj.get("output", {})
+                        err = output.get("error")
+                        if err:
+                            err_str = str(err)
+                            retry_sec = 120
+                            m = re.search(r'(\d+):(\d+):(\d+)', err_str)
+                            if m:
+                                retry_sec = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
+                            is_quota = "quota" in err_str.lower() or "zerogpu" in err_str.lower()
+                            return {"reply": None, "rate_limited": is_quota, "retry_after": retry_sec, "error": err_str}
+                        data = output.get("data", [])
+                        if data and len(data) > 0 and data[0]:
+                            ans = str(data[0]).strip()
+                            if not context_files and ans:
+                                _backend_query_cache[cache_key] = (now, ans)
+                            return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+                    elif msg_type == "close_stream":
+                        break
+        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "Queue stream closed without response"}
     except urllib.error.HTTPError as http_err:
         if http_err.code == 429:
-            retry_header = http_err.headers.get("Retry-After")
-            retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
-            return {"reply": None, "rate_limited": True, "retry_after": retry_seconds, "error": "HTTP 429"}
+            return {"reply": None, "rate_limited": True, "retry_after": 120, "error": "HTTP 429 Too Many Requests"}
         return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(http_err)}
     except Exception as e:
         return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(e)}
@@ -742,6 +725,7 @@ class ChatRequest(BaseModel):
     workspace_id: Optional[str] = None
     files: Optional[Dict[str, str]] = None
     model: Optional[str] = None
+    hf_token: Optional[str] = None
 
 
 @app.post("/api/chat")
@@ -770,7 +754,8 @@ async def chat_api(req: ChatRequest, request: Request):
             })
 
     # 1. Query live Fine-Tuned Model (AravKataria/vajra-lora) running on HF Spaces
-    model_res = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files)
+    hf_token = req.hf_token or request.headers.get("X-HF-Token") or os.environ.get("HF_TOKEN")
+    model_res = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files, hf_token)
     if model_res and model_res.get("reply"):
         return JSONResponse({
             "success": True,
@@ -783,81 +768,39 @@ async def chat_api(req: ChatRequest, request: Request):
     # If the upstream inference engine is rate limited or GPU quota exhausted:
     if model_res and model_res.get("rate_limited"):
         retry_sec = model_res.get("retry_after") or 120
-        wait_min = max(1, round(retry_sec / 60))
-        wait_text = f"{retry_sec} seconds" if retry_sec < 60 else f"~{wait_min} minute{'s' if wait_min > 1 else ''}"
-        limit_msg = (
-            f"⚠️ **Inference Limit Reached**\n\n"
-            f"You have reached the temporary AI inference limit for this session (free GPU compute quota). "
-            f"Please wait **{wait_text}** before sending your next chat request.\n\n"
-            f"💡 *In the meantime, you can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
-        )
+        quota_err = model_res.get("error") or "GPU compute quota reached."
         return JSONResponse({
             "success": False,
             "rate_limited": True,
-            "reply": limit_msg,
+            "reply": f"⚠️ **Hugging Face ZeroGPU Quota Limit**\n\n{quota_err}\n\n💡 *Tip: Authenticate with your free Hugging Face token (https://huggingface.co/settings/tokens) or test locally via Ollama without limits.*",
             "retry_after": retry_sec,
             "model": "VAJRA-Cyber-Reasoning",
-            "shield": "Rate-Limit-Guard",
+            "shield": "ZeroGPU-Quota-Guard",
             "source": "quota-limit"
         }, status_code=429)
 
-    # 2. Graceful Fallback to Deterministic Cyber-Reasoning Engine
+    # 2. Basic Identity / Greeting (Strictly no hardcoded general knowledge)
     reply = "🛡️ **VAJRA Cyber-Reasoning System**\n\n"
     if any(k in lowered for k in ["hello", "hi", "hey", "greetings", "good morning", "good evening", "howdy"]):
         reply += (
             "Hello! I am **VAJRA**, an Autonomous Cyber-Reasoning and Software Security Intelligence System "
             "engineered and fine-tuned by **Arav Kataria**.\n\n"
-            "How can I assist you with your codebase today? You can:\n"
-            "• **Audit Code**: Provide a GitHub URL or upload files/folders to trace dangerous AST execution sinks\n"
-            "• **Synthesize Patches**: Generate minimal, non-breaking surgical repairs for CWE-89, CWE-78, CWE-502, IDOR, etc.\n"
-            "• **Explore Architecture**: Inquire about our 3-stage autonomous pipeline and 6-stage formal verification ledger"
+            "How can I assist you with your codebase today?"
         )
-    elif "kaggle" in lowered:
+    elif any(k in lowered for k in ["who are you", "what are you", "what is vajra", "who created", "who made", "who built", "author", "creator", "arav kataria"]):
         reply += (
-            "**Kaggle** is the world's premier platform for data science competitions, machine learning benchmarks, and datasets (a subsidiary of Google).\n\n"
-            "In VAJRA, our automated verification pipelines and ML benchmarks adhere to Kaggle-grade empirical evaluation standards, "
-            "including confusion matrices, 17-stage verification pipelines, and empirical AST reachability scoring."
-        )
-    elif any(k in lowered for k in ["help", "what can you do", "commands", "features"]):
-        reply += (
-            "Here is what I can do for you:\n\n"
-            "1. **AST Vulnerability Analysis**: Ingest code repositories or files and trace dangerous execution sinks (SQL injection, command injection, unsafe deserialization, IDOR).\n"
-            "2. **Autonomous Patch Synthesis**: Generate minimal, non-breaking surgical code fixes.\n"
-            "3. **6-Stage Proof Ledger**: Formally prove every repair with AST check, static re-scan, exploit sentinels, regression suite, boundary fuzzing, and mutation invariant proofs.\n"
-            "4. **Interactive File Ingestion & Preview**: Live responsive preview for HTML/DOM apps and code artifact inspection."
-        )
-    elif any(k in lowered for k in ["scan", "vulnerabilit", "finding", "cwe", "idor", "audit"]):
-        reply += (
-            "I have indexed your inquiry against VAJRA's Multi-Tier Security Taxonomy (CWE-89, CWE-78, CWE-502, CWE-639 IDOR). "
-            "To run static AST triage, dual-path verification, and zero-regression patch synthesis, "
-            "submit your project code through the **Workspace** or **Scanner** tab."
-        )
-    elif any(k in lowered for k in ["patch", "repair", "fix", "synthes"]):
-        reply += (
-            "VAJRA's **Model 2 (AI Patch Generator)** generates minimal surgical patches verified through a 7-stage pipeline: "
-            "Syntax Verification → Static Re-scan → Exploit Sentinels → Regression Verification → "
-            "Fuzzing → Mutation Testing → Formal Invariant Proofs. Only patches achieving 100% verification pass rate are applied."
-        )
-    elif any(k in lowered for k in ["model", "architecture", "who are you", "what are you", "creator", "author", "who made", "who created"]):
-        reply += (
-            "I am **VAJRA**, an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered by Arav Kataria. "
-            "I operate on an application-level shared inference architecture: Model 1 provides multilingual security analysis, "
-            "and Model 2 synthesizes verified surgical patches under strict 3-tier sovereign independence."
+            "I am **VAJRA**, an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered and fine-tuned by **Arav Kataria**.\n\n"
+            "My neural reasoning weights are specialized on Qwen2.5-Coder-7B with custom LoRA adapters for autonomous vulnerability triage, zero-regression patch generation, and formal invariant verification."
         )
     else:
-        # General question that didn't match any keyword — answer gracefully with 200 OK
-        # (NOT 429, because that would incorrectly trigger a frontend cooldown timer)
+        # Neural model is offline / unreached — inform user transparently (NO fake/hardcoded replies)
+        err_detail = model_res.get("error") if model_res else "Upstream model unreachable"
         reply += (
-            f"Analyzing your request: *\"{prompt_clean[:200]}\"*\n\n"
-            "I am VAJRA — a specialized **cyber-security reasoning system** fine-tuned by Arav Kataria. "
-            "While I specialize in AST vulnerability discovery, surgical patch synthesis, and formal security verification, "
-            "I can assist with general technical and software engineering questions.\n\n"
-            "For the best results, you can:\n"
-            "• **Upload code or a GitHub URL** for deep AST security analysis\n"
-            "• **Ask about security topics**: SQL injection, XSS, IDOR, command injection, secure coding\n"
-            "• **Ask about my architecture**: 3-stage pipeline, 6/6 verification ledger, LoRA fine-tuning\n\n"
-            "*Note: The live AI inference engine (fine-tuned Qwen2.5-Coder-7B) may be warming up. "
-            "Complex questions will get richer answers once the GPU is active.*"
+            f"**Neural Inference Engine Offline:**\n\n"
+            f"The live fine-tuned model (AravKataria/vajra-lora) did not return a response (`{err_detail}`).\n\n"
+            "All general questions (code, science, architecture, definitions) are strictly routed to the neural model without hardcoded fallbacks.\n\n"
+            "• **To test on Hugging Face**: Provide a Hugging Face User Access Token (from https://huggingface.co/settings/tokens)\n"
+            "• **To test locally**: Run `ollama run qwen2.5-coder` on port 11434"
         )
 
     return JSONResponse({

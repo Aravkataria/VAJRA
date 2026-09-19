@@ -3184,12 +3184,18 @@ function appendSessionMessage(role, contentHtml) {
           fullPrompt = filesSummary + "\nUser Request:\n" + userPrompt;
         }
 
+        var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
+        var directHeaders = {
+          "Content-Type": "application/json",
+          "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
+        };
+        if (storedHfToken) {
+          directHeaders["Authorization"] = "Bearer " + storedHfToken;
+        }
+
         var callResp = await fetch(hfEndpoint + "/call/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
-          },
+          headers: directHeaders,
           body: JSON.stringify({ data: [fullPrompt, []] }),
           signal: AbortSignal.timeout(15000)
         });
@@ -3206,9 +3212,7 @@ function appendSessionMessage(role, contentHtml) {
         if (!eventId) return null;
 
         var streamResp = await fetch(hfEndpoint + "/call/chat/" + eventId, {
-          headers: {
-            "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
-          },
+          headers: directHeaders,
           signal: AbortSignal.timeout(35000)
         });
         if (streamResp.status === 429) {
@@ -3272,21 +3276,29 @@ function appendSessionMessage(role, contentHtml) {
         contextFiles = sess.files;
       }
 
+      var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
+
       var payload = JSON.stringify({
         prompt: userPrompt,
         files: contextFiles,
         model: "AravKataria/vajra-lora",
-        max_tokens: 4096
+        max_tokens: 4096,
+        hf_token: storedHfToken || null
       });
 
       // 1. Try 24/7 Cloud Backend Gateway (Zero-Trust Cryptographically Protected)
       try {
+        var backendHeaders = {
+          "Content-Type": "application/json",
+          "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
+        };
+        if (storedHfToken) {
+          backendHeaders["X-HF-Token"] = storedHfToken;
+        }
+
         var hfResp = await fetch(VAJRA_PRIMARY_BACKEND + "/api/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
-          },
+          headers: backendHeaders,
           body: payload,
           signal: AbortSignal.timeout(35000)
         });
@@ -3308,17 +3320,6 @@ function appendSessionMessage(role, contentHtml) {
             };
           }
           if (hfData && hfData.reply) {
-            var rStr = hfData.reply;
-            if (rStr.includes("neural inference engine is currently busy") ||
-                rStr.includes("warming up") ||
-                rStr.includes("Inference Limit Reached") ||
-                rStr.includes("Inference Quota Reached")) {
-              return {
-                isRateLimited: true,
-                reply: rStr,
-                retryAfter: hfData.retry_after || 60
-              };
-            }
             return { reply: hfData.reply };
           }
         }
@@ -3364,17 +3365,6 @@ function appendSessionMessage(role, contentHtml) {
             };
           }
           if (lData && lData.reply) {
-            var lrStr = lData.reply;
-            if (lrStr.includes("neural inference engine is currently busy") ||
-                lrStr.includes("warming up") ||
-                lrStr.includes("Inference Limit Reached") ||
-                lrStr.includes("Inference Quota Reached")) {
-              return {
-                isRateLimited: true,
-                reply: lrStr,
-                retryAfter: lData.retry_after || 60
-              };
-            }
             return { reply: lData.reply };
           }
         }
