@@ -623,18 +623,31 @@ VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY", "vajra_sec_2026_auth_sig_9
 VAJRA_HF_SPACE_URL = os.environ.get("VAJRA_HF_SPACE_URL", "https://aravkataria-vajra.hf.space")
 
 
+# In-memory query cache for Render backend (10-minute TTL)
+_backend_query_cache: Dict[str, Tuple[float, str]] = {}
+BACKEND_CACHE_TTL = 600
+
+
 def query_vajra_fine_tuned_model(
     prompt: str,
     context_files: Optional[Dict[str, str]] = None,
     timeout: int = 30,
-) -> Optional[str]:
+) -> Dict[str, Any]:
     """
     Direct stateless inference query to VAJRA fine-tuned model (AravKataria/vajra-lora)
     running on Hugging Face Spaces (ZeroGPU / A100).
-    Uses line-by-line SSE reading for ultra-fast response.
+    Returns dict: {"reply": str, "rate_limited": bool, "retry_after": int, "error": str}
     """
     import urllib.error
     import urllib.request
+    import re
+
+    cache_key = prompt.lower().strip()
+    now = time.time()
+    if not context_files and cache_key in _backend_query_cache:
+        ts, cached_reply = _backend_query_cache[cache_key]
+        if now - ts < BACKEND_CACHE_TTL:
+            return {"reply": cached_reply, "rate_limited": False, "retry_after": 0, "error": None}
 
     try:
         call_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat"
@@ -647,12 +660,19 @@ def query_vajra_fine_tuned_model(
                 "User-Agent": "VAJRA-Cloud-Gateway/2.1",
             },
         )
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            event_id = data.get("event_id")
+        try:
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                event_id = data.get("event_id")
+        except urllib.error.HTTPError as http_err:
+            if http_err.code == 429:
+                retry_header = http_err.headers.get("Retry-After")
+                retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
+                return {"reply": None, "rate_limited": True, "retry_after": retry_seconds, "error": "HTTP 429 Too Many Requests"}
+            raise
 
         if not event_id:
-            return None
+            return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "No event_id"}
 
         stream_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/chat/{event_id}"
         stream_req = urllib.request.Request(
@@ -662,6 +682,7 @@ def query_vajra_fine_tuned_model(
 
         with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
             is_complete = False
+            is_error = False
             for raw_line in stream:
                 line = raw_line.decode("utf-8", errors="replace").strip()
                 if line.startswith("event: complete"):
@@ -670,14 +691,36 @@ def query_vajra_fine_tuned_model(
                     raw_data = line[5:].strip()
                     parsed = json.loads(raw_data)
                     if isinstance(parsed, list) and len(parsed) > 0 and parsed[0]:
-                        return str(parsed[0]).strip()
+                        ans = str(parsed[0]).strip()
+                        if not context_files and ans:
+                            _backend_query_cache[cache_key] = (now, ans)
+                        return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
                     break
                 elif line.startswith("event: error"):
-                    break
-        return None
-    except Exception:
-        # Seamless fallback to deterministic cyber-reasoning on network/HF timeout
-        return None
+                    is_error = True
+                elif is_error and line.startswith("data:"):
+                    err_msg = line[5:].strip()
+                    lower_err = err_msg.lower()
+                    retry_sec = 120
+                    m_min = re.search(r'(\d+)\s*(?:min|minute)', lower_err)
+                    m_sec = re.search(r'(\d+)\s*(?:sec|second)', lower_err)
+                    if m_min:
+                        retry_sec = int(m_min.group(1)) * 60
+                    elif m_sec:
+                        retry_sec = int(m_sec.group(1))
+                    
+                    is_quota = any(w in lower_err for w in ["quota", "rate limit", "too many", "exceeded", "gpu"])
+                    return {"reply": None, "rate_limited": is_quota, "retry_after": retry_sec, "error": err_msg}
+
+        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "Stream ended"}
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            retry_header = http_err.headers.get("Retry-After")
+            retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
+            return {"reply": None, "rate_limited": True, "retry_after": retry_seconds, "error": "HTTP 429"}
+        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(http_err)}
+    except Exception as e:
+        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(e)}
 
 
 class ChatRequest(BaseModel):
@@ -692,7 +735,7 @@ async def chat_api(req: ChatRequest, request: Request):
     """
     Zero-Trust Protected Cyber-Reasoning Chat Endpoint.
     Requires cryptographic signature header: X-Vajra-Signature.
-    Queries the fine-tuned model (AravKataria/vajra-lora) with deterministic fallback.
+    Queries the fine-tuned model (AravKataria/vajra-lora) with transparent rate-limit and deterministic fallback.
     """
     sig = request.headers.get("X-Vajra-Signature")
     if sig != VAJRA_SECRET_KEY:
@@ -713,15 +756,36 @@ async def chat_api(req: ChatRequest, request: Request):
             })
 
     # 1. Query live Fine-Tuned Model (AravKataria/vajra-lora) running on HF Spaces
-    model_reply = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files)
-    if model_reply:
+    model_res = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files)
+    if model_res and model_res.get("reply"):
         return JSONResponse({
             "success": True,
-            "reply": model_reply,
+            "reply": model_res["reply"],
             "model": "AravKataria/vajra-lora (Fine-Tuned Qwen2.5-Coder-7B)",
             "shield": "Zero-Retention Verified",
             "source": "fine-tuned-model",
         })
+
+    # If the upstream inference engine is rate limited or GPU quota exhausted:
+    if model_res and model_res.get("rate_limited"):
+        retry_sec = model_res.get("retry_after") or 120
+        wait_min = max(1, round(retry_sec / 60))
+        wait_text = f"{retry_sec} seconds" if retry_sec < 60 else f"~{wait_min} minute{'s' if wait_min > 1 else ''}"
+        limit_msg = (
+            f"⚠️ **Inference Limit Reached**\n\n"
+            f"You have reached the temporary AI inference limit for this session (free GPU compute quota). "
+            f"Please wait **{wait_text}** before sending your next chat request.\n\n"
+            f"💡 *In the meantime, you can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
+        )
+        return JSONResponse({
+            "success": False,
+            "rate_limited": True,
+            "reply": limit_msg,
+            "retry_after": retry_sec,
+            "model": "VAJRA-Cyber-Reasoning",
+            "shield": "Rate-Limit-Guard",
+            "source": "quota-limit"
+        }, status_code=429)
 
     # 2. Graceful Fallback to Deterministic Cyber-Reasoning Engine
     reply = "🛡️ **VAJRA Cyber-Reasoning System**\n\n"
@@ -746,8 +810,8 @@ async def chat_api(req: ChatRequest, request: Request):
     else:
         reply += (
             f"Analyzing technical request: *\"{prompt_clean[:120]}\"*\n\n"
-            f"VAJRA security and verification engines are standing by 24/7. "
-            f"All workspace analyses, AST reachability graphs, and deterministic caches are active with Zero-Retention Privacy."
+            f"The neural inference engine is currently busy or warming up. Please wait a moment and try again, "
+            f"or submit source files to run AST security triage with Zero-Retention Privacy."
         )
 
     return JSONResponse({
