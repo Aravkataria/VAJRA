@@ -1158,14 +1158,15 @@
     }
 
     .viewport.with-side-panel .chat-column {
-      flex: 1 1 50%;
-      max-width: 55%;
+      flex: 1 1 62%;
+      min-width: 320px;
     }
 
     .artifact-side-panel {
-      flex: 1 1 50%;
-      min-width: 360px;
-      max-width: 55%;
+      flex: 0 0 38%;
+      width: 38%;
+      min-width: 280px;
+      max-width: 42%;
       height: 100%;
       background: var(--bg-surface-1, #111113);
       border-left: 1px solid var(--border-medium, rgba(255, 255, 255, 0.14));
@@ -1279,13 +1280,13 @@
     }
 
     .live-preview-header {
-      height: 48px;
+      height: 44px;
       background: #18181b;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 14px;
+      padding: 0 12px;
       user-select: none;
       flex-shrink: 0;
     }
@@ -1296,15 +1297,17 @@
     .live-preview-header-left {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      overflow: hidden;
     }
     .preview-mode-switch {
       display: inline-flex;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.35);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 6px;
       padding: 2px;
       gap: 2px;
+      flex-shrink: 0;
     }
     [data-theme="light"] .preview-mode-switch {
       background: rgba(0, 0, 0, 0.06);
@@ -1314,20 +1317,23 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 28px;
+      width: 28px;
+      height: 26px;
       border: none;
       background: transparent;
       color: var(--text-muted, #a1a1aa);
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.12s ease;
+      padding: 0;
     }
     .preview-tab-btn:hover {
       color: #ffffff;
+      background: rgba(255, 255, 255, 0.06);
     }
     [data-theme="light"] .preview-tab-btn:hover {
       color: #18181b;
+      background: rgba(0, 0, 0, 0.05);
     }
     .preview-tab-btn.active {
       background: rgba(255, 255, 255, 0.14);
@@ -1339,37 +1345,41 @@
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
     .live-preview-title-tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.88rem;
-      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 400;
       color: var(--text-primary, #ffffff);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .live-preview-header-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      flex-shrink: 0;
     }
     .btn-preview-action {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-primary, #f4f4f5);
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 0.8rem;
-      font-weight: 500;
+      border-radius: 5px;
+      padding: 4px 8px;
+      font-size: 0.76rem;
+      font-weight: 400;
       cursor: pointer;
       transition: all 0.12s ease;
     }
     .btn-preview-action:hover {
-      background: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.12);
     }
     [data-theme="light"] .btn-preview-action {
       background: #e4e4e7;
       color: #18181b;
-      border-color: rgba(0, 0, 0, 0.12);
+      border-color: rgba(0, 0, 0, 0.1);
     }
     .btn-preview-icon {
       width: 28px;
@@ -2040,22 +2050,16 @@
         <div class="live-preview-header">
           <div class="live-preview-header-left">
             <div class="preview-mode-switch">
-              <button type="button" class="preview-tab-btn" id="btnModePreview" onclick="setPreviewModalMode('preview')" title="Live Interactive Site Preview">
+              <button type="button" class="preview-tab-btn" id="btnModePreview" onclick="setPreviewModalMode('preview')" title="Live Site Preview" aria-label="Preview">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                <span class="preview-tab-label">Preview</span>
               </button>
-              <button type="button" class="preview-tab-btn active" id="btnModeCode" onclick="setPreviewModalMode('code')" title="Source Code">
+              <button type="button" class="preview-tab-btn active" id="btnModeCode" onclick="setPreviewModalMode('code')" title="Source Code" aria-label="Code">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                <span class="preview-tab-label">Code</span>
               </button>
             </div>
             <span class="live-preview-title-tag" id="livePreviewTitle">code.py</span>
           </div>
           <div class="live-preview-header-right">
-            <button type="button" class="btn-preview-action" onclick="toggleSidePanelDock()" id="btnDockToggle" title="Toggle Dock Side (Left / Right)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3m8-18h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3M16 12H8m4-4l-4 4 4 4"/></svg>
-              <span id="dockSideLabel">Dock Left</span>
-            </button>
             <button type="button" class="btn-preview-action" onclick="copyPreviewCode()" id="btnCopyPreviewCode" title="Copy Code">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               <span>Copy</span>
@@ -3427,7 +3431,10 @@ function appendSessionMessage(role, contentHtml) {
 
       var isHtml = (art.type || "").toUpperCase() === "HTML" || art.name.endsWith(".html") || (art.content && (art.content.includes("<!DOCTYPE") || art.content.includes("<html")));
 
-      if (title) title.textContent = (art.name || "Document") + " · " + (art.type || (isHtml ? "HTML" : "CODE"));
+      if (title) {
+        title.innerHTML = '<span style="font-weight:400; color:var(--text-primary);">' + escapeHtml(art.name || "Document") + '</span>' +
+          '<span style="font-weight:400; color:var(--text-muted); font-size:0.75rem; margin-left:6px;">' + escapeHtml(art.type || (isHtml ? "HTML" : "CODE")) + '</span>';
+      }
       if (codePane) codePane.textContent = art.content || "";
       if (iframe) {
         if (isHtml) {
