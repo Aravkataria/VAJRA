@@ -3051,6 +3051,7 @@ function appendSessionMessage(role, contentHtml) {
       var group = document.createElement("div");
       group.className = "msg-group " + role;
 
+      var label = role === "user" ? "USER INSTRUCTION" : "VAJRA REASONING AUDIT";
       group.innerHTML =
         '<div class="msg-header">' +
           '<div style="display:flex; align-items:center; gap:8px;">' +
