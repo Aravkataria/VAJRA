@@ -3119,15 +3119,25 @@ function appendSessionMessage(role, contentHtml) {
     }
 
     var rateLimitInterval = null;
+    var isOnCooldown = false; // Global flag — blocks new submissions during active cooldown
+
     function startRateLimitCooldown(totalSeconds) {
       var remaining = totalSeconds;
       var composer = document.getElementById("composerInput");
+      var sendBtn = document.getElementById("composerSendBtn") || document.querySelector(".btn-send, .composer-send, [data-send]");
       var originalPlaceholder = "Ask VAJRA to reason about a vulnerability, design patches, or drop repo/files...";
 
       if (rateLimitInterval) clearInterval(rateLimitInterval);
+      isOnCooldown = true;
 
+      // Disable the send button visually and functionally
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = "0.4";
+        sendBtn.title = "Cooldown active — wait for inference to resume";
+      }
       if (composer) {
-        composer.placeholder = "Rate limited. Inference resumes in " + remaining + "s...";
+        composer.placeholder = "\u23F1 Inference cooldown: " + remaining + "s remaining...";
       }
 
       rateLimitInterval = setInterval(function() {
@@ -3136,18 +3146,26 @@ function appendSessionMessage(role, contentHtml) {
         if (cdSpan) cdSpan.textContent = remaining;
 
         if (composer) {
-          composer.placeholder = "Rate limited. Inference resumes in " + remaining + "s...";
+          composer.placeholder = "\u23F1 Inference cooldown: " + remaining + "s remaining...";
         }
 
         if (remaining <= 0) {
           clearInterval(rateLimitInterval);
           rateLimitInterval = null;
+          isOnCooldown = false;
+
+          // Re-enable send button
+          if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.style.opacity = "";
+            sendBtn.title = "";
+          }
           if (composer) {
             composer.placeholder = originalPlaceholder;
           }
           var timerBox = document.getElementById("cooldownTimerBox");
           if (timerBox) {
-            timerBox.innerHTML = "✅ <b>Cooldown Complete</b>: AI inference engine is ready for your next request!";
+            timerBox.innerHTML = "\u2705 <b>Cooldown Complete</b>: AI inference engine is ready for your next request!";
             timerBox.style.color = "var(--ok, #5fbf7a)";
           }
         }
@@ -3754,6 +3772,24 @@ function appendSessionMessage(role, contentHtml) {
     }
 
     async function handleCasefileQuery(q, extraFiles) {
+      // Guard: if a rate-limit cooldown is currently active, block the request
+      if (isOnCooldown) {
+        var cdEl = document.getElementById("cooldownSeconds");
+        var secLeft = cdEl ? cdEl.textContent : "a moment";
+        showTypingIndicator();
+        setTimeout(function() {
+          removeTypingIndicator();
+          appendSessionMessage("bot",
+            "<div style='border:1px solid var(--spark); background:rgba(245,180,0,0.08); padding:12px 16px; border-radius:8px; font-size:0.88rem;'>" +
+              "<b>\u23F1 Inference Cooldown Active</b>" +
+              "<p style='margin-top:6px; color:var(--text-secondary);'>The AI inference engine is still resetting. Please wait <b>" + secLeft + " more seconds</b> before sending your next message.</p>" +
+              "<p style='margin-top:4px; font-size:0.82rem; color:var(--text-muted);'>You can continue using local AST security scans and codebase audits without limit.</p>" +
+            "</div>"
+          );
+        }, 400);
+        return;
+      }
+
       showTypingIndicator();
       var sess = getActiveSession();
 
@@ -3845,31 +3881,62 @@ function appendSessionMessage(role, contentHtml) {
           });
         }
 
-        // 3. Fast Conversational & Greeting Intent (Instant Response, Zero-Latency, Zero False-Busy)
+        // 3. Slim Local Responder — only for things that should NEVER go to the LLM
+        //    (pure greetings, VAJRA identity questions, upload how-to)
+        //    Everything else — kaggle, trust, benzene, cicd, security concepts — goes to the LLM.
         var qLower = (q || "").toLowerCase().trim();
-        var isPureGreeting = qLower === "hello" || qLower === "hi" || qLower === "hey" ||
-          qLower === "hello vajra" || qLower === "hi vajra" || qLower === "hey vajra" ||
-          qLower.startsWith("hello ") || qLower.startsWith("hi ") || qLower.startsWith("hey ") ||
-          qLower === "good morning" || qLower === "good evening" || qLower === "greetings" ||
-          qLower === "who are you" || qLower === "what is vajra" || qLower === "what are you";
 
-        if (isPureGreeting && (!extraFiles || Object.keys(extraFiles).length === 0)) {
+        function resolveLocalResponse(query, sess) {
+          // Pure greetings only (single-word or very short greeting phrases)
+          if (/^(hello|hi|hey|howdy|greetings|good morning|good evening|good afternoon|good night|hey vajra|hello vajra|hi vajra|sup|yo)[\s!?.]*$/.test(query)) {
+            return '<p>Hello! I am <b>VAJRA</b> \u2014 your autonomous cyber-reasoning and deterministic software security intelligence system, engineered and fine-tuned by <b>Arav Kataria</b>.</p>' +
+              '<p style="margin-top:0.4rem; color:var(--text-secondary);">How can I assist you today?</p>' +
+              '<ul style="margin:0.4rem 0 0 1.2rem; font-size:0.86rem; color:var(--text-secondary); line-height:1.6;">' +
+                '<li>Ask about my <b>Architecture</b> or 8-layer sovereign security model</li>' +
+                '<li>Provide a GitHub URL or upload files/folders to run deep <b>AST vulnerability audits</b></li>' +
+                '<li>Request verified surgical <b>security patch synthesis</b> (CWE-89, CWE-78, CWE-502, IDOR)</li>' +
+                '<li>Ask any technical, security, or general knowledge question</li>' +
+              '</ul>';
+          }
+          // Who are you / What is VAJRA — always answered locally (identity, never goes to LLM)
+          if (query === "who are you" || query === "what is vajra" || query === "what are you" ||
+              query.includes("introduce yourself") || query.includes("tell me about yourself") ||
+              query.includes("tell me about vajra") ||
+              (query.includes("who") && query.includes("vajra"))) {
+            return '<p>I am <b>VAJRA</b> \u2014 an Autonomous Cyber-Reasoning and Deterministic Software Security Intelligence System, fine-tuned and engineered by <b>Arav Kataria</b>.</p>' +
+              '<p style="color:var(--text-secondary); margin-top:0.4rem;">I operate via a 3-stage security pipeline: <b>Vulnerability Finder</b> \u2192 <b>Autonomous Patch Generator</b> \u2192 <b>Formal Invariant Verifier</b> \u2014 tracking AST execution sinks, synthesizing surgical patches, and formally proving patch efficacy across a 6-stage test ledger.</p>';
+          }
+          // Who created / made VAJRA — answered locally (proprietary info)
+          if (query.includes("who created") || query.includes("who made") || query.includes("who built") ||
+              query.includes("who fine tuned") || query.includes("who fine-tuned") ||
+              query.includes("arav kataria") ||
+              ((query.includes("who") || query.includes("by whom")) && (query.includes("author") || query.includes("creator") || query.includes("made") || query.includes("built") || query.includes("created")))) {
+            return '<p>I was fine-tuned and engineered by <b>Arav Kataria</b> as part of the <b>VAJRA Cyber-Reasoning Project</b>.</p>' +
+              '<p style="color:var(--text-secondary); margin-top:0.4rem;">My neural reasoning weights are specialized for high-precision vulnerability discovery, automated security patch synthesis, and formal regression verification \u2014 built on <b>Qwen2.5-Coder-7B</b> with custom LoRA adapters.</p>';
+          }
+          // Upload instructions — answered locally (UI how-to, LLM doesn't know the UI)
+          if (query.includes("how do i upload") || query.includes("how do i submit") ||
+              query.includes("how to upload") || query.includes("how to submit") ||
+              (query.startsWith("upload") && query.length < 30)) {
+            return '<p><b>How to Submit Code to VAJRA:</b></p>' +
+              '<ul style="margin:0.4rem 0 0 1.2rem; font-size:0.85rem; color:var(--text-secondary); line-height:1.6;">' +
+                '<li>Click the <b>📎 attachment icon</b> in the chat input to upload individual files</li>' +
+                '<li>Drag-and-drop a <b>ZIP archive</b> directly into the chat window</li>' +
+                '<li>Paste a <b>GitHub repository URL</b> in the chat input</li>' +
+                '<li>Click <b>Load Local Folder</b> in the sidebar to scan entire project directories</li>' +
+              '</ul>';
+          }
+          return null; // Everything else goes to the LLM backend
+        }
+
+        var localResp = resolveLocalResponse(qLower, sess);
+        if (localResp !== null && (!extraFiles || Object.keys(extraFiles).length === 0)) {
           removeTypingIndicator();
-          var greetingHtml =
-            '<p>Hello! I am <b>VAJRA</b> — your autonomous cyber-reasoning and deterministic software security intelligence system, engineered and fine-tuned by <b>Arav Kataria</b>.</p>' +
-            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
-              'How can I assist you with your codebase today? You can:' +
-            '</p>' +
-            '<ul style="margin:0.4rem 0 0 1.2rem; font-size:0.86rem; color:var(--text-secondary); line-height:1.6;">' +
-              '<li>Ask about my <b>Architecture</b> or 8-layer sovereign security model</li>' +
-              '<li>Provide a GitHub URL or upload files/folders to run deep <b>AST vulnerability audits</b></li>' +
-              '<li>Request verified surgical <b>security patch synthesis</b> (CWE-89, CWE-78, CWE-502, IDOR)</li>' +
-              '<li>Ask general software engineering, threat modeling, or technical programming questions</li>' +
-            '</ul>';
-          appendSessionMessage("bot", greetingHtml);
+          appendSessionMessage("bot", localResp);
           return;
         }
 
+        // 4. Network LLM Inference — all real questions go here
         var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles);
         if (inferenceRes) {
           removeTypingIndicator();
@@ -3885,7 +3952,7 @@ function appendSessionMessage(role, contentHtml) {
               "<div class='rate-limit-alert' style='border: 1px solid var(--spark); background: rgba(245, 180, 0, 0.08); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5; color: var(--text-primary);'>" +
                 "<p>" + formattedHtml + "</p>" +
                 "<div id='cooldownTimerBox' style='margin-top: 10px; font-family: monospace; font-size: 0.8rem; color: var(--spark); font-weight: 600;'>" +
-                  "⏱️ Cooldown active: <span id='cooldownSeconds'>" + (inferenceRes.retryAfter || 60) + "</span>s remaining" +
+                  "\u23F1\uFE0F Cooldown active: <span id='cooldownSeconds'>" + (inferenceRes.retryAfter || 60) + "</span>s remaining" +
                 "</div>" +
               "</div>"
             );
@@ -3905,119 +3972,28 @@ function appendSessionMessage(role, contentHtml) {
               var fId = registerArtifactFile(genExt, codeContent, genType);
               artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
             }
-
-            var formattedHtml = inferenceRes.reply
+            var formattedHtml2 = inferenceRes.reply
               .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
               .replace(/\n/g, "<br>")
               .replace(/`([^`]+)`/g, "<code>$1</code>");
-            appendSessionMessage("bot", "<p>" + formattedHtml + "</p>" + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""));
+            appendSessionMessage("bot", "<p>" + formattedHtml2 + "</p>" + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""));
             return;
           }
         }
 
-        // Rich Dynamic Technical Intelligence Engine (Instant Offline / Cloud Fallback)
-        var query = q.toLowerCase().trim();
+        // 5. Final static fallback (network failed AND no local match)
+        var queryFallback = q.toLowerCase().trim();
         var response = "";
-
-        if (query.includes("what is a llm") || query.includes("what is an llm") || query.includes("llm")) {
-          response =
-            '<p><b>Large Language Models (LLMs) &amp; VAJRA Architecture:</b></p>' +
-            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
-              'A <b>Large Language Model (LLM)</b> is a deep neural network based on the <b>Transformer architecture</b>, trained on massive code and language corpora using multi-head self-attention mechanisms. ' +
-              'In <b>VAJRA</b>, we adapt a specialized <b>Qwen2.5-Coder</b> foundation using fine-tuned LoRA adapters to perform deterministic security reasoning, zero-regression patch synthesis, and AST taint tracing.' +
-            '</p>';
-        } else if (query.includes("how is it secure") || query.includes("how are you secure") || query.includes("security") || query.includes("how secure")) {
-          response =
-            '<p><b>VAJRA 8-Layer Sovereign Enterprise Security Architecture:</b></p>' +
-            '<div style="margin:0.4rem 0; font-size:0.85rem; color:var(--text-secondary);">' +
-              '<div>1. <b>(Cryptographic Signature Lock):</b> Highest security, blocks all unauthorized requests via <code>X-Vajra-Signature</code> HMAC verification.</div>' +
-              '<div>2. <b>(Encrypted in frontend):</b> Keeps the URL secret from anyone reading the source code using runtime XOR/Base64 in-memory decoders.</div>' +
-              '<div>3. <b>Origin Lockdown:</b> Whitelist strictly restricts API communication to authorized domains.</div>' +
-              '<div>4. <b>Anti-DDoS Sliding Rate Limiting:</b> Enforces max 30 requests/min per IP.</div>' +
-              '<div>5. <b>Anti-Prompt Injection:</b> Automated guardrail filter intercepts adversarial jailbreak patterns.</div>' +
-              '<div>6. <b>Zero-Retention Privacy:</b> Analyzed source code exists solely in volatile RAM and is immediately purged with <code>gc.collect()</code> after inference.</div>' +
-              '<div>7. <b>Formal 6/6 Proof Ledger:</b> Every generated patch must pass AST, PoC Neutralization, and Invariant verification.</div>' +
-              '<div>8. <b>Dual-Route Cloud Redundancy:</b> Secure Render gateway with automatic client-side Hugging Face ZeroGPU fallback.</div>' +
-            '</div>';
-        } else if (query.includes("zip") || query.includes("download") || query.includes("where is") || query.includes("where are my files")) {
-          if (sess && sess.scanData) {
-            response =
-              '<p>The clean patched project archive has been compiled and verified for workspace <code>' + escapeHtml(sess.workspaceId) + '</code>.</p>' +
-              '<p style="margin-top:0.5rem;"><button onclick="downloadPatchedArchive()" class="btn-run-scan">DOWNLOAD VERIFIED PATCHED ARCHIVE (.ZIP)</button></p>' +
-              '<p style="color:var(--text-muted); font-size:0.8rem; margin-top:0.5rem;">All verified patches have been applied directly to this clean downloadable package.</p>';
-          } else {
-            response =
-              '<p>No scan has been completed in this casefile yet. Provide a <b>GitHub URL</b>, <b>Local Folder</b>, or <b>ZIP Archive</b> to initiate deterministic AST analysis and generate a verified clean ZIP.</p>';
-          }
-        } else if (query.includes("who are you") || query.includes("what are you") || query.includes("what is vajra") || query.includes("introduce")) {
-          response =
-            '<p>I am <b>VAJRA</b> — an autonomous cyber-reasoning and deterministic software security intelligence system, fine-tuned and engineered by <b>Arav Kataria</b>.</p>' +
-            '<p style="color:var(--text-secondary); margin-top:0.4rem;">I operate via an evidence-driven 3-stage security pipeline (Vulnerability Finder &rarr; Autonomous Patch Generator &rarr; Formal Invariant Verifier) to ingest codebases, track dangerous AST execution sinks, synthesize surgical defensive patches, and formally prove patch efficacy across a 6-stage test ledger.</p>';
-        } else if (query.includes("who created") || query.includes("who made") || query.includes("who fine tuned") || query.includes("author") || query.includes("creator")) {
-          response =
-            '<p>I was fine-tuned and engineered by <b>Arav Kataria</b> as part of the <b>VAJRA Cyber-Reasoning Project</b>.</p>' +
-            '<p style="color:var(--text-secondary); margin-top:0.4rem;">My neural reasoning weights are specialized for high-precision vulnerability discovery, automated security patch synthesis, and formal regression verification.</p>';
-        } else if (query.includes("what llm") || query.includes("which model") || query.includes("what model") || query.includes("foundation") || query.includes("base model")) {
-          response =
-            '<p>I am powered by a specialized <b>fine-tuned Qwen2.5-Coder model</b>, fine-tuned by <b>Arav Kataria</b> for cyber-reasoning and automated security repair.</p>' +
-            '<p style="color:var(--text-secondary); margin-top:0.4rem;">The foundational architecture was developed by Alibaba Cloud based on the <b>Transformer</b> architecture, adapted with custom LoRA adapters for zero-regression patch generation.</p>';
-        } else if (query.includes("architecture") || query.includes("how are you built") || query.includes("pipeline") || query.includes("6-stage")) {
-          response =
-            '<div><b>VAJRA 3-Stage Autonomous Pipeline &amp; 6-Stage Verifier:</b></div>' +
-            '<div style="margin:0.4rem 0; font-size:0.85rem; color:var(--text-secondary);">' +
-              '<div>1. <b>Vulnerability Finder:</b> AST syntax tracing &amp; taint analysis across dangerous execution sinks.</div>' +
-              '<div>2. <b>Autonomous Patch Generator:</b> Neural synthesis of minimal, non-breaking defensive code diffs.</div>' +
-              '<div>3. <b>Formal Verifier (6/6 Test Ledger):</b> AST Check &rarr; Static Re-scan &rarr; Sentinel PoC Neutralization &rarr; Regression Suite &rarr; Boundary Fuzzing &rarr; Patch Mutation Invariant.</div>' +
-            '</div>';
-        } else if (query.includes("plan") || query.includes("planning") || query.includes("project") || query.includes("can you plan")) {
-          response =
-            '<p><b>Autonomous Project Planning &amp; Security Architecture:</b></p>' +
-            '<p style="margin-top:0.4rem; color:var(--text-secondary);">Yes, I can assist with project planning, threat modeling, and defensive architecture design. Describe your target system, tech stack, and threat model, and I will structure a multi-phase implementation roadmap with built-in security controls.</p>';
-        } else if (query.includes("file") || query.includes("code") || query.includes("see my code") || query.includes("local")) {
-          response =
-            '<p><b>Local File &amp; Workspace Access:</b></p>' +
-            '<p style="margin-top:0.4rem; color:var(--text-secondary);">Yes! I have direct access to your local workspace files. You can load a local folder, drag-and-drop a ZIP archive, or provide a GitHub repository. I will analyze the codebase, isolate AST execution vulnerabilities, and synthesize verified patches right here.</p>';
-        } else if (query.includes("kaggle")) {
-          response =
-            '<p><b>Kaggle &amp; VAJRA Evaluation Benchmarks:</b></p>' +
-            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
-              '<b>Kaggle</b> is the world’s premier community and platform for data science and machine learning competitions, benchmarks, and datasets (a subsidiary of Google). ' +
-              'In VAJRA, our automated vulnerability discovery and repair models are benchmarked against Kaggle-grade empirical evaluation suites, ' +
-              'featuring multi-stage test ledgers, confusion matrix scoring, and AST reachability verification.' +
-            '</p>';
-        } else if (query.includes("error") || query.includes("matrix") || query.includes("404") || query.includes("503") || query.includes("401") || query.includes("429") || query.includes("500") || query.includes("offline")) {
-          var errMatch = query.match(/(?:error|code|status|err)?\s*([0-9]{3}|[a-z0-9_]{4,})/i);
-          var code = errMatch ? errMatch[1].toUpperCase() : "404";
-          response =
-            '<div style="border-left: 3px solid var(--spark); padding-left: 12px; margin: 4px 0;">' +
-              '<p><b>🛡️ VAJRA Universal Error Diagnostic Matrix</b></p>' +
-              '<p style="margin-top:0.3rem; color:var(--text-secondary); font-size:0.85rem;">' +
-                'VAJRA indexes <b>50+ error states</b> across L7 HTTP, transport, ZeroGPU inference, AST reachability, and cryptographic vault security.' +
-              '</p>' +
-              '<div style="margin-top:0.6rem; display:flex; gap:8px; flex-wrap:wrap;">' +
-                '<a href="../404.html?code=' + encodeURIComponent(code) + '" target="_blank" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:rgba(245,180,0,0.1); color:var(--spark); border:1px solid var(--spark); border-radius:6px; font-size:0.8rem; font-family:monospace; text-decoration:none; font-weight:600;">' +
-                  '🔍 INSPECT CODE [' + escapeHtml(code) + '] IN MATRIX &rarr;' +
-                '</a>' +
-                '<a href="../404.html" target="_blank" style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:var(--bg-elevated); color:var(--text-primary); border:1px solid var(--border-medium); border-radius:6px; font-size:0.8rem; font-family:monospace; text-decoration:none;">' +
-                  'VIEW FULL 50+ ERROR MATRIX &rarr;' +
-                '</a>' +
-              '</div>' +
-            '</div>';
-        } else if (query === "hello" || query === "hi" || query === "hey" || query.startsWith("hello") || query.startsWith("hi ") || query.startsWith("hey ")) {
-          response =
-            '<p>Hello! I am <b>VAJRA</b>, your autonomous cyber-reasoning and deterministic security intelligence assistant.</p>' +
-            '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
-              'How can I help you today? You can ask me about my architecture, security verification, upload code to inspect, or ask technical software engineering questions.' +
-            '</p>';
+        if (queryFallback === "hello" || queryFallback === "hi" || queryFallback === "hey" || queryFallback.startsWith("hello") || queryFallback.startsWith("hi ") || queryFallback.startsWith("hey ")) {
+          response = '<p>Hello! I am <b>VAJRA</b>, your autonomous cyber-reasoning and security intelligence assistant. How can I help you today?</p>';
         } else {
           response =
             '<p><b>VAJRA Cyber-Reasoning Engine:</b></p>' +
             '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
               'Query received: <i>"' + escapeHtml(q) + '"</i>. ' +
-              'The system is active. Provide a <b>GitHub repository link</b> or upload source files to initiate AST sink tracking, or ask about vulnerability remediation.' +
+              'The system is active. Provide a <b>GitHub repository link</b> or upload source files to initiate AST sink tracking, or ask about vulnerability remediation, security concepts, or architecture.' +
             '</p>';
         }
-
         appendSessionMessage("bot", response);
       } catch (err) {
         removeTypingIndicator();
