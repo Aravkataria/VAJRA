@@ -916,6 +916,139 @@
       color: var(--text-muted);
     }
 
+    /* Composer Attachment Tray & Cards (Pasted/Uploaded Files) */
+    .composer-attachments {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 4px 0 6px;
+      width: 100%;
+    }
+
+    .attachment-card {
+      position: relative;
+      width: 136px;
+      height: 136px;
+      background: var(--bg-elevated, #1c1c1f);
+      border: 1px solid var(--border-medium, rgba(255, 255, 255, 0.14));
+      border-radius: 8px;
+      padding: 10px 8px 8px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      box-sizing: border-box;
+      user-select: none;
+      animation: fadeInAttachment 0.15s ease-out;
+    }
+
+    @keyframes fadeInAttachment {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    [data-theme="light"] .attachment-card {
+      background: #f4f4f5;
+      border-color: rgba(0, 0, 0, 0.14);
+    }
+
+    .attachment-preview {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      line-height: 1.35;
+      color: var(--text-muted, #a1a1aa);
+      word-break: break-all;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      opacity: 0.9;
+    }
+
+    [data-theme="light"] .attachment-preview {
+      color: #52525b;
+    }
+
+    .attachment-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .attachment-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #09090b;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+
+    [data-theme="light"] .attachment-badge {
+      background: #e4e4e7;
+      color: #18181b;
+      border-color: rgba(0, 0, 0, 0.16);
+    }
+
+    .attachment-name {
+      font-size: 9.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted, #71717a);
+      max-width: 65px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .attachment-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.65);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      line-height: 1;
+      opacity: 0.6;
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+
+    .attachment-card:hover .attachment-remove {
+      opacity: 1;
+    }
+
+    .attachment-remove:hover {
+      background: rgba(244, 63, 94, 0.9);
+      color: #ffffff;
+    }
+
+    .chat-attachment-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-surface-2, rgba(255, 255, 255, 0.06));
+      border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+      border-radius: 6px;
+      padding: 4px 8px;
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+    }
+
     .composer-toolbar {
       display: flex;
       align-items: center;
@@ -1412,9 +1545,16 @@
         <!-- Composer Terminal -->
         <div class="composer-shell">
           <form class="composer-panel" id="composerForm">
+            <!-- Attachment Tray for Pasted Code / Uploaded Files -->
+            <div class="composer-attachments" id="composerAttachments" style="display:none;"></div>
+
             <textarea class="composer-input" id="composerInput" placeholder="Ask VAJRA to plan, reason, analyze code, or enter GitHub repo URL..." rows="1"></textarea>
             <div class="composer-toolbar">
               <div class="toolbar-left">
+                <button type="button" class="btn-tool-chip" onclick="document.getElementById('hiddenSingleFileInput').click()" title="Attach code or data file">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  File
+                </button>
                 <button type="button" class="btn-tool-chip" onclick="document.getElementById('hiddenZipInput').click()">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                   ZIP
@@ -1441,6 +1581,7 @@
   </main>
 
   <!-- Hidden File Pickers -->
+  <input type="file" id="hiddenSingleFileInput" style="display:none;" onchange="handleSingleFileSelected(this.files[0])">
   <input type="file" id="hiddenZipInput" accept=".zip" style="display:none;" onchange="handleZipSelected(this.files[0])">
   <input type="file" id="hiddenFolderInput" webkitdirectory directory multiple style="display:none;" onchange="handleFolderSelected(this.files)">
 
@@ -2437,17 +2578,26 @@ function appendSessionMessage(role, contentHtml) {
       }, 1000);
     }
 
-    async function tryDirectHfSpace(userPrompt) {
+    async function tryDirectHfSpace(userPrompt, contextFiles) {
       try {
         var hfEndpoint = VAJRA_HF_SPACE_URL;
+        var fullPrompt = userPrompt;
+        if (contextFiles && Object.keys(contextFiles).length > 0) {
+          var filesSummary = "Workspace / Attached Files:\n";
+          Object.keys(contextFiles).slice(0, 5).forEach(function(k) {
+            filesSummary += "\n--- File: " + k + " ---\n" + (contextFiles[k] || "").slice(0, 3500) + "\n";
+          });
+          fullPrompt = filesSummary + "\nUser Request:\n" + userPrompt;
+        }
+
         var callResp = await fetch(hfEndpoint + "/call/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
           },
-          body: JSON.stringify({ data: [userPrompt, []] }),
-          signal: AbortSignal.timeout(12000)
+          body: JSON.stringify({ data: [fullPrompt, []] }),
+          signal: AbortSignal.timeout(15000)
         });
         if (callResp.status === 429) {
           return {
@@ -2514,9 +2664,11 @@ function appendSessionMessage(role, contentHtml) {
       return null;
     }
 
-    async function tryFastLlmInference(userPrompt, sess) {
+    async function tryFastLlmInference(userPrompt, sess, extraFiles) {
       var contextFiles = null;
-      if (sess && sess.files && Object.keys(sess.files).length > 0) {
+      if (extraFiles && Object.keys(extraFiles).length > 0) {
+        contextFiles = extraFiles;
+      } else if (sess && sess.files && Object.keys(sess.files).length > 0) {
         contextFiles = sess.files;
       }
 
@@ -2565,7 +2717,7 @@ function appendSessionMessage(role, contentHtml) {
 
       // 2. Try Direct Hugging Face Space (Runs fine-tuned AravKataria/vajra-lora 7B model)
       try {
-        var directRes = await tryDirectHfSpace(userPrompt);
+        var directRes = await tryDirectHfSpace(userPrompt, contextFiles);
         if (directRes) {
           if (directRes.isRateLimited) return directRes;
           if (directRes.reply) return directRes;
@@ -2631,20 +2783,22 @@ function appendSessionMessage(role, contentHtml) {
       return null;
     }
 
-    async function handleCasefileQuery(q) {
+    async function handleCasefileQuery(q, extraFiles) {
       showTypingIndicator();
       var sess = getActiveSession();
 
       try {
         // If user asks to scan/audit and files exist, run the 3-Stage Finder pipeline
-        if (isFinderScanIntent(q) && sess && sess.files && Object.keys(sess.files).length > 0) {
+        var hasFiles = (extraFiles && Object.keys(extraFiles).length > 0) || (sess && sess.files && Object.keys(sess.files).length > 0);
+        if (isFinderScanIntent(q) && hasFiles) {
+          var scanFiles = (extraFiles && Object.keys(extraFiles).length > 0) ? extraFiles : (sess && sess.files ? sess.files : {});
           removeTypingIndicator();
-          startScanAnalysis(sess.workspaceId, sess.files);
+          startScanAnalysis((sess ? sess.workspaceId : "attached_workspace"), scanFiles);
           return;
         }
 
         // For general questions or non-scan prompts, BYPASS FINDER & CALL LLM
-        var inferenceRes = await tryFastLlmInference(q, sess);
+        var inferenceRes = await tryFastLlmInference(q, sess, extraFiles);
         if (inferenceRes) {
           removeTypingIndicator();
           if (inferenceRes.isRateLimited) {
@@ -2817,9 +2971,15 @@ function appendSessionMessage(role, contentHtml) {
 
       var file = dt.files[0];
       if (file.name.toLowerCase().endsWith(".zip")) {
-        handleZipSelect({ target: { files: dt.files } });
+        if (typeof handleZipSelected === "function") {
+          handleZipSelected(file);
+        }
+      } else if (dt.files.length === 1 && !file.type.includes("directory")) {
+        window.handleSingleFileSelected(file);
       } else {
-        handleFolderSelect({ target: { files: dt.files } });
+        if (typeof handleFolderSelected === "function") {
+          handleFolderSelected(dt.files);
+        }
       }
     });
 
@@ -2834,6 +2994,94 @@ function appendSessionMessage(role, contentHtml) {
         createNewSession();
       }
     });
+
+    // ─── COMPOSER ATTACHMENTS & AUTO-CARD MANAGEMENT ───
+    var currentComposerAttachments = [];
+
+    function detectSnippetLanguage(code) {
+      var trimmed = (code || "").trim();
+      if (trimmed.startsWith("<!DOCTYPE") || trimmed.includes("<html") || (trimmed.includes("<div") && trimmed.includes("</div>"))) {
+        return { name: "index.html", badge: "HTML" };
+      }
+      if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+        try { JSON.parse(trimmed); return { name: "data.json", badge: "JSON" }; } catch(e) {}
+      }
+      if (/^(import |from |def |class |print\()/m.test(trimmed)) {
+        return { name: "main.py", badge: "PYTHON" };
+      }
+      if (/^(const |let |var |function |import .* from )/m.test(trimmed)) {
+        return { name: "script.js", badge: "JS" };
+      }
+      if (trimmed.includes("SELECT ") || trimmed.includes("CREATE TABLE") || trimmed.includes("INSERT INTO")) {
+        return { name: "query.sql", badge: "SQL" };
+      }
+      if (trimmed.includes("<?php")) {
+        return { name: "index.php", badge: "PHP" };
+      }
+      if (trimmed.includes("#include <") || trimmed.includes("int main(")) {
+        return { name: "main.cpp", badge: "C++" };
+      }
+      return { name: "snippet.txt", badge: "PASTED" };
+    }
+
+    window.addComposerAttachment = function(att) {
+      if (!att || !att.content) return;
+      currentComposerAttachments.push(att);
+      renderComposerAttachments();
+    };
+
+    window.removeComposerAttachment = function(id) {
+      currentComposerAttachments = currentComposerAttachments.filter(function(a) { return a.id !== id; });
+      renderComposerAttachments();
+    };
+
+    function renderComposerAttachments() {
+      var tray = document.getElementById("composerAttachments");
+      if (!tray) return;
+
+      if (!currentComposerAttachments || currentComposerAttachments.length === 0) {
+        tray.style.display = "none";
+        tray.innerHTML = "";
+        return;
+      }
+
+      tray.style.display = "flex";
+      var html = "";
+      currentComposerAttachments.forEach(function(att) {
+        var rawSnippet = (att.content || "").replace(/\r\n/g, "\n").trim();
+        var lines = rawSnippet.split("\n").slice(0, 6).join("\n");
+        var preview = lines.length > 150 ? lines.slice(0, 150) + "..." : lines;
+
+        html += '<div class="attachment-card" data-id="' + escapeHtml(att.id) + '">' +
+          '<button type="button" class="attachment-remove" onclick="removeComposerAttachment(\'' + escapeHtml(att.id) + '\')" title="Remove attachment">&times;</button>' +
+          '<div class="attachment-preview">' + escapeHtml(preview) + '</div>' +
+          '<div class="attachment-bottom">' +
+            '<span class="attachment-badge">' + escapeHtml(att.badge || "PASTED") + '</span>' +
+            '<span class="attachment-name" title="' + escapeHtml(att.name) + '">' + escapeHtml(att.name) + '</span>' +
+          '</div>' +
+        '</div>';
+      });
+      tray.innerHTML = html;
+    }
+
+    window.handleSingleFileSelected = function(file) {
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var content = e.target.result;
+        var ext = (file.name.split(".").pop() || "txt").toUpperCase();
+        window.addComposerAttachment({
+          id: "att_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+          type: "file",
+          name: file.name,
+          badge: ext.slice(0, 6) || "FILE",
+          content: content
+        });
+      };
+      reader.readAsText(file);
+      var input = document.getElementById("hiddenSingleFileInput");
+      if (input) input.value = "";
+    };
 
     // ─── COMPOSER FORM SUBMIT & ENTER KEY HANDLER ───
     var composerTextarea = document.getElementById("composerInput");
@@ -2857,8 +3105,27 @@ function appendSessionMessage(role, contentHtml) {
 
     if (composerTextarea) {
       composerTextarea.addEventListener("input", autoResizeComposer);
-      composerTextarea.addEventListener("paste", function () {
-        setTimeout(autoResizeComposer, 10);
+      composerTextarea.addEventListener("paste", function (e) {
+        var clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData) return;
+        var pastedText = clipboardData.getData("text");
+        if (!pastedText) return;
+
+        var lineCount = pastedText.split(/\r\n|\r|\n/).length;
+        if (pastedText.length > 180 || lineCount > 3) {
+          e.preventDefault();
+          var detected = detectSnippetLanguage(pastedText);
+          window.addComposerAttachment({
+            id: "att_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+            type: "pasted",
+            name: detected.name,
+            badge: "PASTED",
+            content: pastedText
+          });
+          setTimeout(autoResizeComposer, 10);
+        } else {
+          setTimeout(autoResizeComposer, 10);
+        }
       });
       composerTextarea.addEventListener("keydown", function (e) {
         // Enter sends message, Shift+Enter inserts newline
@@ -2876,7 +3143,32 @@ function appendSessionMessage(role, contentHtml) {
         e.preventDefault();
         if (!composerTextarea) composerTextarea = document.getElementById("composerInput");
         var text = (composerTextarea ? composerTextarea.value : "").trim();
-        if (!text) return;
+        var attachments = currentComposerAttachments.slice();
+
+        if (!text && attachments.length === 0) return;
+        if (!text && attachments.length > 0) {
+          text = "Analyze this code and identify any vulnerabilities or improvements.";
+        }
+
+        var attachedFilesDict = null;
+        var attachmentChipsHtml = "";
+
+        if (attachments.length > 0) {
+          attachedFilesDict = {};
+          attachments.forEach(function(att, idx) {
+            var fileName = att.name || ("file_" + (idx + 1) + ".txt");
+            attachedFilesDict[fileName] = att.content;
+            var byteLen = (new TextEncoder().encode(att.content)).length;
+            var sizeStr = byteLen > 1024 ? (byteLen / 1024).toFixed(1) + " KB" : byteLen + " B";
+            attachmentChipsHtml += '<div class="chat-attachment-chip">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>' +
+              '<span>' + escapeHtml(fileName) + ' (' + escapeHtml(att.badge || "PASTED") + ' &bull; ' + sizeStr + ')</span>' +
+            '</div>';
+          });
+          currentComposerAttachments = [];
+          renderComposerAttachments();
+        }
+
         if (composerTextarea) {
           composerTextarea.value = "";
           composerTextarea.style.height = "auto";
@@ -2886,8 +3178,9 @@ function appendSessionMessage(role, contentHtml) {
         if (text.startsWith("http://") || text.startsWith("https://")) {
           scanGitHubRepo(text);
         } else {
-          appendSessionMessage("user", escapeHtml(text));
-          handleCasefileQuery(text);
+          var userMessageHtml = (attachmentChipsHtml ? attachmentChipsHtml : "") + '<div>' + escapeHtml(text) + '</div>';
+          appendSessionMessage("user", userMessageHtml);
+          handleCasefileQuery(text, attachedFilesDict);
         }
       });
     }
