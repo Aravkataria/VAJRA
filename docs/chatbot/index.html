@@ -3368,27 +3368,16 @@
       var text = rawText;
 
       // 1. Normalize multiline block math so newlines don't get broken by <br>
-<<<<<<< HEAD
       text = text.replace(/\\\[([\s\S]*?)\\\]/g, function(match, formula) {
         return "\\[ " + formula.trim().replace(/\r?\n/g, " ") + " \\]";
       });
       text = text.replace(/\$\$([\s\S]*?)\$\$/g, function(match, formula) {
-=======
-      text = text.replace(/\\\\[([\\s\\S]*?)\\\\]/g, function(match, formula) {
-        return "\\[ " + formula.trim().replace(/\r?\n/g, " ") + " \\]";
-      });
-      text = text.replace(/\$\$([\\s\\S]*?)\$\$/g, function(match, formula) {
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
         return "$$ " + formula.trim().replace(/\r?\n/g, " ") + " $$";
       });
 
       // 2. Protect code blocks
       var codeBlocks = [];
-<<<<<<< HEAD
       text = text.replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, function(match, lang, code) {
-=======
-      text = text.replace(/```([a-zA-Z0-9_-]*)\s*([\\s\\S]*?)```/g, function(match, lang, code) {
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
         var placeholder = "___CODEBLOCK_" + codeBlocks.length + "___";
         codeBlocks.push({ lang: lang || "", code: code });
         return placeholder;
