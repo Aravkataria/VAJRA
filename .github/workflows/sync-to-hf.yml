@@ -1,0 +1,48 @@
+name: Sync to Hugging Face Space
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'hf_space/**'
+      - '.github/workflows/sync-to-hf.yml'
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
+
+jobs:
+  sync-to-hf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Upload hf_space to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          import os
+          from huggingface_hub import HfApi
+
+          token = os.environ.get('HF_TOKEN')
+          if not token:
+              print('::error::HF_TOKEN secret not found! Please add HF_TOKEN to your GitHub repository secrets.')
+              exit(1)
+
+          api = HfApi(token=token)
+          print('Uploading hf_space contents directly to AravKataria/vajra Space...')
+          api.upload_folder(
+              folder_path='hf_space',
+              repo_id='AravKataria/vajra',
+              repo_type='space',
+              commit_message='Automated sync from GitHub main'
+          )
+          print('✅ Hugging Face Space updated successfully!')
+          "
