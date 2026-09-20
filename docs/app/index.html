@@ -3429,13 +3429,13 @@
       return "<p>" + text + "</p>";
     }
 
-function appendSessionMessage(role, contentHtml) {
+    function appendSessionMessage(role, contentHtml, tierBadge) {
       removeTypingIndicator();
       var sess = getActiveSession();
       var timeStr = new Date().toLocaleTimeString();
       if (!sess) sess = { messages: [] };
       if (!sess.messages) sess.messages = [];
-      sess.messages.push({ role: role, html: contentHtml, time: timeStr });
+      sess.messages.push({ role: role, html: contentHtml, time: timeStr, tier: tierBadge });
       if (typeof saveSessions === 'function') saveSessions();
 
       var hero = document.getElementById("ledgerHero");
@@ -3446,7 +3446,7 @@ function appendSessionMessage(role, contentHtml) {
       var group = document.createElement("div");
       group.className = "msg-group " + role;
 
-      var label = role === "user" ? "USER INSTRUCTION" : "VAJRA REASONING AUDIT";
+      var label = role === "user" ? "USER INSTRUCTION" : (tierBadge || "VAJRA REASONING AUDIT");
       group.innerHTML =
         '<div class="msg-header">' +
           '<div style="display:flex; align-items:center; gap:8px;">' +
@@ -3671,7 +3671,11 @@ function appendSessionMessage(role, contentHtml) {
                       }
                       var d = out.data || [];
                       if (d.length > 0 && d[0]) {
-                        return { reply: String(d[0]).trim() };
+                        return {
+                          reply: String(d[0]).trim(),
+                          tier: "max",
+                          model: "AravKataria/vajra-lora"
+                        };
                       }
                     }
                   }
@@ -3712,11 +3716,11 @@ function appendSessionMessage(role, contentHtml) {
           backendHeaders["X-HF-Token"] = storedHfToken;
         }
 
-        var hfResp = await fetch(VAJRA_PRIMARY_BACKEND + "/api/chat", {
+        var hfResp = await fetch(VAJRA_PROD_BACKEND + "/api/chat", {
           method: "POST",
           headers: backendHeaders,
           body: payload,
-          signal: AbortSignal.timeout(35000)
+          signal: AbortSignal.timeout(60000)
         });
         if (hfResp.status === 429) {
           var limitData = await hfResp.json();
@@ -3736,7 +3740,11 @@ function appendSessionMessage(role, contentHtml) {
             };
           }
           if (hfData && hfData.reply) {
-            return { reply: hfData.reply };
+            return {
+              reply: hfData.reply,
+              model: hfData.model,
+              tier: hfData.tier
+            };
           }
         }
       } catch (e) {
@@ -3780,7 +3788,11 @@ function appendSessionMessage(role, contentHtml) {
             };
           }
           if (lData && lData.reply) {
-            return { reply: lData.reply };
+            return {
+              reply: lData.reply,
+              model: lData.model,
+              tier: lData.tier
+            };
           }
         }
       } catch (e) {}
@@ -4378,7 +4390,17 @@ function appendSessionMessage(role, contentHtml) {
               artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
             }
             var formattedHtml2 = formatBotMarkdown(inferenceRes.reply);
-            appendSessionMessage("bot", formattedHtml2 + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""));
+            var badge = "";
+            if (inferenceRes.tier === "ultra_lite" || inferenceRes.tier === "ultra_lite_fallback") {
+              badge = "VAJRA ULTRA-LITE [0.5B]";
+            } else if (inferenceRes.tier === "standard") {
+              badge = "VAJRA STANDARD [7B]";
+            } else if (inferenceRes.tier === "max") {
+              badge = "VAJRA MAX [7B LoRA]";
+            } else if (inferenceRes.model) {
+              badge = inferenceRes.model;
+            }
+            appendSessionMessage("bot", formattedHtml2 + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""), badge);
             return;
           }
         }
