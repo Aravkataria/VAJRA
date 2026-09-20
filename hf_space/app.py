@@ -98,7 +98,7 @@ Operational Directives:
 # =====================================================================
 # 3. ZEROGPU INFERENCE
 # =====================================================================
-@spaces.GPU(duration=60)
+@spaces.GPU(duration=20)
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
     load_model()
 
