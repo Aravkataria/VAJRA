@@ -3376,27 +3376,10 @@ function appendSessionMessage(role, contentHtml) {
     }
 
     /* ==========================================================================
-       CRYPTOGRAPHIC SIGNATURE LOCK & FRONTEND CIPHER LAYER
-       - (Cryptographic Signature Lock): Highest security, blocks all unauthorized requests.
-       - (Encrypted in frontend): Keeps the URL secret from anyone reading the source code.
+       VAJRA BACKEND & INFERENCE GATEWAYS
        ========================================================================== */
-    function _vajraDecrypt(cipher) {
-      var key = "vajra_2026_sec";
-      var raw = atob(cipher);
-      var res = "";
-      for (var i = 0; i < raw.length; i++) {
-        res += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-      }
-      return res;
-    }
-
-    // (Encrypted in frontend): Keeps the URL secret from anyone reading the source code.
-    var VAJRA_PRIMARY_BACKEND = _vajraDecrypt("HhUeAhJlHR9EVzUBBE5BAB8XTzBcQldYOxYXTRUOBw==");
-    var VAJRA_HF_SPACE_URL = _vajraDecrypt("HhUeAhJlHR9TRD4FDgICABgbAHJEUVhEPl0NBVgSGhMCOg==");
-
-    // (Cryptographic Signature Lock): Highest security, blocks all unauthorized requests.
-    var VAJRA_SIGNATURE_LOCK = _vajraDecrypt("AAAAAAAAQVVRaW1DV1UpAB8GCQBBWVVpZhVdB0ECXBBUPgY=");
-
+    var VAJRA_PRIMARY_BACKEND = "https://vajra-7aue.onrender.com";
+    var VAJRA_HF_SPACE_URL = "https://aravkataria-vajra.hf.space";
     var VAJRA_LOCAL_BACKEND = "http://localhost:8000";
     var VAJRA_LOCAL_OLLAMA = "http://localhost:11434/v1/chat/completions";
 
@@ -3496,8 +3479,8 @@ function appendSessionMessage(role, contentHtml) {
           if (callResp.status === 429) {
             return {
               isRateLimited: true,
-              reply: "⚠️ **Quota Limit Reached**\n\nYou have reached the temporary AI inference limit for this session. Please wait before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-              retryAfter: 120
+              reply: "⚠️ **Inference Cluster Busy**\n\nThe neural reasoning engine is currently processing queued tasks or warming up. Please wait approximately **30 seconds** before trying again.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*",
+              retryAfter: 30
             };
           }
           if (callResp.ok) {
@@ -3617,11 +3600,10 @@ function appendSessionMessage(role, contentHtml) {
         hf_token: storedHfToken || null
       });
 
-      // 1. Try 24/7 Cloud Backend Gateway (Zero-Trust Cryptographically Protected)
+      // 1. Try 24/7 Cloud Backend Gateway
       try {
         var backendHeaders = {
-          "Content-Type": "application/json",
-          "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
+          "Content-Type": "application/json"
         };
         if (storedHfToken) {
           backendHeaders["X-HF-Token"] = storedHfToken;
@@ -3672,8 +3654,7 @@ function appendSessionMessage(role, contentHtml) {
         var localResp = await fetch(VAJRA_LOCAL_BACKEND + "/api/chat", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
+            "Content-Type": "application/json"
           },
           body: payload,
           signal: AbortSignal.timeout(3000)

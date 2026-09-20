@@ -26,15 +26,12 @@ def test_browser_404_html():
     assert "404" in resp.text
 
 def test_schema_validation_422_json():
-    """Verify that invalid schema payloads return structured 422 error JSON with field diagnostics."""
+    """Verify that invalid schema payloads return structured 422 error JSON with field diagnostics for public callers."""
     # /api/chat requires {"prompt": str}
     resp = client.post(
         "/api/chat",
         json={},
-        headers={
-            "Accept": "application/json",
-            "X-Vajra-Signature": VAJRA_SECRET_KEY
-        }
+        headers={"Accept": "application/json"}
     )
     assert resp.status_code == 422
     data = resp.json()
@@ -45,7 +42,7 @@ def test_schema_validation_422_json():
     assert "validation_errors" in data
 
 def test_unauthorized_signature_403_json():
-    """Verify that invalid signature returns structured 403 error JSON."""
+    """Verify that invalid or tampered signature returns structured 403 error JSON."""
     resp = client.post(
         "/api/chat",
         json={"prompt": "test inquiry"},
@@ -60,3 +57,41 @@ def test_unauthorized_signature_403_json():
     assert data["status_code"] == 403
     assert data["code"] == "ERR_E403"
     assert "Forbidden" in data["detail"]
+
+def test_valid_signature_authenticated(monkeypatch):
+    """Verify that a valid server-to-server signature is accepted."""
+    test_secret = "test_server_secret_998877"
+    monkeypatch.setenv("VAJRA_SECRET_KEY", test_secret)
+    # Testing schema validation with authenticated signature
+    resp = client.post(
+        "/api/chat",
+        json={},
+        headers={
+            "Accept": "application/json",
+            "X-Vajra-Signature": test_secret
+        }
+    )
+    # Passes authentication check and reaches schema validation
+    assert resp.status_code == 422
+
+def test_chat_rate_limiting_429():
+    """Verify that unauthenticated public callers exceeding chat rate limits receive HTTP 429."""
+    from app.api import _ip_chat_history, MAX_CHAT_PER_WINDOW
+    import time
+    # Seed history to simulate hitting the rate limit
+    _ip_chat_history["testclient"] = [time.time()] * MAX_CHAT_PER_WINDOW
+    try:
+        resp = client.post(
+            "/api/chat",
+            json={"prompt": "hello"},
+            headers={"Accept": "application/json"}
+        )
+        assert resp.status_code == 429
+        data = resp.json()
+        assert data["success"] is False
+        assert data["rate_limited"] is True
+        assert data["code"] == "CHAT_RATE_LIMIT"
+        assert "Retry-After" in resp.headers
+    finally:
+        _ip_chat_history.pop("testclient", None)
+

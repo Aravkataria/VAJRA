@@ -2069,8 +2069,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
       fetch(apiBase + "/api/chat", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "X-Vajra-Signature": "vajra_sec_2026_auth_sig_9f8d7c6b5a4"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ prompt: q, model: "AravKataria/vajra-lora" }),
         signal: AbortSignal.timeout(35000)

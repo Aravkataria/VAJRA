@@ -105,8 +105,10 @@ app.add_middleware(
 RATE_LIMIT_WINDOW = 60  # seconds
 MAX_REQUESTS_PER_WINDOW = int(os.environ.get("VAJRA_RATE_LIMIT", "120"))
 MAX_PIPELINE_PER_WINDOW = int(os.environ.get("VAJRA_PIPELINE_RATE_LIMIT", "30"))
+MAX_CHAT_PER_WINDOW = int(os.environ.get("VAJRA_CHAT_RATE_LIMIT", "10"))
 _ip_request_history: Dict[str, List[float]] = {}
 _ip_pipeline_history: Dict[str, List[float]] = {}
+_ip_chat_history: Dict[str, List[float]] = {}
 _history_lock = threading.Lock()
 
 
@@ -121,6 +123,43 @@ async def production_security_and_rate_limit(request: Request, call_next):
         timestamps = _ip_request_history.setdefault(client_ip, [])
         _ip_request_history[client_ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
         current_count = len(_ip_request_history[client_ip])
+
+        # Strict rate limit for public AI chat inference (10 req/min default per IP)
+        if path == "/api/chat":
+            has_personal_token = bool(request.headers.get("X-HF-Token"))
+            has_api_key = verify_api_key(request.headers.get("X-API-Key")) if request.headers.get("X-API-Key") else False
+            has_valid_sig = verify_signature(request.headers.get("X-Vajra-Signature")) if request.headers.get("X-Vajra-Signature") else False
+            is_elevated = has_personal_token or has_api_key or has_valid_sig
+
+            if not is_elevated:
+                c_timestamps = _ip_chat_history.setdefault(client_ip, [])
+                _ip_chat_history[client_ip] = [t for t in c_timestamps if now - t < RATE_LIMIT_WINDOW]
+                if len(_ip_chat_history[client_ip]) >= MAX_CHAT_PER_WINDOW:
+                    oldest = _ip_chat_history[client_ip][0] if _ip_chat_history[client_ip] else now
+                    reset_in = max(1, int(RATE_LIMIT_WINDOW - (now - oldest)))
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "success": False,
+                            "rate_limited": True,
+                            "reply": (
+                                "⚠️ **Rate Limit Exceeded**\n\n"
+                                "You are submitting inference queries too quickly. "
+                                f"Please wait approximately **{reset_in} seconds** before sending your next request.\n\n"
+                                "💡 *Tip: Configure your personal Hugging Face Token in settings or pass X-API-Key to bypass public guest rate limits.*"
+                            ),
+                            "retry_after": reset_in,
+                            "model": "VAJRA-Cyber-Reasoning",
+                            "code": "CHAT_RATE_LIMIT",
+                        },
+                        headers={
+                            "X-RateLimit-Limit": str(MAX_CHAT_PER_WINDOW),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": str(reset_in),
+                            "Retry-After": str(reset_in),
+                        },
+                    )
+                _ip_chat_history[client_ip].append(now)
 
         # Strict limit for heavy compute endpoints
         if "/analyze" in path or "/scan" in path:
@@ -620,7 +659,8 @@ def health():
     }
 
 
-VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY", "vajra_sec_2026_auth_sig_9f8d7c6b5a4")
+VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY")
+VAJRA_REQUIRE_AUTH = os.environ.get("VAJRA_REQUIRE_AUTH", "false").lower() in ("true", "1")
 VAJRA_HF_SPACE_URL = os.environ.get("VAJRA_HF_SPACE_URL", "https://aravkataria-vajra.hf.space")
 
 
@@ -668,6 +708,9 @@ def query_vajra_fine_tuned_model(
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    secret_key = os.environ.get("VAJRA_SECRET_KEY") or VAJRA_SECRET_KEY
+    if secret_key:
+        headers["X-Vajra-Signature"] = secret_key
 
     # 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
     try:
@@ -753,7 +796,7 @@ def query_vajra_fine_tuned_model(
 
 
 class ChatRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=1, max_length=16000, description="User prompt or cyber-reasoning query")
     workspace_id: Optional[str] = None
     files: Optional[Dict[str, str]] = None
     model: Optional[str] = None
@@ -763,15 +806,30 @@ class ChatRequest(BaseModel):
 @app.post("/api/chat")
 async def chat_api(req: ChatRequest, request: Request):
     """
-    Zero-Trust Protected Cyber-Reasoning Chat Endpoint.
-    Requires cryptographic signature header: X-Vajra-Signature.
+    Cyber-Reasoning Chat Endpoint.
+    Enforces constant-time verification for cryptographic signatures / API keys when supplied.
+    Unauthenticated public guest queries are permitted under the sliding-window chat rate limit.
     Queries the fine-tuned model (AravKataria/vajra-lora) with transparent rate-limit and deterministic fallback.
     """
     sig = request.headers.get("X-Vajra-Signature")
-    if sig != VAJRA_SECRET_KEY:
+    api_key = request.headers.get("X-API-Key")
+
+    if sig:
+        if not verify_signature(sig):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Invalid or unverified VAJRA Security Signature. Direct access denied.",
+            )
+    elif api_key:
+        if not verify_api_key(api_key):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Invalid or unverified VAJRA API Key.",
+            )
+    elif VAJRA_REQUIRE_AUTH:
         raise HTTPException(
-            status_code=403,
-            detail="Forbidden: Invalid or missing VAJRA Security Signature. Direct access denied.",
+            status_code=401,
+            detail="Unauthorized: Authentication required. Provide a valid X-API-Key or X-Vajra-Signature header.",
         )
 
     prompt_clean = req.prompt.strip()
