@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'hf_space/**'
+      - 'hf_zerogpu_space/**'
       - '.github/workflows/sync-to-hf.yml'
   workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
 
@@ -23,7 +24,7 @@ jobs:
       - name: Install huggingface_hub
         run: pip install huggingface_hub
 
-      - name: Upload hf_space to Hugging Face Space
+      - name: Upload Spaces to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
@@ -37,12 +38,30 @@ jobs:
               exit(1)
 
           api = HfApi(token=token)
-          print('Uploading hf_space contents directly to AravKataria/VAJRA_v2 Space...')
-          api.upload_folder(
-              folder_path='hf_space',
-              repo_id='AravKataria/VAJRA_v2',
-              repo_type='space',
-              commit_message='Automated sync from GitHub main'
-          )
-          print('✅ Hugging Face Space updated successfully!')
+
+          # 1. Sync 2 vCPU Primary Space (VAJRA_v2)
+          print('Uploading hf_space contents to AravKataria/VAJRA_v2 Space (2 vCPU)...')
+          try:
+              api.upload_folder(
+                  folder_path='hf_space',
+                  repo_id='AravKataria/VAJRA_v2',
+                  repo_type='space',
+                  commit_message='Automated sync: 2 vCPU engine with python_version 3.10 and audioop-lts'
+              )
+              print('✅ AravKataria/VAJRA_v2 updated successfully!')
+          except Exception as e:
+              print(f'⚠️ Error updating VAJRA_v2: {e}')
+
+          # 2. Sync ZeroGPU Turbo Burst Space (vajra)
+          print('Uploading hf_zerogpu_space contents to AravKataria/vajra Space (ZeroGPU)...')
+          try:
+              api.upload_folder(
+                  folder_path='hf_zerogpu_space',
+                  repo_id='AravKataria/vajra',
+                  repo_type='space',
+                  commit_message='Automated sync: ZeroGPU burst engine with python_version 3.10 and audioop-lts'
+              )
+              print('✅ AravKataria/vajra updated successfully!')
+          except Exception as e:
+              print(f'⚠️ Error updating vajra: {e}')
           "
