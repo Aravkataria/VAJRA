@@ -13,7 +13,7 @@ export default {
   async scheduled(event, env, ctx) {
     const TARGETS = [
       "https://vajra-7aue.onrender.com/health",
-      "https://aravkataria-vajra.hf.space"
+      "https://aravkataria-vajra-v2.hf.space"
     ];
 
     const results = await Promise.allSettled(
@@ -43,7 +43,7 @@ export default {
         status: "ACTIVE",
         targets: [
           "https://vajra-7aue.onrender.com/health",
-          "https://aravkataria-vajra.hf.space"
+          "https://aravkataria-vajra-v2.hf.space"
         ],
         author: "Arav Kataria"
       }, null, 2),

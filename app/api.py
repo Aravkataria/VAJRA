@@ -663,7 +663,7 @@ def health():
 
 VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY")
 VAJRA_REQUIRE_AUTH = os.environ.get("VAJRA_REQUIRE_AUTH", "false").lower() in ("true", "1")
-VAJRA_HF_SPACE_URL = os.environ.get("VAJRA_HF_SPACE_URL", "https://aravkataria-vajra.hf.space")
+VAJRA_HF_SPACE_URL = os.environ.get("VAJRA_HF_SPACE_URL", "https://aravkataria-vajra-v2.hf.space")
 
 
 # In-memory query cache for Render backend (10-minute TTL)

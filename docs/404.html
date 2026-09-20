@@ -1707,12 +1707,12 @@ async function pingServices() {
   }
 
   try {
-    await fetch("https://aravkataria-vajra.hf.space", {
+    await fetch("https://aravkataria-vajra-v2.hf.space", {
       mode: "no-cors",
       signal: AbortSignal.timeout(8000)
     });
     document.getElementById("lampHf").className = "status-lamp";
-    document.getElementById("statusHf").textContent = "warm & active (A100 ready)";
+    document.getElementById("statusHf").textContent = "warm & active (2 vCPU ready)";
     document.getElementById("statusHf").style.color = "var(--ok)";
   } catch (e) {
     document.getElementById("lampHf").className = "status-lamp offline";

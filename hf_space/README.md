@@ -1,5 +1,5 @@
 ---
-title: VAJRA
+title: VAJRA_v2
 emoji: ⚡
 colorFrom: purple
 colorTo: blue
@@ -10,5 +10,5 @@ pinned: false
 license: apache-2.0
 ---
 
-# 🛡️ VAJRA Cyber-Reasoning Engine & API Gateway
-Fine-Tuned by Arav Kataria | ZeroGPU | FastAPI + Gradio
+# 🛡️ VAJRA Cyber-Reasoning Engine & API Gateway (v2)
+Fine-Tuned by Arav Kataria | 2 vCPU CPU Basic | FastAPI + Gradio
