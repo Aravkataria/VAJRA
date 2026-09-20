@@ -376,6 +376,40 @@
       font-weight: 600;
     }
 
+    .btn-report-bug {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-family: inherit;
+      padding: 2px 7px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-report-bug:hover {
+      color: var(--text-primary);
+      border-color: var(--border-medium);
+      background: var(--bg-hover);
+    }
+
+    .screenshot-dropzone {
+      border: 1px dashed var(--border-medium);
+      border-radius: 6px;
+      background: var(--bg-surface);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .screenshot-dropzone:hover, .screenshot-dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--bg-elevated);
+    }
+
     .status-dot {
       width: 6px;
       height: 6px;
@@ -1942,9 +1976,15 @@
     </div>
 
     <div class="sidebar-footer">
-      <div class="status-pill">
-        <div class="status-dot"></div>
-        <span>6/6 Verifiers Ready</span>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:0.25rem;">
+        <div class="status-pill">
+          <div class="status-dot"></div>
+          <span>6/6 Verifiers Ready</span>
+        </div>
+        <button type="button" class="btn-report-bug" onclick="openBugReportModal()" title="Report an issue or bug to Arav Kataria" aria-label="Report Bug">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Report Bug</span>
+        </button>
       </div>
       <div style="color: var(--text-muted); font-size: 0.68rem; font-family:'JetBrains Mono', monospace;">100% In-Browser Forensic Sentinel</div>
     </div>
@@ -2136,6 +2176,72 @@
       <div class="modal-actions">
         <button class="btn-tool-chip" onclick="closeModal('githubModal')">Cancel</button>
         <button class="btn-run-scan" onclick="submitGithubModal()">Scan Repository</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="bugReportModal">
+    <div class="modal-frame" style="max-width: 500px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+        <div style="font-size:0.95rem; font-weight:700; display:flex; align-items:center; gap:0.5rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--spark);"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6ZM12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M18 13h4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+          <span>Report a Bug to Maintainer</span>
+        </div>
+        <button class="btn-icon" onclick="closeModal('bugReportModal')" style="padding:4px;" title="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.85rem; line-height:1.4;">
+        Encountered an issue, incorrect reasoning, or interface defect? Submit your report directly to the lead engineer (<strong>Arav Kataria</strong>).
+      </div>
+      <div style="margin-bottom:0.6rem;">
+        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Issue Title / Summary *</label>
+        <input type="text" id="bugTitleInput" class="modal-input" placeholder="e.g. Rate-limit message loop or AST scan failure on Python 3.12" style="margin-bottom:0;">
+      </div>
+      <div style="margin-bottom:0.6rem;">
+        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Description &amp; Steps to Reproduce *</label>
+        <textarea id="bugDescInput" class="modal-input" placeholder="What happened, and what did you expect instead? Include any prompt or repo tested..." rows="4" style="resize:vertical; font-family:inherit;"></textarea>
+      </div>
+      <div style="margin-bottom:0.6rem;">
+        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Your Email / Discord / GitHub (Optional)</label>
+        <input type="text" id="bugContactInput" class="modal-input" placeholder="Optional contact so we can follow up with a fix" style="margin-bottom:0;">
+      </div>
+
+      <!-- Anti-bot honeypot: Hidden from human users -->
+      <input type="text" id="bugHoneypot" name="user_website_url" style="position:absolute; left:-9999px; top:-9999px; opacity:0; pointer-events:none;" tabindex="-1" autocomplete="off">
+
+      <!-- Optional Screenshot Attachment -->
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
+          <span>Screenshot (Optional)</span>
+          <span style="font-size:0.7rem; color:var(--text-muted);">Paste with Ctrl+V or click to upload</span>
+        </label>
+        <div class="screenshot-dropzone" id="bugScreenshotZone" onclick="document.getElementById('bugScreenshotFile').click()">
+          <input type="file" id="bugScreenshotFile" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleBugScreenshotSelected(this.files[0])">
+          <div id="bugScreenshotPrompt" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; padding:10px; font-size:0.75rem; color:var(--text-secondary);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Click to upload image or paste screenshot (Ctrl+V)</span>
+          </div>
+          <div id="bugScreenshotPreviewWrap" style="display:none; position:relative; padding:6px; align-items:center; gap:8px;">
+            <img id="bugScreenshotPreview" src="" alt="Screenshot Preview" style="max-height:80px; max-width:140px; border-radius:4px; border:1px solid var(--border-medium); object-fit:contain; background:#000;">
+            <div style="font-size:0.72rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;" id="bugScreenshotName">screenshot.png</div>
+            <button type="button" class="btn-icon" onclick="removeBugScreenshot(event)" style="margin-left:auto; padding:2px 6px;" title="Remove screenshot">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:0.85rem; font-size:0.72rem; color:var(--text-muted); background:var(--bg-elevated); padding:8px 10px; border-radius:4px; border:1px solid var(--border-subtle);">
+        System diagnostics (platform, browser environment, and session timestamp) will be automatically compiled into your report.
+      </div>
+      <div id="bugReportStatus" style="font-size:0.78rem; margin-bottom:0.6rem; display:none;"></div>
+      <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+        <button type="button" class="btn-tool-chip" onclick="copyBugReportDiagnostics()" title="Copy diagnostics to clipboard">Copy Diagnostics</button>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" class="btn-tool-chip" onclick="closeModal('bugReportModal')">Cancel</button>
+          <button type="button" class="btn-run-scan" onclick="submitBugReport()" id="btnSubmitBug">Send Report</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2966,6 +3072,192 @@
     window.closeModal = function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.remove("active");
+    };
+
+    var currentBugScreenshotBase64 = null;
+
+    window.handleBugScreenshotSelected = function (file) {
+      if (!file || !file.type.startsWith("image/")) return;
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Screenshot must be under 5MB.");
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        currentBugScreenshotBase64 = e.target.result;
+        var preview = document.getElementById("bugScreenshotPreview");
+        var previewWrap = document.getElementById("bugScreenshotPreviewWrap");
+        var promptWrap = document.getElementById("bugScreenshotPrompt");
+        var nameLabel = document.getElementById("bugScreenshotName");
+        if (preview) preview.src = currentBugScreenshotBase64;
+        if (nameLabel) nameLabel.textContent = file.name || "screenshot.png";
+        if (previewWrap) previewWrap.style.display = "flex";
+        if (promptWrap) promptWrap.style.display = "none";
+      };
+      reader.readAsDataURL(file);
+    };
+
+    window.removeBugScreenshot = function (e) {
+      if (e) e.stopPropagation();
+      currentBugScreenshotBase64 = null;
+      var fileInp = document.getElementById("bugScreenshotFile");
+      if (fileInp) fileInp.value = "";
+      var preview = document.getElementById("bugScreenshotPreview");
+      if (preview) preview.src = "";
+      var previewWrap = document.getElementById("bugScreenshotPreviewWrap");
+      var promptWrap = document.getElementById("bugScreenshotPrompt");
+      if (previewWrap) previewWrap.style.display = "none";
+      if (promptWrap) promptWrap.style.display = "flex";
+    };
+
+    window.openBugReportModal = function () {
+      var st = document.getElementById("bugReportStatus");
+      if (st) { st.style.display = "none"; st.innerHTML = ""; }
+      var t = document.getElementById("bugTitleInput");
+      if (t) t.value = "";
+      var d = document.getElementById("bugDescInput");
+      if (d) d.value = "";
+      var c = document.getElementById("bugContactInput");
+      if (c) c.value = "";
+      var hp = document.getElementById("bugHoneypot");
+      if (hp) hp.value = "";
+      window.removeBugScreenshot();
+      var btn = document.getElementById("btnSubmitBug");
+      if (btn) { btn.disabled = false; btn.textContent = "Send Report"; }
+      window.openModal("bugReportModal");
+    };
+
+    window.getSystemDiagnostics = function () {
+      return {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenWidth: window.innerWidth,
+        screenHeight: window.innerHeight,
+        activeSessionId: (typeof activeSession !== "undefined" && activeSession && activeSession.id) ? activeSession.id : null,
+        messageCount: (typeof activeSession !== "undefined" && activeSession && activeSession.messages) ? activeSession.messages.length : 0,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+    };
+
+    window.copyBugReportDiagnostics = function () {
+      var diag = window.getSystemDiagnostics();
+      var text = "### VAJRA Diagnostics Report\n" +
+        "- Timestamp: " + diag.timestamp + "\n" +
+        "- URL: " + diag.url + "\n" +
+        "- Platform: " + diag.platform + "\n" +
+        "- User-Agent: " + diag.userAgent + "\n" +
+        "- Session ID: " + (diag.activeSessionId || "N/A") + "\n" +
+        "- Messages in Session: " + diag.messageCount;
+      navigator.clipboard.writeText(text).then(function () {
+        var st = document.getElementById("bugReportStatus");
+        if (st) {
+          st.style.display = "block";
+          st.style.color = "var(--ok, #4ade80)";
+          st.textContent = "✓ Diagnostics copied to clipboard!";
+          setTimeout(function () { st.style.display = "none"; }, 3000);
+        }
+      });
+    };
+
+    
+    // Capture pasted screenshot (Ctrl+V) when Bug Report modal is open
+    document.addEventListener("paste", function (e) {
+      var modal = document.getElementById("bugReportModal");
+      if (!modal || !modal.classList.contains("active")) return;
+      if (e.clipboardData && e.clipboardData.items) {
+        for (var i = 0; i < e.clipboardData.items.length; i++) {
+          var item = e.clipboardData.items[i];
+          if (item.type && item.type.indexOf("image") !== -1) {
+            var blob = item.getAsFile();
+            if (blob) {
+              window.handleBugScreenshotSelected(blob);
+              break;
+            }
+          }
+        }
+      }
+    });
+
+    window.submitBugReport = async function () {
+      var titleInp = document.getElementById("bugTitleInput");
+      var descInp = document.getElementById("bugDescInput");
+      var contactInp = document.getElementById("bugContactInput");
+      var st = document.getElementById("bugReportStatus");
+      var btn = document.getElementById("btnSubmitBug");
+
+      var title = (titleInp ? titleInp.value : "").trim();
+      var desc = (descInp ? descInp.value : "").trim();
+      var contact = (contactInp ? contactInp.value : "").trim();
+
+      if (!title || !desc) {
+        if (st) {
+          st.style.display = "block";
+          st.style.color = "var(--stamp-warn, #f5b400)";
+          st.textContent = "Please provide both an issue title and description.";
+        }
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = "Sending..."; }
+      if (st) { st.style.display = "block"; st.style.color = "var(--text-secondary)"; st.textContent = "Transmitting report to VAJRA..."; }
+
+      var diag = window.getSystemDiagnostics();
+      var hpInp = document.getElementById("bugHoneypot");
+      var payload = {
+        title: title,
+        description: desc,
+        contact: contact,
+        session_id: diag.activeSessionId,
+        screenshot: currentBugScreenshotBase64,
+        honeypot: (hpInp ? hpInp.value : ""),
+        diagnostics: diag
+      };
+
+      var ghUrl = "https://github.com/Aravkataria/VAJRA/issues/new?title=" +
+        encodeURIComponent("[BUG] " + title) +
+        "&body=" + encodeURIComponent(
+          "### Bug Description\n" + desc + "\n\n" +
+          "### Contact\n" + (contact || "Anonymous") + "\n\n" +
+          "### Environment Diagnostics\n" +
+          "- Timestamp: " + diag.timestamp + "\n" +
+          "- Platform: " + diag.platform + "\n" +
+          "- User Agent: " + diag.userAgent + "\n" +
+          "- Session: " + (diag.activeSessionId || "N/A") + "\n"
+        );
+
+      var submitted = false;
+      var reportId = null;
+      try {
+        var resp = await fetch(VAJRA_PRIMARY_BACKEND + "/api/report_bug", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (resp.ok) {
+          var resData = await resp.json();
+          submitted = true;
+          reportId = resData.report_id;
+          if (resData.github_issue_url) ghUrl = resData.github_issue_url;
+        }
+      } catch (e) {}
+
+      if (st) {
+        st.style.display = "block";
+        st.style.color = "var(--ok, #4ade80)";
+        st.innerHTML = (submitted ? "✓ Report successfully received by Arav Kataria! (ID: " + reportId + ")" : "Report prepared!") +
+          '<br><a href="' + ghUrl + '" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; color:var(--accent); text-decoration:underline; font-weight:600;">Track on GitHub Issues &rarr;</a>';
+      }
+
+      if (btn) {
+        btn.textContent = "Sent ✓";
+      }
+
+      setTimeout(function () {
+        window.closeModal("bugReportModal");
+      }, 4000);
     };
 
 

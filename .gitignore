@@ -81,3 +81,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# VAJRA local runtime data & bug reports
+.vajra/

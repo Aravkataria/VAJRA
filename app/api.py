@@ -21,7 +21,7 @@ from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, Resp
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.analysis.analyst import build_default_analyst
@@ -850,6 +850,148 @@ async def chat_api(req: ChatRequest, request: Request):
         "model": "VAJRA-Cyber-Reasoning",
         "shield": "Zero-Retention Verified",
         "source": "deterministic-fallback",
+    })
+
+
+# IP-based rate limiting table for bug reports (max 5 per 10 minutes)
+_bug_report_history: Dict[str, List[float]] = {}
+BUG_REPORT_MAX_PER_WINDOW = 5
+BUG_REPORT_WINDOW_SECONDS = 600
+
+
+class BugReportRequest(BaseModel):
+    title: str = Field(..., min_length=2, max_length=200)
+    description: str = Field(..., min_length=5, max_length=5000)
+    diagnostics: Optional[Dict[str, Any]] = None
+    session_id: Optional[str] = None
+    contact: Optional[str] = None
+    screenshot: Optional[str] = None  # Base64 image URL (optional)
+    honeypot: Optional[str] = None  # Hidden anti-bot trap field
+
+
+@app.post("/api/report_bug")
+async def report_bug_endpoint(req: BugReportRequest, request: Request):
+    """
+    Submits a bug report to VAJRA maintainers (Arav Kataria).
+    Includes honeypot anti-bot filtering, IP rate limiting, and screenshot persistence.
+    """
+    # 1. Honeypot check: Bots automatically fill out hidden fields
+    if req.honeypot and req.honeypot.strip():
+        return JSONResponse({
+            "success": True,
+            "report_id": "bug_ack",
+            "message": "Bug report recorded successfully.",
+            "github_issue_url": "https://github.com/Aravkataria/VAJRA/issues"
+        })
+
+    # 2. Strict per-IP rate limiting (Anti-spam)
+    client_ip = request.client.host if request.client else "unknown"
+    now_ts = time.time()
+    ip_history = [t for t in _bug_report_history.get(client_ip, []) if now_ts - t < BUG_REPORT_WINDOW_SECONDS]
+    if len(ip_history) >= BUG_REPORT_MAX_PER_WINDOW:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many bug reports submitted from your IP address. Please wait a few minutes."
+        )
+    ip_history.append(now_ts)
+    _bug_report_history[client_ip] = ip_history
+
+    import urllib.parse
+    report_id = "bug_" + uuid.uuid4().hex[:10]
+    ts = time.time()
+    iso_time = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
+
+    has_screenshot = False
+    report_dir = os.path.join(os.getcwd(), ".vajra", "bug_reports")
+    os.makedirs(report_dir, exist_ok=True)
+
+    # 3. Process optional base64 screenshot
+    if req.screenshot and "base64," in req.screenshot:
+        try:
+            import base64
+            img_b64 = req.screenshot.split("base64,")[1]
+            img_bytes = base64.b64decode(img_b64[:7000000])  # Cap at ~5MB
+            img_path = os.path.join(report_dir, f"{report_id}.png")
+            with open(img_path, "wb") as img_f:
+                img_f.write(img_bytes)
+            has_screenshot = True
+        except Exception as img_err:
+            print(f"[VAJRA Warning] Could not save screenshot: {img_err}")
+
+    report_data = {
+        "id": report_id,
+        "timestamp": iso_time,
+        "title": req.title.strip(),
+        "description": req.description.strip(),
+        "contact": req.contact.strip() if req.contact else None,
+        "session_id": req.session_id,
+        "has_screenshot": has_screenshot,
+        "diagnostics": req.diagnostics or {},
+        "client_ip": client_ip,
+        "user_agent": request.headers.get("User-Agent", "unknown"),
+    }
+
+    try:
+        report_path = os.path.join(report_dir, f"{report_id}.json")
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=2)
+    except Exception as e:
+        print(f"[VAJRA Warning] Failed to write bug report to disk: {e}")
+
+    print(f"[VAJRA Bug Report] ID: {report_id} | Title: {req.title[:60]} | Screenshot: {has_screenshot}")
+
+    # Optional Instant Push Notification (Discord / Slack / Generic Webhook)
+    webhook_url = os.environ.get("BUG_WEBHOOK_URL") or os.environ.get("DISCORD_WEBHOOK_URL")
+    if webhook_url:
+        def _dispatch_alert():
+            try:
+                import urllib.request
+                if "discord.com" in webhook_url:
+                    payload = {
+                        "embeds": [{
+                            "title": f"🚨 [VAJRA Bug Report] {req.title[:100]}",
+                            "description": req.description[:2000],
+                            "color": 16102400,
+                            "fields": [
+                                {"name": "Report ID", "value": f"`{report_id}`", "inline": True},
+                                {"name": "Contact", "value": req.contact or "Anonymous", "inline": True},
+                                {"name": "Platform", "value": str((req.diagnostics or {}).get("platform", "N/A")), "inline": True},
+                                {"name": "Screenshot", "value": "Attached (.png)" if has_screenshot else "None", "inline": True},
+                                {"name": "Timestamp", "value": iso_time, "inline": True},
+                            ],
+                            "footer": {"text": "VAJRA Automated Telemetry"}
+                        }]
+                    }
+                else:
+                    payload = report_data
+
+                wh_req = urllib.request.Request(
+                    webhook_url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "User-Agent": "VAJRA-Alerts/1.0"}
+                )
+                with urllib.request.urlopen(wh_req, timeout=5):
+                    pass
+            except Exception as wh_err:
+                print(f"[VAJRA Webhook Warning] Could not deliver alert: {wh_err}")
+
+        threading.Thread(target=_dispatch_alert, daemon=True).start()
+
+    gh_title = urllib.parse.quote(f"[BUG] {req.title.strip()}")
+    gh_body = urllib.parse.quote(
+        f"### Bug Description\n{req.description.strip()}\n\n"
+        f"### Diagnostics\n- **Report ID**: `{report_id}`\n"
+        f"- **Timestamp**: {iso_time}\n"
+        f"- **Session ID**: `{req.session_id or 'N/A'}`\n"
+        f"- **Contact**: `{req.contact or 'Anonymous'}`\n"
+    )
+    gh_url = f"https://github.com/Aravkataria/VAJRA/issues/new?title={gh_title}&body={gh_body}"
+
+    return JSONResponse({
+        "success": True,
+        "report_id": report_id,
+        "message": "Bug report recorded successfully.",
+        "github_issue_url": gh_url,
     })
 
 
