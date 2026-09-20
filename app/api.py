@@ -664,11 +664,130 @@ def health():
 VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY")
 VAJRA_REQUIRE_AUTH = os.environ.get("VAJRA_REQUIRE_AUTH", "false").lower() in ("true", "1")
 VAJRA_HF_SPACE_URL = os.environ.get("VAJRA_HF_SPACE_URL", "https://aravkataria-vajra-v2.hf.space")
+VAJRA_HF_ZEROGPU_URL = os.environ.get("VAJRA_HF_ZEROGPU_URL", "https://aravkataria-vajra.hf.space")
 
 
 # In-memory query cache for Render backend (10-minute TTL)
 _backend_query_cache: Dict[str, Tuple[float, str]] = {}
 BACKEND_CACHE_TTL = 600
+
+
+def _query_single_space_endpoint(
+    space_base_url: str,
+    full_prompt: str,
+    headers: Dict[str, str],
+    timeout: int = 25,
+) -> Dict[str, Any]:
+    """
+    Queries an individual Hugging Face Space using:
+    1. Direct FastAPI /api/chat route (instant, lowest latency)
+    2. Gradio 4 /call/generate_vajra_reply route
+    3. Gradio /queue/join SSE stream
+    """
+    import urllib.error
+    import urllib.request
+    import uuid
+    import re
+
+    clean_base = space_base_url.rstrip("/")
+
+    # 1. Try Direct FastAPI REST endpoint: /api/chat
+    try:
+        api_chat_url = f"{clean_base}/api/chat"
+        payload = json.dumps({"prompt": full_prompt}).encode("utf-8")
+        req = urllib.request.Request(api_chat_url, data=payload, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data and data.get("reply"):
+                    return {
+                        "reply": data["reply"],
+                        "model": data.get("model"),
+                        "tier": data.get("tier"),
+                        "rate_limited": False,
+                        "retry_after": 0,
+                        "error": None,
+                    }
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            return {"reply": None, "rate_limited": True, "retry_after": 60, "error": "HTTP 429 Too Many Requests"}
+    except Exception:
+        pass
+
+    # 2. Try Gradio 4 Client API (/call/generate_vajra_reply)
+    try:
+        call_url = f"{clean_base}/call/generate_vajra_reply"
+        call_payload = json.dumps({"data": [full_prompt]}).encode("utf-8")
+        call_req = urllib.request.Request(call_url, data=call_payload, headers=headers)
+        with urllib.request.urlopen(call_req, timeout=10) as call_resp:
+            if call_resp.status == 200:
+                call_data = json.loads(call_resp.read().decode("utf-8"))
+                event_id = call_data.get("event_id")
+                if event_id:
+                    stream_url = f"{clean_base}/call/generate_vajra_reply/{event_id}"
+                    stream_req = urllib.request.Request(stream_url, headers=headers)
+                    with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
+                        is_complete = False
+                        for raw_line in stream:
+                            line = raw_line.decode("utf-8", errors="replace").strip()
+                            if line.startswith("event: complete"):
+                                is_complete = True
+                            elif is_complete and line.startswith("data:"):
+                                res_arr = json.loads(line[5:].strip())
+                                if res_arr and len(res_arr) > 0 and res_arr[0]:
+                                    ans = str(res_arr[0]).strip()
+                                    return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            return {"reply": None, "rate_limited": True, "retry_after": 60, "error": "HTTP 429 Too Many Requests"}
+    except Exception:
+        pass
+
+    # 3. Gradio Queue Fallback (/queue/join on fn_index 0)
+    try:
+        session_hash = "vajra_" + uuid.uuid4().hex[:10]
+        join_url = f"{clean_base}/queue/join"
+        payload = json.dumps({
+            "data": [full_prompt],
+            "event_data": None,
+            "fn_index": 0,
+            "session_hash": session_hash,
+            "trigger_id": 7,
+        }).encode("utf-8")
+
+        req = urllib.request.Request(join_url, data=payload, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            pass
+
+        data_url = f"{clean_base}/queue/data?session_hash={session_hash}"
+        data_req = urllib.request.Request(data_url, headers=headers)
+        with urllib.request.urlopen(data_req, timeout=timeout) as stream:
+            for raw_line in stream:
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if line.startswith("data:"):
+                    msg_obj = json.loads(line[5:].strip())
+                    msg_type = msg_obj.get("msg")
+                    if msg_type == "process_completed":
+                        output = msg_obj.get("output", {})
+                        err = output.get("error")
+                        if err:
+                            err_str = str(err)
+                            retry_sec = 60
+                            m = re.search(r'(\d+):(\d+):(\d+)', err_str)
+                            if m:
+                                retry_sec = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
+                            is_quota = "quota" in err_str.lower() or "zerogpu" in err_str.lower()
+                            return {"reply": None, "rate_limited": is_quota, "retry_after": retry_sec, "error": err_str}
+                        data = output.get("data", [])
+                        if data and len(data) > 0 and data[0]:
+                            ans = str(data[0]).strip()
+                            return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+                    elif msg_type == "close_stream":
+                        break
+    except Exception as e:
+        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(e)}
+
+    return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "No response"}
 
 
 def query_vajra_fine_tuned_model(
@@ -678,16 +797,10 @@ def query_vajra_fine_tuned_model(
     timeout: int = 45,
 ) -> Dict[str, Any]:
     """
-    Direct stateless inference query to VAJRA fine-tuned model (AravKataria/vajra-lora)
-    running on high-throughput neural inference cluster (A100).
-    Uses the queue protocol and supports authenticated queries.
-    Returns dict: {"reply": str, "rate_limited": bool, "retry_after": int, "error": str}
+    Dual-Space Cascading Query Engine:
+    1. Primary: VAJRA_v2 Space (2 vCPU • 16 GB RAM) - 24/7 unlimited queries, 0 GPU quota.
+    2. Turbo Burst: vajra Space (ZeroGPU A100) - High-speed burst inference for overflow or deep audits.
     """
-    import urllib.error
-    import urllib.request
-    import uuid
-    import re
-
     cache_key = prompt.lower().strip()
     now = time.time()
     if not context_files and cache_key in _backend_query_cache:
@@ -706,7 +819,7 @@ def query_vajra_fine_tuned_model(
     token = hf_token or os.environ.get("HF_TOKEN")
     headers = {
         "Content-Type": "application/json",
-        "User-Agent": "VAJRA-Cloud-Gateway/2.1",
+        "User-Agent": "VAJRA-Cloud-Gateway/2.2",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -714,87 +827,35 @@ def query_vajra_fine_tuned_model(
     if secret_key:
         headers["X-Vajra-Signature"] = secret_key
 
-    # 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
-    try:
-        call_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/generate_vajra_reply"
-        call_payload = json.dumps({"data": [full_prompt]}).encode("utf-8")
-        call_req = urllib.request.Request(call_url, data=call_payload, headers=headers)
-        with urllib.request.urlopen(call_req, timeout=12) as call_resp:
-            if call_resp.status == 200:
-                call_data = json.loads(call_resp.read().decode("utf-8"))
-                event_id = call_data.get("event_id")
-                if event_id:
-                    stream_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/generate_vajra_reply/{event_id}"
-                    stream_req = urllib.request.Request(stream_url, headers=headers)
-                    with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
-                        is_complete = False
-                        for raw_line in stream:
-                            line = raw_line.decode("utf-8", errors="replace").strip()
-                            if line.startswith("event: complete"):
-                                is_complete = True
-                            elif is_complete and line.startswith("data:"):
-                                res_arr = json.loads(line[5:].strip())
-                                if res_arr and len(res_arr) > 0 and res_arr[0]:
-                                    ans = str(res_arr[0]).strip()
-                                    if not context_files and ans:
-                                        _backend_query_cache[cache_key] = (now, ans)
-                                    return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
-    except urllib.error.HTTPError as http_err:
-        if http_err.code == 429:
-            return {"reply": None, "rate_limited": True, "retry_after": 120, "error": "HTTP 429 Too Many Requests"}
-    except Exception:
-        pass
+    # 1. Primary: 2 vCPU Space (VAJRA_v2) - Unlimited queries, 0 GPU quota
+    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=22)
+    if res_vcpu and res_vcpu.get("reply"):
+        if not res_vcpu.get("tier"):
+            res_vcpu["tier"] = "standard"
+        if not res_vcpu.get("model"):
+            res_vcpu["model"] = "AravKataria/vajra-lora (7B 2 vCPU)"
+        if not context_files:
+            _backend_query_cache[cache_key] = (now, res_vcpu["reply"])
+        return res_vcpu
 
-    # 2. Gradio Queue Fallback (/queue/join on fn_index 0)
-    session_hash = "vajra_" + uuid.uuid4().hex[:10]
-    join_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/queue/join"
-    payload = json.dumps({
-        "data": [full_prompt],
-        "event_data": None,
-        "fn_index": 0,
-        "session_hash": session_hash,
-        "trigger_id": 7,
-    }).encode("utf-8")
+    # 2. Emergency Turbo Burst: ZeroGPU Space (vajra) - High-speed A100 GPU for overflow queries
+    logger.info("2 vCPU Space busy or in standby; engaging ZeroGPU A100 Turbo Burst...")
+    res_gpu = _query_single_space_endpoint(VAJRA_HF_ZEROGPU_URL, full_prompt, headers, timeout=25)
+    if res_gpu and res_gpu.get("reply"):
+        if not res_gpu.get("tier"):
+            res_gpu["tier"] = "max"
+        if not res_gpu.get("model"):
+            res_gpu["model"] = "AravKataria/vajra-lora (ZeroGPU A100 Burst)"
+        if not context_files:
+            _backend_query_cache[cache_key] = (now, res_gpu["reply"])
+        return res_gpu
 
-    try:
-        req = urllib.request.Request(join_url, data=payload, headers=headers)
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            pass
+    if res_gpu and res_gpu.get("rate_limited"):
+        return res_gpu
+    if res_vcpu and res_vcpu.get("rate_limited"):
+        return res_vcpu
 
-        data_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/queue/data?session_hash={session_hash}"
-        data_req = urllib.request.Request(data_url, headers=headers)
-        with urllib.request.urlopen(data_req, timeout=timeout) as stream:
-            for raw_line in stream:
-                line = raw_line.decode("utf-8", errors="replace").strip()
-                if line.startswith("data:"):
-                    msg_obj = json.loads(line[5:].strip())
-                    msg_type = msg_obj.get("msg")
-                    if msg_type == "process_completed":
-                        output = msg_obj.get("output", {})
-                        err = output.get("error")
-                        if err:
-                            err_str = str(err)
-                            retry_sec = 120
-                            m = re.search(r'(\d+):(\d+):(\d+)', err_str)
-                            if m:
-                                retry_sec = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
-                            is_quota = "quota" in err_str.lower() or "zerogpu" in err_str.lower()
-                            return {"reply": None, "rate_limited": is_quota, "retry_after": retry_sec, "error": err_str}
-                        data = output.get("data", [])
-                        if data and len(data) > 0 and data[0]:
-                            ans = str(data[0]).strip()
-                            if not context_files and ans:
-                                _backend_query_cache[cache_key] = (now, ans)
-                            return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
-                    elif msg_type == "close_stream":
-                        break
-        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "Queue stream closed without response"}
-    except urllib.error.HTTPError as http_err:
-        if http_err.code == 429:
-            return {"reply": None, "rate_limited": True, "retry_after": 120, "error": "HTTP 429 Too Many Requests"}
-        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(http_err)}
-    except Exception as e:
-        return {"reply": None, "rate_limited": False, "retry_after": 0, "error": str(e)}
+    return {"reply": None, "rate_limited": False, "retry_after": 0, "error": "Both 2 vCPU and ZeroGPU spaces unresponsive"}
 
 
 class ChatRequest(BaseModel):
@@ -867,11 +928,13 @@ async def chat_api(req: ChatRequest, request: Request):
     # 1. Query live Fine-Tuned Model (AravKataria/vajra-lora) running on HF Spaces
     model_res = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files, hf_token)
     if model_res and model_res.get("reply"):
+        tier_val = model_res.get("tier") or tier.value
+        model_name = model_res.get("model") or "AravKataria/vajra-lora (Fine-Tuned Qwen2.5-Coder-7B)"
         return JSONResponse({
             "success": True,
             "reply": model_res["reply"],
-            "model": "AravKataria/vajra-lora (Fine-Tuned Qwen2.5-Coder-7B)",
-            "tier": tier.value,
+            "model": model_name,
+            "tier": tier_val,
             "shield": "Zero-Retention Verified",
             "source": "fine-tuned-model",
         })
