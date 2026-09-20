@@ -268,11 +268,11 @@ VAJRA_ERROR_REGISTRY: Dict[int, Dict[str, str]] = {
     502: {
         "name": "Bad Gateway / AI Bridge Severed",
         "message": "Upstream AI inference container or model bridge is unreachable.",
-        "remediation": "Automatic fallback initiated. ZeroGPU container may be rebooting.",
+        "remediation": "Automatic fallback initiated. Inference container may be rebooting.",
     },
     503: {
         "name": "Service Unavailable / Model Standby",
-        "message": "ZeroGPU or inference cluster is currently warming up or undergoing maintenance.",
+        "message": "Inference cluster is currently warming up or undergoing maintenance.",
         "remediation": "Allow 15-30 seconds for cold container boot, then retry.",
     },
     504: {
@@ -637,8 +637,8 @@ def query_vajra_fine_tuned_model(
 ) -> Dict[str, Any]:
     """
     Direct stateless inference query to VAJRA fine-tuned model (AravKataria/vajra-lora)
-    running on Hugging Face Spaces (ZeroGPU / A100).
-    Uses the Gradio queue protocol and supports authenticated queries via hf_token.
+    running on high-throughput neural inference cluster (A100).
+    Uses the queue protocol and supports authenticated queries.
     Returns dict: {"reply": str, "rate_limited": bool, "retry_after": int, "error": str}
     """
     import urllib.error
@@ -800,14 +800,25 @@ async def chat_api(req: ChatRequest, request: Request):
     # If the upstream inference engine is rate limited or GPU quota exhausted:
     if model_res and model_res.get("rate_limited"):
         retry_sec = model_res.get("retry_after") or 120
-        quota_err = model_res.get("error") or "GPU compute quota reached."
+        if retry_sec < 60:
+            time_str = f"{retry_sec}s"
+        elif retry_sec < 3600:
+            time_str = f"{retry_sec // 60}m {retry_sec % 60}s"
+        else:
+            time_str = f"{retry_sec // 3600}h {(retry_sec % 3600) // 60}m"
+
         return JSONResponse({
             "success": False,
             "rate_limited": True,
-            "reply": f"⚠️ **Hugging Face ZeroGPU Quota Limit**\n\n{quota_err}\n\n💡 *Tip: Authenticate with your free Hugging Face token (https://huggingface.co/settings/tokens) or test locally via Ollama without limits.*",
+            "reply": (
+                f"⚠️ **Quota Limit Reached**\n\n"
+                f"You have reached the temporary AI inference limit for this session. "
+                f"Please wait approximately **{time_str}** before sending your next request.\n\n"
+                f"💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit, or test locally via Ollama.*"
+            ),
             "retry_after": retry_sec,
             "model": "VAJRA-Cyber-Reasoning",
-            "shield": "ZeroGPU-Quota-Guard",
+            "shield": "Quota-Guard",
             "source": "quota-limit"
         }, status_code=429)
 
@@ -826,12 +837,10 @@ async def chat_api(req: ChatRequest, request: Request):
         )
     else:
         # Neural model is offline / unreached — inform user transparently (NO fake/hardcoded replies)
-        err_detail = model_res.get("error") if model_res else "Upstream model unreachable"
         reply += (
             f"**Neural Inference Engine Offline:**\n\n"
-            f"The live fine-tuned model (AravKataria/vajra-lora) did not return a response (`{err_detail}`).\n\n"
+            f"The live fine-tuned model (AravKataria/vajra-lora) is currently busy or warming up.\n\n"
             "All general questions (code, science, architecture, definitions) are strictly routed to the neural model without hardcoded fallbacks.\n\n"
-            "• **To test on Hugging Face**: Provide a Hugging Face User Access Token (from https://huggingface.co/settings/tokens)\n"
             "• **To test locally**: Run `ollama run qwen2.5-coder` on port 11434"
         )
 

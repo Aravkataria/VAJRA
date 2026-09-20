@@ -602,7 +602,7 @@
         </div>
         <div class="health-item">
           <div class="status-lamp testing" id="lampHf"></div>
-          <span>HF ZeroGPU (A100): <strong id="statusHf">checking...</strong></span>
+          <span>Neural Cluster (A100): <strong id="statusHf">checking...</strong></span>
         </div>
       </div>
     </div>
@@ -1019,18 +1019,18 @@
         severity: "HIGH",
         layer: "INFERENCE_GATEWAY",
         summary: "The gateway received an invalid or terminated response from upstream AI inference container.",
-        cause: "Hugging Face Space container restarting or network bridge dropped.",
+        cause: "Neural inference container restarting or network bridge dropped.",
         safeguard: "Automatic Client-Side Direct Space Fallback",
-        remediation: "Client automatically falls back to direct Hugging Face ZeroGPU or local Ollama."
+        remediation: "Client automatically falls back to secondary neural gateway or local Ollama."
       },
       {
         code: "503",
-        name: "Service Unavailable / ZeroGPU Cold Boot",
+        name: "Service Unavailable / Cluster Cold Boot",
         cat: "5xx",
         severity: "HIGH",
-        layer: "ZEROGPU_SCHEDULER",
+        layer: "INFERENCE_SCHEDULER",
         summary: "Inference container is waking up from standby or undergoing scheduled deployment.",
-        cause: "ZeroGPU Space container cold booting after idle period (takes ~15-30 seconds).",
+        cause: "Inference container cold booting after idle period (takes ~15-30 seconds).",
         safeguard: "Dual-Route Cloud Redundancy + Cloudflare 24/7 Pinger",
         remediation: "Allow 15-20 seconds for container to initialize, then retry request."
       },
@@ -1152,7 +1152,7 @@
         cat: "net",
         severity: "HIGH",
         layer: "DNS_TRANSPORT",
-        summary: "Client could not resolve IP address for API or Hugging Face Space hostname.",
+        summary: "Client could not resolve IP address for API or inference hostname.",
         cause: "DNS server failure, misconfigured /etc/hosts, or network hijacking.",
         safeguard: "DNS Cache Redundancy",
         remediation: "Check DNS settings (use 1.1.1.1 or 8.8.8.8); verify domain spelling."
@@ -1209,14 +1209,14 @@
         cat: "ai",
         severity: "MEDIUM",
         layer: "LLM_INFERENCE",
-        summary: "The AravKataria/vajra-lora 7B model container on ZeroGPU is warming up from sleep.",
-        cause: "Hugging Face Space container wakes up after inactivity (15-30s boot duration).",
+        summary: "The AravKataria/vajra-lora 7B model container is warming up from standby.",
+        cause: "Inference container wakes up after inactivity (15-30s boot duration).",
         safeguard: "24/7 Cloudflare Keep-Alive Pinger Active",
         remediation: "Wait 15-20 seconds. Client automatically polls and streams response upon readiness."
       },
       {
         code: "AI_GPU_OOM_SATURATED",
-        name: "ZeroGPU VRAM Saturated (OOM)",
+        name: "GPU VRAM Saturated (OOM)",
         cat: "ai",
         severity: "HIGH",
         layer: "HARDWARE_ACCELERATION",
@@ -1227,11 +1227,11 @@
       },
       {
         code: "AI_ZERO_GPU_QUOTA_EXHAUSTED",
-        name: "ZeroGPU Daily Quota Depleted",
+        name: "Inference Daily Quota Depleted",
         cat: "ai",
         severity: "HIGH",
         layer: "QUOTA_GOVERNANCE",
-        summary: "Hugging Face community ZeroGPU allocation exhausted for current 24-hour cycle.",
+        summary: "Inference compute allocation reached for current cycle.",
         cause: "Heavy continuous multi-user inference on community GPU tier.",
         safeguard: "Seamless Fallback to Deterministic Cyber-Reasoning Engine",
         remediation: "System automatically switches to local AST rule synthesis and local Ollama."
@@ -1299,8 +1299,8 @@
         layer: "DISTRIBUTED_WORKERS",
         summary: "Kaggle Model 1 / Model 2 dual worker node is currently offline or sleeping.",
         cause: "Kaggle 12-hour session quota elapsed.",
-        safeguard: "Active Hugging Face ZeroGPU Primary Route",
-        remediation: "Primary inference seamlessly routed through Hugging Face Space."
+        safeguard: "Active Neural Engine Primary Route",
+        remediation: "Primary inference seamlessly routed through neural gateway."
       },
 
       // --- Security Analysis & AST Engine Errors ---
