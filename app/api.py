@@ -669,6 +669,29 @@ def query_vajra_fine_tuned_model(
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
+    # 1. Try Direct FastAPI endpoint (16GB Dedicated Space Gateway)
+    try:
+        api_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/api/chat"
+        api_payload = json.dumps({
+            "prompt": prompt,
+            "files": context_files,
+            "max_tokens": 1024
+        }).encode("utf-8")
+        api_headers = dict(headers)
+        api_headers["X-Vajra-Signature"] = VAJRA_SECRET_KEY
+        api_req = urllib.request.Request(api_url, data=api_payload, headers=api_headers)
+        with urllib.request.urlopen(api_req, timeout=timeout) as api_resp:
+            if api_resp.status == 200:
+                resp_json = json.loads(api_resp.read().decode("utf-8"))
+                if resp_json.get("reply"):
+                    ans = str(resp_json["reply"]).strip()
+                    if not context_files and ans:
+                        _backend_query_cache[cache_key] = (now, ans)
+                    return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+    except Exception:
+        pass
+
+    # 2. Legacy Gradio Queue Fallback
     session_hash = uuid.uuid4().hex
     join_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/queue/join"
     payload = json.dumps({
