@@ -37,10 +37,10 @@ jobs:
               exit(1)
 
           api = HfApi(token=token)
-          print('Uploading hf_space contents directly to AravKataria/vajra Space...')
+          print('Uploading hf_space contents directly to AravKataria/VAJRA_v2 Space...')
           api.upload_folder(
               folder_path='hf_space',
-              repo_id='AravKataria/vajra',
+              repo_id='AravKataria/VAJRA_v2',
               repo_type='space',
               commit_message='Automated sync from GitHub main'
           )
