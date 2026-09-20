@@ -799,22 +799,16 @@ async def chat_api(req: ChatRequest, request: Request):
 
     # If the upstream inference engine is rate limited or GPU quota exhausted:
     if model_res and model_res.get("rate_limited"):
-        retry_sec = model_res.get("retry_after") or 120
-        if retry_sec < 60:
-            time_str = f"{retry_sec}s"
-        elif retry_sec < 3600:
-            time_str = f"{retry_sec // 60}m {retry_sec % 60}s"
-        else:
-            time_str = f"{retry_sec // 3600}h {(retry_sec % 3600) // 60}m"
+        retry_sec = min(model_res.get("retry_after") or 30, 30)
 
         return JSONResponse({
             "success": False,
             "rate_limited": True,
             "reply": (
-                f"⚠️ **Quota Limit Reached**\n\n"
-                f"You have reached the temporary AI inference limit for this session. "
-                f"Please wait approximately **{time_str}** before sending your next request.\n\n"
-                f"💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit, or test locally via Ollama.*"
+                "⚠️ **Inference Cluster Busy**\n\n"
+                "The neural reasoning engine is currently processing queued tasks or warming up. "
+                "Please wait approximately **30 seconds** before trying again.\n\n"
+                "💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*"
             ),
             "retry_after": retry_sec,
             "model": "VAJRA-Cyber-Reasoning",
