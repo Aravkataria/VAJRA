@@ -19,7 +19,7 @@ import re
 import secrets
 from typing import Optional
 
-VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY", "vajra_sec_2026_auth_sig_9f8d7c6b5a4")
+VAJRA_SECRET_KEY = os.environ.get("VAJRA_SECRET_KEY")
 VAJRA_API_KEY = os.environ.get("VAJRA_API_KEY")
 SAFE_WORKSPACE_ID_REGEX = re.compile(r"^[0-9a-fA-F-]{8,64}$")
 
@@ -55,10 +55,12 @@ def verify_password(password: str, stored_hash: str) -> bool:
 def verify_signature(signature: Optional[str]) -> bool:
     """
     Constant-time comparison of X-Vajra-Signature against server secret key.
+    Fails closed if server secret key is not configured or signature is empty.
     """
-    if not signature or not VAJRA_SECRET_KEY:
+    secret = os.environ.get("VAJRA_SECRET_KEY") or VAJRA_SECRET_KEY
+    if not signature or not secret:
         return False
-    return hmac.compare_digest(signature.strip(), VAJRA_SECRET_KEY.strip())
+    return hmac.compare_digest(signature.strip(), secret.strip())
 
 
 def verify_api_key(api_key: Optional[str]) -> bool:

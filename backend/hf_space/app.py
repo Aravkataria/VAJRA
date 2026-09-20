@@ -12,10 +12,7 @@ from typing import Optional, Dict
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-# =====================================================================
-# 1. SECURITY CONFIGURATION & GUARDRAILS
-# =====================================================================
-VAJRA_SECRET_KEY = os.getenv("VAJRA_SECRET_KEY", "vajra_sec_2026_auth_sig_9f8d7c6b5a4")
+VAJRA_SECRET_KEY = os.getenv("VAJRA_SECRET_KEY")
 
 # Strict Origin Whitelist
 ALLOWED_ORIGINS = [
@@ -220,8 +217,15 @@ def health():
 @api_app.post("/api/chat")
 async def chat_api(req: ChatRequest, request: Request):
     sig_header = request.headers.get("X-Vajra-Signature") or req.auth_key
-    if sig_header != VAJRA_SECRET_KEY:
-        raise HTTPException(status_code=403, detail="Forbidden: Invalid or missing VAJRA Security Signature.")
+    client_ip = request.client.host if request.client else "127.0.0.1"
+
+    if VAJRA_SECRET_KEY:
+        import hmac
+        if not sig_header or not hmac.compare_digest(sig_header.strip(), VAJRA_SECRET_KEY.strip()):
+            raise HTTPException(status_code=403, detail="Forbidden: Invalid or missing VAJRA Security Signature.")
+    else:
+        if not check_rate_limit(client_ip):
+            raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
     
     reply = generate_vajra_reply(req.prompt, req.files)
     return JSONResponse({

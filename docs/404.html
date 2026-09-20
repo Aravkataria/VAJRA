@@ -688,7 +688,7 @@
         layer: "VAULT_SECURITY",
         summary: "Cryptographic vault signature mismatch. The X-Vajra-Signature HMAC header was missing or corrupted.",
         cause: "Unauthorized caller or forged request attempted without sovereign HMAC handshake credentials.",
-        safeguard: "(Cryptographic Signature Lock) Enforcement",
+        safeguard: "Server HMAC Signature Enforcement",
         remediation: "Ensure X-Vajra-Signature is dynamically synthesized with authorized HMAC key."
       },
       {
