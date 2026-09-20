@@ -10,9 +10,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- KaTeX Mathematical Formula Rendering Engine -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
   <style>
     /* ─── PURE BLACK TRUE DARK THEME (Zero Blue) ─── */
+    .katex {
+      font-size: 1.06em;
+      color: inherit;
+    }
+    .katex-display {
+      margin: 0.85rem 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.35rem 0;
+      text-align: center;
+    }
     :root[data-theme="dark"] {
       --bg-base: #000000;
       --bg-sidebar: #080808;
@@ -2755,6 +2770,7 @@
             '<div class="msg-card">' + m.html + '</div>';
           stream.appendChild(group);
         });
+        renderMath(stream);
         stream.scrollTop = stream.scrollHeight;
       }
 
@@ -2801,7 +2817,7 @@
       if (!match) {
         tracker.remove();
         state.isRunning = false;
-        appendSessionMessage("bot", '<div style="color:var(--text-secondary); font-family:\'JetBrains Mono\',monospace; font-size:0.85rem;">Invalid GitHub URL format.</div>');
+        appendSessionMessage("bot", '<div style="color:var(--text-secondary); font-family:JetBrains Mono,monospace; font-size:0.85rem;">Invalid GitHub URL format.</div>');
         return;
       }
 
@@ -2871,7 +2887,7 @@
       .catch(function (err) {
         tracker.remove();
         state.isRunning = false;
-        appendSessionMessage("bot", '<div style="color:var(--text-secondary); font-family:\'JetBrains Mono\',monospace; font-size:0.85rem;"><b>GitHub Fetch Error:</b> ' + escapeHtml(err.message) + '</div>');
+        appendSessionMessage("bot", '<div style="color:var(--text-secondary); font-family:JetBrains Mono,monospace; font-size:0.85rem;"><b>GitHub Fetch Error:</b> ' + escapeHtml(err.message) + '</div>');
       });
     };
 
@@ -2916,7 +2932,7 @@
       .catch(function (err) {
         tracker.remove();
         state.isRunning = false;
-        appendSessionMessage("bot", '<div style="color:var(--text-secondary); font-family:\'JetBrains Mono\',monospace; font-size:0.85rem;"><b>ZIP Extraction Error:</b> ' + escapeHtml(err.message) + '</div>');
+        appendSessionMessage("bot", '<div style="color:var(--text-secondary); font-family:JetBrains Mono,monospace; font-size:0.85rem;"><b>ZIP Extraction Error:</b> ' + escapeHtml(err.message) + '</div>');
       });
     };
 
@@ -3002,16 +3018,16 @@
             '<div class="finding-card-header">' +
               '<div style="display:flex; align-items:center; gap:0.5rem;">' +
                 '<span class="state-seal vulnerable">' + sev + '</span>' +
-                '<span style="font-weight:700; color:var(--text-primary); font-family:\'JetBrains Mono\',monospace;">' + escapeHtml(f.vulnerability_type || 'FINDING') + '</span>' +
+                '<span style="font-weight:700; color:var(--text-primary); font-family:JetBrains Mono,monospace;">' + escapeHtml(f.vulnerability_type || 'FINDING') + '</span>' +
               '</div>' +
-              '<span style="color:var(--text-muted); font-size:0.75rem; font-family:\'JetBrains Mono\',monospace;">' + escapeHtml(f.file) + ':' + escapeHtml(f.line) + '</span>' +
+              '<span style="color:var(--text-muted); font-size:0.75rem; font-family:JetBrains Mono,monospace;">' + escapeHtml(f.file) + ':' + escapeHtml(f.line) + '</span>' +
             '</div>' +
             '<div class="finding-card-body">' +
               '<div style="margin-bottom:0.5rem; color:var(--text-secondary);">' + escapeHtml(f.message) + '</div>' +
               (matched ?
                 '<div class="code-diff">' +
                   '<div class="diff-title-bar"><span>' + escapeHtml(f.file) + '</span><span class="state-seal verified" style="font-size:0.6rem;">MINIMAL REPAIR</span></div>' +
-                  '<pre style="padding:0.65rem 0.85rem; color:var(--text-primary); font-family:\'JetBrains Mono\',monospace; font-size:0.75rem;">' + escapeHtml(matched.diff) + '</pre>' +
+                  '<pre style="padding:0.65rem 0.85rem; color:var(--text-primary); font-family:JetBrains Mono,monospace; font-size:0.75rem;">' + escapeHtml(matched.diff) + '</pre>' +
                 '</div>'
               : '') +
             '</div>' +
@@ -3327,6 +3343,92 @@
       if (el) el.remove();
     }
 
+    function renderMath(targetEl) {
+      if (!targetEl) return;
+      if (window.renderMathInElement) {
+        try {
+          renderMathInElement(targetEl, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "\\[", right: "\\]", display: true },
+              { left: "\\(", right: "\\)", display: false },
+              { left: "$", right: "$", display: false }
+            ],
+            throwOnError: false
+          });
+        } catch (e) {}
+      } else {
+        window.addEventListener("DOMContentLoaded", function() { renderMath(targetEl); }, { once: true });
+        window.addEventListener("load", function() { renderMath(targetEl); }, { once: true });
+      }
+    }
+
+    function formatBotMarkdown(rawText) {
+      if (!rawText) return "";
+      var text = rawText;
+
+      // 1. Normalize multiline block math so newlines don't get broken by <br>
+      text = text.replace(/\\\[([\s\S]*?)\\\]/g, function(match, formula) {
+        return "\\[ " + formula.trim().replace(/\r?\n/g, " ") + " \\]";
+      });
+      text = text.replace(/\$\$([\s\S]*?)\$\$/g, function(match, formula) {
+        return "$$ " + formula.trim().replace(/\r?\n/g, " ") + " $$";
+      });
+
+      // 2. Protect code blocks
+      var codeBlocks = [];
+      text = text.replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, function(match, lang, code) {
+        var placeholder = "___CODEBLOCK_" + codeBlocks.length + "___";
+        codeBlocks.push({ lang: lang || "", code: code });
+        return placeholder;
+      });
+
+      // 3. Protect inline code
+      var inlineCodes = [];
+      text = text.replace(/`([^`\n]+)`/g, function(match, code) {
+        var placeholder = "___INLINECODE_" + inlineCodes.length + "___";
+        inlineCodes.push(code);
+        return placeholder;
+      });
+
+      // 4. Headers
+      text = text.replace(/^### (.*$)/gim, "<h4 style='margin:0.75rem 0 0.25rem 0; font-weight:700; color:var(--text-primary);'>$1</h4>");
+      text = text.replace(/^## (.*$)/gim, "<h3 style='margin:0.85rem 0 0.35rem 0; font-weight:700; color:var(--text-primary);'>$1</h3>");
+      text = text.replace(/^# (.*$)/gim, "<h2 style='margin:1rem 0 0.5rem 0; font-weight:700; color:var(--text-primary);'>$1</h2>");
+
+      // 5. Bold & Italic
+      text = text.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+      text = text.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<i>$2</i>$3");
+
+      // 6. Bullet lists
+      text = text.replace(/^[*-]\s+(.*$)/gim, "<li style='margin-left:1.2rem; list-style-type:disc;'>$1</li>");
+
+      // 7. Numbered lists
+      text = text.replace(/^(\d+)\.\s+(.*$)/gim, "<div style='margin-left:0.25rem; margin-top:0.35rem;'><b>$1.</b> $2</div>");
+
+      // 8. Paragraphs and line breaks
+      text = text.replace(/\n\n/g, "</p><p style='margin-top:0.65rem;'>");
+      text = text.replace(/\n/g, "<br>");
+
+      // 9. Restore inline code
+      text = text.replace(/___INLINECODE_(\d+)___/g, function(match, idx) {
+        var code = inlineCodes[parseInt(idx, 10)] || "";
+        return "<code style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em;'>" +
+          code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</code>";
+      });
+
+      // 10. Restore code blocks
+      text = text.replace(/___CODEBLOCK_(\d+)___/g, function(match, idx) {
+        var item = codeBlocks[parseInt(idx, 10)];
+        if (!item) return "";
+        var escaped = item.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return "<pre style='background:#050505; border:1px solid var(--border-subtle); border-radius:8px; padding:12px; margin:10px 0; overflow-x:auto; font-family:JetBrains Mono,monospace; font-size:0.85rem;'><code class='language-" +
+          (item.lang || "text") + "'>" + escaped + "</code></pre>";
+      });
+
+      return "<p>" + text + "</p>";
+    }
+
 function appendSessionMessage(role, contentHtml) {
       removeTypingIndicator();
       var sess = getActiveSession();
@@ -3359,6 +3461,7 @@ function appendSessionMessage(role, contentHtml) {
         '<div class="msg-card">' + contentHtml + '</div>';
 
       stream.appendChild(group);
+      renderMath(group);
       stream.scrollTop = stream.scrollHeight;
       return group;
     }
@@ -4151,7 +4254,7 @@ function appendSessionMessage(role, contentHtml) {
             '<div style="line-height:1.5;">' +
               '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
                 '<span class="state-seal verified" style="font-size:0.7rem; padding:2px 8px;">VERIFIED (6/6 PROOFS)</span>' +
-                '<span style="font-weight:700; font-family:\'JetBrains Mono\',monospace; font-size:0.9rem;">HTML &amp; DOM FORENSIC REPAIR COMPLETE</span>' +
+                '<span style="font-weight:700; font-family:JetBrains Mono,monospace; font-size:0.9rem;">HTML &amp; DOM FORENSIC REPAIR COMPLETE</span>' +
               '</div>' +
               '<p style="color:var(--text-secondary); font-size:0.86rem; margin: 4px 0 8px 0;">' +
                 'Analyzed <b>' + escapeHtml(auditRes.fileName) + '</b> (' + (auditRes.originalContent.length / 1024).toFixed(1) + ' KB, ' + auditRes.totalElements + ' DOM elements). ' +
@@ -4274,11 +4377,8 @@ function appendSessionMessage(role, contentHtml) {
               var fId = registerArtifactFile(genExt, codeContent, genType);
               artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
             }
-            var formattedHtml2 = inferenceRes.reply
-              .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
-              .replace(/\n/g, "<br>")
-              .replace(/`([^`]+)`/g, "<code>$1</code>");
-            appendSessionMessage("bot", "<p>" + formattedHtml2 + "</p>" + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""));
+            var formattedHtml2 = formatBotMarkdown(inferenceRes.reply);
+            appendSessionMessage("bot", formattedHtml2 + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""));
             return;
           }
         }
