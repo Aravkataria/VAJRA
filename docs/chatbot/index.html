@@ -3193,6 +3193,27 @@ function appendSessionMessage(role, contentHtml) {
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
+        // 1. Try Direct FastAPI endpoint (16GB Dedicated Space Gateway)
+        try {
+          var directFastApiResp = await fetch(hfEndpoint + "/api/chat", {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({
+              prompt: fullPrompt,
+              files: contextFiles,
+              max_tokens: 1024
+            }),
+            signal: AbortSignal.timeout(45000)
+          });
+          if (directFastApiResp.ok) {
+            var directData = await directFastApiResp.json();
+            if (directData && directData.reply) {
+              return { reply: directData.reply };
+            }
+          }
+        } catch (fastApiErr) {}
+
+        // 2. Legacy Gradio Queue Fallback
         var callResp = await fetch(hfEndpoint + "/call/chat", {
           method: "POST",
           headers: directHeaders,
