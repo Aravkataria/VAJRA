@@ -16,7 +16,8 @@
 
 const TARGET_SERVICES = [
   "https://vajra-7aue.onrender.com/health",
-  "https://aravkataria-vajra-v2.hf.space/health"
+  "https://aravkataria-vajra-v2.hf.space/health",
+  "https://aravkataria-vajra.hf.space"
 ];
 
 export default {

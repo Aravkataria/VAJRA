@@ -3483,6 +3483,7 @@
        ========================================================================== */
     var VAJRA_PRIMARY_BACKEND = "https://vajra-7aue.onrender.com";
     var VAJRA_HF_SPACE_URL = "https://aravkataria-vajra-v2.hf.space";
+    var VAJRA_HF_ZEROGPU_URL = "https://aravkataria-vajra.hf.space";
     var VAJRA_LOCAL_BACKEND = "http://localhost:8000";
     var VAJRA_LOCAL_OLLAMA = "http://localhost:11434/v1/chat/completions";
 
@@ -3551,9 +3552,146 @@
       }, 1000);
     }
 
+    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders) {
+      // 1. Try Direct FastAPI REST Endpoint: /api/chat
+      try {
+        var restResp = await fetch(hfEndpoint + "/api/chat", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ prompt: fullPrompt }),
+          signal: AbortSignal.timeout(20000)
+        });
+        if (restResp.ok) {
+          var restData = await restResp.json();
+          if (restData && restData.reply) {
+            return {
+              reply: restData.reply,
+              model: restData.model || "AravKataria/vajra-lora",
+              tier: restData.tier || "standard"
+            };
+          }
+        }
+      } catch (restErr) {}
+
+      // 2. Try Gradio 4 Client API (/call/generate_vajra_reply)
+      try {
+        var callResp = await fetch(hfEndpoint + "/call/generate_vajra_reply", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ data: [fullPrompt] }),
+          signal: AbortSignal.timeout(12000)
+        });
+        if (callResp.status === 429) {
+          return {
+            isRateLimited: true,
+            reply: "⚠️ **Inference Cluster Busy**\n\nThe neural reasoning engine is currently processing queued tasks or warming up. Please wait approximately **30 seconds** before trying again.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*",
+            retryAfter: 30
+          };
+        }
+        if (callResp.ok) {
+          var callData = await callResp.json();
+          var eventId = callData.event_id;
+          if (eventId) {
+            var streamResp = await fetch(hfEndpoint + "/call/generate_vajra_reply/" + eventId, {
+              headers: directHeaders,
+              signal: AbortSignal.timeout(45000)
+            });
+            if (streamResp.ok && streamResp.body) {
+              var reader = streamResp.body.getReader();
+              var decoder = new TextDecoder("utf-8");
+              var buffer = "";
+              var isComplete = false;
+              while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buffer += decoder.decode(chunk.value, { stream: true });
+                var lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (var i = 0; i < lines.length; i++) {
+                  var line = lines[i].trim();
+                  if (line.startsWith("event: complete")) {
+                    isComplete = true;
+                  } else if (isComplete && line.startsWith("data:")) {
+                    var payload = JSON.parse(line.substring(5).trim());
+                    if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
+                      reader.cancel();
+                      return { reply: String(payload[0]).trim(), tier: "max", model: "AravKataria/vajra-lora" };
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (callErr) {}
+
+      // 3. Gradio Queue Fallback (/queue/join on fn_index 0)
+      try {
+        var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
+        var joinResp = await fetch(hfEndpoint + "/queue/join", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({
+            data: [fullPrompt],
+            event_data: null,
+            fn_index: 0,
+            session_hash: sessionHash,
+            trigger_id: 7
+          }),
+          signal: AbortSignal.timeout(12000)
+        });
+        if (joinResp.ok) {
+          var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
+            headers: directHeaders,
+            signal: AbortSignal.timeout(45000)
+          });
+          if (dataStreamResp.ok && dataStreamResp.body) {
+            var qReader = dataStreamResp.body.getReader();
+            var qDecoder = new TextDecoder("utf-8");
+            var qBuffer = "";
+            while (true) {
+              var qChunk = await qReader.read();
+              if (qChunk.done) break;
+              qBuffer += qDecoder.decode(qChunk.value, { stream: true });
+              var qLines = qBuffer.split("\n");
+              qBuffer = qLines.pop() || "";
+              for (var j = 0; j < qLines.length; j++) {
+                var qLine = qLines[j].trim();
+                if (qLine.startsWith("data:")) {
+                  var msgObj = JSON.parse(qLine.substring(5).trim());
+                  if (msgObj.msg === "process_completed") {
+                    qReader.cancel();
+                    var out = msgObj.output || {};
+                    if (out.error) {
+                      var errText = String(out.error);
+                      var isQuota = errText.toLowerCase().includes("quota") || errText.toLowerCase().includes("zerogpu");
+                      return {
+                        isRateLimited: isQuota,
+                        reply: "⚠️ **Quota Limit Reached**\n\nYou have reached the temporary AI inference limit for this session. Please wait before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
+                        retryAfter: 120
+                      };
+                    }
+                    var d = out.data || [];
+                    if (d.length > 0 && d[0]) {
+                      return {
+                        reply: String(d[0]).trim(),
+                        tier: "max",
+                        model: "AravKataria/vajra-lora"
+                      };
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (queueErr) {}
+
+      return null;
+    }
+
     async function tryDirectHfSpace(userPrompt, contextFiles) {
       try {
-        var hfEndpoint = VAJRA_HF_SPACE_URL.replace(/\/$/, "");
         var fullPrompt = userPrompt;
         if (contextFiles && Object.keys(contextFiles).length > 0) {
           var filesSummary = "Workspace / Attached Files:\n";
@@ -3571,119 +3709,13 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
-        try {
-          var callResp = await fetch(hfEndpoint + "/call/generate_vajra_reply", {
-            method: "POST",
-            headers: directHeaders,
-            body: JSON.stringify({ data: [fullPrompt] }),
-            signal: AbortSignal.timeout(15000)
-          });
-          if (callResp.status === 429) {
-            return {
-              isRateLimited: true,
-              reply: "⚠️ **Inference Cluster Busy**\n\nThe neural reasoning engine is currently processing queued tasks or warming up. Please wait approximately **30 seconds** before trying again.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*",
-              retryAfter: 30
-            };
-          }
-          if (callResp.ok) {
-            var callData = await callResp.json();
-            var eventId = callData.event_id;
-            if (eventId) {
-              var streamResp = await fetch(hfEndpoint + "/call/generate_vajra_reply/" + eventId, {
-                headers: directHeaders,
-                signal: AbortSignal.timeout(60000)
-              });
-              if (streamResp.ok && streamResp.body) {
-                var reader = streamResp.body.getReader();
-                var decoder = new TextDecoder("utf-8");
-                var buffer = "";
-                var isComplete = false;
-                while (true) {
-                  var chunk = await reader.read();
-                  if (chunk.done) break;
-                  buffer += decoder.decode(chunk.value, { stream: true });
-                  var lines = buffer.split("\n");
-                  buffer = lines.pop() || "";
-                  for (var i = 0; i < lines.length; i++) {
-                    var line = lines[i].trim();
-                    if (line.startsWith("event: complete")) {
-                      isComplete = true;
-                    } else if (isComplete && line.startsWith("data:")) {
-                      var payload = JSON.parse(line.substring(5).trim());
-                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
-                        reader.cancel();
-                        return { reply: String(payload[0]).trim() };
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } catch (callErr) {}
+        // 1. Try Primary: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
+        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders);
+        if (vcpuRes && vcpuRes.reply) return vcpuRes;
 
-        // 2. Gradio Queue Fallback (/queue/join on fn_index 0)
-        try {
-          var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
-          var joinResp = await fetch(hfEndpoint + "/queue/join", {
-            method: "POST",
-            headers: directHeaders,
-            body: JSON.stringify({
-              data: [fullPrompt],
-              event_data: null,
-              fn_index: 0,
-              session_hash: sessionHash,
-              trigger_id: 7
-            }),
-            signal: AbortSignal.timeout(15000)
-          });
-          if (joinResp.ok) {
-            var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
-              headers: directHeaders,
-              signal: AbortSignal.timeout(60000)
-            });
-            if (dataStreamResp.ok && dataStreamResp.body) {
-              var qReader = dataStreamResp.body.getReader();
-              var qDecoder = new TextDecoder("utf-8");
-              var qBuffer = "";
-              while (true) {
-                var qChunk = await qReader.read();
-                if (qChunk.done) break;
-                qBuffer += qDecoder.decode(qChunk.value, { stream: true });
-                var qLines = qBuffer.split("\n");
-                qBuffer = qLines.pop() || "";
-                for (var j = 0; j < qLines.length; j++) {
-                  var qLine = qLines[j].trim();
-                  if (qLine.startsWith("data:")) {
-                    var msgObj = JSON.parse(qLine.substring(5).trim());
-                    if (msgObj.msg === "process_completed") {
-                      qReader.cancel();
-                      var out = msgObj.output || {};
-                      if (out.error) {
-                        var errText = String(out.error);
-                        var isQuota = errText.toLowerCase().includes("quota") || errText.toLowerCase().includes("zerogpu");
-                        return {
-                          isRateLimited: isQuota,
-                          reply: "⚠️ **Quota Limit Reached**\n\nYou have reached the temporary AI inference limit for this session. Please wait before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-                          retryAfter: 120
-                        };
-                      }
-                      var d = out.data || [];
-                      if (d.length > 0 && d[0]) {
-                        return {
-                          reply: String(d[0]).trim(),
-                          tier: "max",
-                          model: "AravKataria/vajra-lora"
-                        };
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } catch (queueErr) {}
+        // 2. Emergency Turbo Burst: ZeroGPU Space (vajra) - A100 GPU
+        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders);
+        if (gpuRes) return gpuRes;
 
       } catch (e) {}
       return null;
