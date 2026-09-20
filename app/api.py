@@ -669,37 +669,46 @@ def query_vajra_fine_tuned_model(
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    # 1. Try Direct FastAPI endpoint (16GB Dedicated Space Gateway)
+    # 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
     try:
-        api_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/api/chat"
-        api_payload = json.dumps({
-            "prompt": prompt,
-            "files": context_files,
-            "max_tokens": 1024
-        }).encode("utf-8")
-        api_headers = dict(headers)
-        api_headers["X-Vajra-Signature"] = VAJRA_SECRET_KEY
-        api_req = urllib.request.Request(api_url, data=api_payload, headers=api_headers)
-        with urllib.request.urlopen(api_req, timeout=timeout) as api_resp:
-            if api_resp.status == 200:
-                resp_json = json.loads(api_resp.read().decode("utf-8"))
-                if resp_json.get("reply"):
-                    ans = str(resp_json["reply"]).strip()
-                    if not context_files and ans:
-                        _backend_query_cache[cache_key] = (now, ans)
-                    return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+        call_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/generate_vajra_reply"
+        call_payload = json.dumps({"data": [full_prompt]}).encode("utf-8")
+        call_req = urllib.request.Request(call_url, data=call_payload, headers=headers)
+        with urllib.request.urlopen(call_req, timeout=12) as call_resp:
+            if call_resp.status == 200:
+                call_data = json.loads(call_resp.read().decode("utf-8"))
+                event_id = call_data.get("event_id")
+                if event_id:
+                    stream_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/call/generate_vajra_reply/{event_id}"
+                    stream_req = urllib.request.Request(stream_url, headers=headers)
+                    with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
+                        is_complete = False
+                        for raw_line in stream:
+                            line = raw_line.decode("utf-8", errors="replace").strip()
+                            if line.startswith("event: complete"):
+                                is_complete = True
+                            elif is_complete and line.startswith("data:"):
+                                res_arr = json.loads(line[5:].strip())
+                                if res_arr and len(res_arr) > 0 and res_arr[0]:
+                                    ans = str(res_arr[0]).strip()
+                                    if not context_files and ans:
+                                        _backend_query_cache[cache_key] = (now, ans)
+                                    return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            return {"reply": None, "rate_limited": True, "retry_after": 120, "error": "HTTP 429 Too Many Requests"}
     except Exception:
         pass
 
-    # 2. Legacy Gradio Queue Fallback
-    session_hash = uuid.uuid4().hex
+    # 2. Gradio Queue Fallback (/queue/join on fn_index 0)
+    session_hash = "vajra_" + uuid.uuid4().hex[:10]
     join_url = f"{VAJRA_HF_SPACE_URL.rstrip('/')}/queue/join"
     payload = json.dumps({
-        "data": [full_prompt, []],
+        "data": [full_prompt],
         "event_data": None,
-        "fn_index": 9,
+        "fn_index": 0,
         "session_hash": session_hash,
-        "trigger_id": 12,
+        "trigger_id": 7,
     }).encode("utf-8")
 
     try:

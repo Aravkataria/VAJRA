@@ -1976,6 +1976,10 @@
           <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <span id="themeToggleText" class="btn-label">Theme</span>
         </button>
+        <button class="btn-theme" id="btnHfTokenModal" onclick="openHfTokenModal()" title="Configure Hugging Face Access Token" aria-label="Configure Hugging Face Token">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span id="hfTokenLabel" class="btn-label">HF Token</span>
+        </button>
         <button class="btn-theme" onclick="window.open('https://github.com/Aravkataria/VAJRA', '_blank')" title="Open GitHub Repository" aria-label="Open GitHub Repository">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
           <span class="btn-label">GitHub</span>
@@ -2136,6 +2140,31 @@
       <div class="modal-actions">
         <button class="btn-tool-chip" onclick="closeModal('githubModal')">Cancel</button>
         <button class="btn-run-scan" onclick="submitGithubModal()">Scan Repository</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="hfTokenModal">
+    <div class="modal-frame" style="max-width: 480px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+        <div style="font-size:0.95rem; font-weight:700; display:flex; align-items:center; gap:0.5rem;">
+          <span>🤗 Hugging Face Token</span>
+        </div>
+        <button class="btn-icon" onclick="closeModal('hfTokenModal')" style="padding:4px;" title="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.45; margin-bottom:0.85rem;">
+        Hugging Face ZeroGPU provides free GPU acceleration for <code>AravKataria/vajra-lora</code>. Provide your free <strong>User Access Token</strong> (Read) to bypass shared anonymous IP quotas.
+      </div>
+      <input type="password" id="inputHfToken" class="modal-input" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxx" style="font-family:'JetBrains Mono', monospace; font-size:0.82rem; margin-bottom:0.6rem;">
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">
+        Generate your free token at: <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer" style="color:var(--accent); text-decoration:underline;">huggingface.co/settings/tokens</a>. Token is saved only in your local browser storage.
+      </div>
+      <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:0.5rem;">
+        <button class="btn-tool-chip" onclick="clearHfToken()" style="color:var(--text-muted);">Clear</button>
+        <button class="btn-tool-chip" onclick="closeModal('hfTokenModal')">Cancel</button>
+        <button class="btn-run-scan" onclick="saveHfToken()">Save Token</button>
       </div>
     </div>
   </div>
@@ -2968,6 +2997,47 @@
       if (el) el.classList.remove("active");
     };
 
+    window.openHfTokenModal = function () {
+      var inp = document.getElementById("inputHfToken");
+      if (inp) inp.value = localStorage.getItem("vajra_hf_token") || "";
+      window.openModal("hfTokenModal");
+    };
+
+    window.saveHfToken = function () {
+      var inp = document.getElementById("inputHfToken");
+      var tok = (inp ? inp.value : "").trim();
+      if (tok) {
+        localStorage.setItem("vajra_hf_token", tok);
+        window.updateHfTokenStatusUI(true);
+      } else {
+        localStorage.removeItem("vajra_hf_token");
+        window.updateHfTokenStatusUI(false);
+      }
+      window.closeModal("hfTokenModal");
+    };
+
+    window.clearHfToken = function () {
+      localStorage.removeItem("vajra_hf_token");
+      var inp = document.getElementById("inputHfToken");
+      if (inp) inp.value = "";
+      window.updateHfTokenStatusUI(false);
+      window.closeModal("hfTokenModal");
+    };
+
+    window.updateHfTokenStatusUI = function (hasToken) {
+      if (hasToken === undefined) {
+        hasToken = Boolean(localStorage.getItem("vajra_hf_token"));
+      }
+      var label = document.getElementById("hfTokenLabel");
+      var btn = document.getElementById("btnHfTokenModal");
+      if (label) {
+        label.textContent = hasToken ? "HF Token ✓" : "HF Token";
+      }
+      if (btn) {
+        btn.style.borderColor = hasToken ? "var(--accent)" : "";
+      }
+    };
+
     window.closeSidebarMobile = function () {
       var sb = document.getElementById("appSidebar");
       var bd = document.getElementById("sidebarBackdrop");
@@ -3174,7 +3244,7 @@ function appendSessionMessage(role, contentHtml) {
 
     async function tryDirectHfSpace(userPrompt, contextFiles) {
       try {
-        var hfEndpoint = VAJRA_HF_SPACE_URL;
+        var hfEndpoint = VAJRA_HF_SPACE_URL.replace(/\/$/, "");
         var fullPrompt = userPrompt;
         if (contextFiles && Object.keys(contextFiles).length > 0) {
           var filesSummary = "Workspace / Attached Files:\n";
@@ -3186,105 +3256,122 @@ function appendSessionMessage(role, contentHtml) {
 
         var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
         var directHeaders = {
-          "Content-Type": "application/json",
-          "X-Vajra-Signature": VAJRA_SIGNATURE_LOCK
+          "Content-Type": "application/json"
         };
         if (storedHfToken) {
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try Direct FastAPI endpoint (16GB Dedicated Space Gateway)
+        // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
         try {
-          var directFastApiResp = await fetch(hfEndpoint + "/api/chat", {
+          var callResp = await fetch(hfEndpoint + "/call/generate_vajra_reply", {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({ data: [fullPrompt] }),
+            signal: AbortSignal.timeout(15000)
+          });
+          if (callResp.status === 429) {
+            return {
+              isRateLimited: true,
+              reply: "⚠️ **Hugging Face ZeroGPU Quota Limit**\n\nYou have exceeded the anonymous ZeroGPU compute quota. Please click **HF Token** in the top bar to provide your free Hugging Face User Access Token (from https://huggingface.co/settings/tokens).",
+              retryAfter: 120
+            };
+          }
+          if (callResp.ok) {
+            var callData = await callResp.json();
+            var eventId = callData.event_id;
+            if (eventId) {
+              var streamResp = await fetch(hfEndpoint + "/call/generate_vajra_reply/" + eventId, {
+                headers: directHeaders,
+                signal: AbortSignal.timeout(60000)
+              });
+              if (streamResp.ok && streamResp.body) {
+                var reader = streamResp.body.getReader();
+                var decoder = new TextDecoder("utf-8");
+                var buffer = "";
+                var isComplete = false;
+                while (true) {
+                  var chunk = await reader.read();
+                  if (chunk.done) break;
+                  buffer += decoder.decode(chunk.value, { stream: true });
+                  var lines = buffer.split("\n");
+                  buffer = lines.pop() || "";
+                  for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (line.startsWith("event: complete")) {
+                      isComplete = true;
+                    } else if (isComplete && line.startsWith("data:")) {
+                      var payload = JSON.parse(line.substring(5).trim());
+                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
+                        reader.cancel();
+                        return { reply: String(payload[0]).trim() };
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (callErr) {}
+
+        // 2. Gradio Queue Fallback (/queue/join on fn_index 0)
+        try {
+          var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
+          var joinResp = await fetch(hfEndpoint + "/queue/join", {
             method: "POST",
             headers: directHeaders,
             body: JSON.stringify({
-              prompt: fullPrompt,
-              files: contextFiles,
-              max_tokens: 1024
+              data: [fullPrompt],
+              event_data: null,
+              fn_index: 0,
+              session_hash: sessionHash,
+              trigger_id: 7
             }),
-            signal: AbortSignal.timeout(45000)
+            signal: AbortSignal.timeout(15000)
           });
-          if (directFastApiResp.ok) {
-            var directData = await directFastApiResp.json();
-            if (directData && directData.reply) {
-              return { reply: directData.reply };
+          if (joinResp.ok) {
+            var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
+              headers: directHeaders,
+              signal: AbortSignal.timeout(60000)
+            });
+            if (dataStreamResp.ok && dataStreamResp.body) {
+              var qReader = dataStreamResp.body.getReader();
+              var qDecoder = new TextDecoder("utf-8");
+              var qBuffer = "";
+              while (true) {
+                var qChunk = await qReader.read();
+                if (qChunk.done) break;
+                qBuffer += qDecoder.decode(qChunk.value, { stream: true });
+                var qLines = qBuffer.split("\n");
+                qBuffer = qLines.pop() || "";
+                for (var j = 0; j < qLines.length; j++) {
+                  var qLine = qLines[j].trim();
+                  if (qLine.startsWith("data:")) {
+                    var msgObj = JSON.parse(qLine.substring(5).trim());
+                    if (msgObj.msg === "process_completed") {
+                      qReader.cancel();
+                      var out = msgObj.output || {};
+                      if (out.error) {
+                        var errText = String(out.error);
+                        var isQuota = errText.toLowerCase().includes("quota") || errText.toLowerCase().includes("zerogpu");
+                        return {
+                          isRateLimited: isQuota,
+                          reply: "⚠️ **Hugging Face ZeroGPU Quota**\n\n" + errText + "\n\n💡 *Tip: Click 'HF Token' in the top bar to authenticate with your free Hugging Face account and bypass anonymous limits.*",
+                          retryAfter: 120
+                        };
+                      }
+                      var d = out.data || [];
+                      if (d.length > 0 && d[0]) {
+                        return { reply: String(d[0]).trim() };
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
-        } catch (fastApiErr) {}
+        } catch (queueErr) {}
 
-        // 2. Legacy Gradio Queue Fallback
-        var callResp = await fetch(hfEndpoint + "/call/chat", {
-          method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({ data: [fullPrompt, []] }),
-          signal: AbortSignal.timeout(15000)
-        });
-        if (callResp.status === 429) {
-          return {
-            isRateLimited: true,
-            reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-            retryAfter: 120
-          };
-        }
-        if (!callResp.ok) return null;
-        var callData = await callResp.json();
-        var eventId = callData.event_id;
-        if (!eventId) return null;
-
-        var streamResp = await fetch(hfEndpoint + "/call/chat/" + eventId, {
-          headers: directHeaders,
-          signal: AbortSignal.timeout(35000)
-        });
-        if (streamResp.status === 429) {
-          return {
-            isRateLimited: true,
-            reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-            retryAfter: 120
-          };
-        }
-        if (!streamResp.ok || !streamResp.body) return null;
-        var reader = streamResp.body.getReader();
-        var decoder = new TextDecoder("utf-8");
-        var buffer = "";
-        var isComplete = false;
-        var isError = false;
-
-        while (true) {
-          var chunk = await reader.read();
-          if (chunk.done) break;
-          buffer += decoder.decode(chunk.value, { stream: true });
-          var lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i].trim();
-            if (line.startsWith("event: complete")) {
-              isComplete = true;
-            } else if (isComplete && line.startsWith("data:")) {
-              var payload = JSON.parse(line.substring(5).trim());
-              if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
-                reader.cancel();
-                return { reply: payload[0] };
-              }
-            } else if (line.startsWith("event: error")) {
-              isError = true;
-            } else if (isError && line.startsWith("data:")) {
-              var errData = line.substring(5).trim();
-              var lowerErr = errData.toLowerCase();
-              var isQuota = lowerErr.includes("quota") || lowerErr.includes("rate limit") || lowerErr.includes("too many") || lowerErr.includes("exceeded") || lowerErr.includes("429");
-              reader.cancel();
-              if (isQuota) {
-                return {
-                  isRateLimited: true,
-                  reply: "⚠️ **Inference Quota Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait approximately **2 minutes** before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-                  retryAfter: 120
-                };
-              }
-              return null;
-            }
-          }
-        }
       } catch (e) {}
       return null;
     }
@@ -4294,6 +4381,7 @@ function appendSessionMessage(role, contentHtml) {
     renderSidebarSessions();
     renderActiveSessionWorkspace();
     renderSidebarArtifacts();
+    window.updateHfTokenStatusUI();
 
   })();
   </script>
