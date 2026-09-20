@@ -18,9 +18,24 @@ CHAT_HTML = r"""<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- KaTeX Mathematical Formula Rendering Engine -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
   <style>
     /* ─── PURE BLACK TRUE DARK THEME (Zero Blue) ─── */
+    .katex {
+      font-size: 1.06em;
+      color: inherit;
+    }
+    .katex-display {
+      margin: 0.85rem 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.35rem 0;
+      text-align: center;
+    }
     :root[data-theme="dark"] {
       --bg-base: #000000;
       --bg-sidebar: #080808;
@@ -1805,6 +1820,81 @@ CHAT_HTML = r"""<!DOCTYPE html>
       if (el) el.remove();
     }
 
+    function renderMath(targetEl) {
+      if (!targetEl) return;
+      if (window.renderMathInElement) {
+        try {
+          renderMathInElement(targetEl, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "\\[", right: "\\]", display: true },
+              { left: "\\(", right: "\\)", display: false },
+              { left: "$", right: "$", display: false }
+            ],
+            throwOnError: false
+          });
+        } catch (e) {}
+      } else {
+        window.addEventListener("DOMContentLoaded", function() { renderMath(targetEl); }, { once: true });
+        window.addEventListener("load", function() { renderMath(targetEl); }, { once: true });
+      }
+    }
+
+    function formatBotMarkdown(rawText) {
+      if (!rawText) return "";
+      var text = rawText;
+
+      text = text.replace(/\\\\[([\\s\\S]*?)\\\\]/g, function(match, formula) {
+        return "\\[ " + formula.trim().replace(/\r?\n/g, " ") + " \\]";
+      });
+      text = text.replace(/\$\$([\\s\\S]*?)\$\$/g, function(match, formula) {
+        return "$$ " + formula.trim().replace(/\r?\n/g, " ") + " $$";
+      });
+
+      var codeBlocks = [];
+      text = text.replace(/```([a-zA-Z0-9_-]*)\s*([\\s\\S]*?)```/g, function(match, lang, code) {
+        var placeholder = "___CODEBLOCK_" + codeBlocks.length + "___";
+        codeBlocks.push({ lang: lang || "", code: code });
+        return placeholder;
+      });
+
+      var inlineCodes = [];
+      text = text.replace(/`([^`\n]+)`/g, function(match, code) {
+        var placeholder = "___INLINECODE_" + inlineCodes.length + "___";
+        inlineCodes.push(code);
+        return placeholder;
+      });
+
+      text = text.replace(/^### (.*$)/gim, "<h4 style='margin:0.75rem 0 0.25rem 0; font-weight:700; color:var(--text-primary);'>$1</h4>");
+      text = text.replace(/^## (.*$)/gim, "<h3 style='margin:0.85rem 0 0.35rem 0; font-weight:700; color:var(--text-primary);'>$1</h3>");
+      text = text.replace(/^# (.*$)/gim, "<h2 style='margin:1rem 0 0.5rem 0; font-weight:700; color:var(--text-primary);'>$1</h2>");
+
+      text = text.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+      text = text.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<i>$2</i>$3");
+
+      text = text.replace(/^[*-]\s+(.*$)/gim, "<li style='margin-left:1.2rem; list-style-type:disc;'>$1</li>");
+      text = text.replace(/^(\d+)\.\s+(.*$)/gim, "<div style='margin-left:0.25rem; margin-top:0.35rem;'><b>$1.</b> $2</div>");
+
+      text = text.replace(/\n\n/g, "</p><p style='margin-top:0.65rem;'>");
+      text = text.replace(/\n/g, "<br>");
+
+      text = text.replace(/___INLINECODE_(\d+)___/g, function(match, idx) {
+        var code = inlineCodes[parseInt(idx, 10)] || "";
+        return "<code style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em;'>" +
+          code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</code>";
+      });
+
+      text = text.replace(/___CODEBLOCK_(\d+)___/g, function(match, idx) {
+        var item = codeBlocks[parseInt(idx, 10)];
+        if (!item) return "";
+        var escaped = item.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return "<pre style='background:#050505; border:1px solid var(--border-subtle); border-radius:8px; padding:12px; margin:10px 0; overflow-x:auto; font-family:JetBrains Mono,monospace; font-size:0.85rem;'><code class='language-" +
+          (item.lang || "text") + "'>" + escaped + "</code></pre>";
+      });
+
+      return "<p>" + text + "</p>";
+    }
+
     function appendSessionMessage(role, contentHtml) {
       removeTypingIndicator();
       var sess = getActiveSession();
@@ -1825,6 +1915,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
         '<div class="msg-card">' + contentHtml + '</div>';
 
       stream.appendChild(group);
+      renderMath(group);
       stream.scrollTop = stream.scrollHeight;
       return group;
     }
@@ -2080,11 +2171,8 @@ CHAT_HTML = r"""<!DOCTYPE html>
       })
       .then(function (data) {
         if (data && data.reply) {
-          var formatted = escapeHtml(data.reply)
-            .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
-            .replace(/\n/g, "<br>")
-            .replace(/`([^`]+)`/g, "<code>$1</code>");
-          appendSessionMessage("bot", "<p>" + formatted + "</p>");
+          var formatted = formatBotMarkdown(data.reply);
+          appendSessionMessage("bot", formatted);
         } else {
           throw new Error("Empty response");
         }
