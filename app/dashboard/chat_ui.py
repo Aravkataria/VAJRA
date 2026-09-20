@@ -1844,7 +1844,6 @@ CHAT_HTML = r"""<!DOCTYPE html>
       if (!rawText) return "";
       var text = rawText;
 
-<<<<<<< HEAD
       // 1. Normalize multiline block math so newlines don't get broken by <br>
       text = text.replace(/\\\[([\s\S]*?)\\\]/g, function(match, formula) {
         return "\\[ " + formula.trim().replace(/\r?\n/g, " ") + " \\]";
@@ -1856,26 +1855,12 @@ CHAT_HTML = r"""<!DOCTYPE html>
       // 2. Protect code blocks
       var codeBlocks = [];
       text = text.replace(/```([a-zA-Z0-9_-]*)\s*([\s\S]*?)```/g, function(match, lang, code) {
-=======
-      text = text.replace(/\\\\[([\\s\\S]*?)\\\\]/g, function(match, formula) {
-        return "\\[ " + formula.trim().replace(/\r?\n/g, " ") + " \\]";
-      });
-      text = text.replace(/\$\$([\\s\\S]*?)\$\$/g, function(match, formula) {
-        return "$$ " + formula.trim().replace(/\r?\n/g, " ") + " $$";
-      });
-
-      var codeBlocks = [];
-      text = text.replace(/```([a-zA-Z0-9_-]*)\s*([\\s\\S]*?)```/g, function(match, lang, code) {
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
         var placeholder = "___CODEBLOCK_" + codeBlocks.length + "___";
         codeBlocks.push({ lang: lang || "", code: code });
         return placeholder;
       });
 
-<<<<<<< HEAD
       // 3. Protect inline code
-=======
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
       var inlineCodes = [];
       text = text.replace(/`([^`\n]+)`/g, function(match, code) {
         var placeholder = "___INLINECODE_" + inlineCodes.length + "___";
@@ -1883,15 +1868,11 @@ CHAT_HTML = r"""<!DOCTYPE html>
         return placeholder;
       });
 
-<<<<<<< HEAD
       // 4. Headers
-=======
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
       text = text.replace(/^### (.*$)/gim, "<h4 style='margin:0.75rem 0 0.25rem 0; font-weight:700; color:var(--text-primary);'>$1</h4>");
       text = text.replace(/^## (.*$)/gim, "<h3 style='margin:0.85rem 0 0.35rem 0; font-weight:700; color:var(--text-primary);'>$1</h3>");
       text = text.replace(/^# (.*$)/gim, "<h2 style='margin:1rem 0 0.5rem 0; font-weight:700; color:var(--text-primary);'>$1</h2>");
 
-<<<<<<< HEAD
       // 5. Bold & Italic
       text = text.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
       text = text.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<i>$2</i>$3");
@@ -1907,27 +1888,13 @@ CHAT_HTML = r"""<!DOCTYPE html>
       text = text.replace(/\n/g, "<br>");
 
       // 9. Restore inline code
-=======
-      text = text.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
-      text = text.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<i>$2</i>$3");
-
-      text = text.replace(/^[*-]\s+(.*$)/gim, "<li style='margin-left:1.2rem; list-style-type:disc;'>$1</li>");
-      text = text.replace(/^(\d+)\.\s+(.*$)/gim, "<div style='margin-left:0.25rem; margin-top:0.35rem;'><b>$1.</b> $2</div>");
-
-      text = text.replace(/\n\n/g, "</p><p style='margin-top:0.65rem;'>");
-      text = text.replace(/\n/g, "<br>");
-
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
       text = text.replace(/___INLINECODE_(\d+)___/g, function(match, idx) {
         var code = inlineCodes[parseInt(idx, 10)] || "";
         return "<code style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em;'>" +
           code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</code>";
       });
 
-<<<<<<< HEAD
       // 10. Restore code blocks
-=======
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
       text = text.replace(/___CODEBLOCK_(\d+)___/g, function(match, idx) {
         var item = codeBlocks[parseInt(idx, 10)];
         if (!item) return "";
@@ -1939,11 +1906,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
       return "<p>" + text + "</p>";
     }
 
-<<<<<<< HEAD
-function appendSessionMessage(role, contentHtml) {
-=======
     function appendSessionMessage(role, contentHtml) {
->>>>>>> 80fbe52c50177c41f7becd3acc929c2772052592
       removeTypingIndicator();
       var sess = getActiveSession();
       var timeStr = new Date().toLocaleTimeString();
