@@ -9,4 +9,3 @@ accelerate>=0.30.0
 gradio==4.44.1
 uvicorn>=0.27.0
 pydantic>=2.6.0
-audioop-lts
