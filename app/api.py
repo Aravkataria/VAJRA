@@ -846,12 +846,13 @@ async def chat_api(req: ChatRequest, request: Request):
             })
 
     # 0. Cascading Complexity Router:
+    hf_token = req.hf_token or request.headers.get("X-HF-Token") or os.environ.get("HF_TOKEN")
     tier, tier_config, route_reason = route_query(prompt_clean, req.files, req.model)
 
     # Tier 1 (Ultra-Lite): For general STEM, definitions, syntax, or lightweight prompts
     if tier == ModelTier.ULTRA_LITE:
         ultra_engine = get_ultra_lite_engine()
-        ultra_reply = await asyncio.to_thread(ultra_engine.generate, prompt_clean)
+        ultra_reply = await asyncio.to_thread(ultra_engine.generate, prompt_clean, 1024, hf_token)
         if ultra_reply:
             return JSONResponse({
                 "success": True,
@@ -864,7 +865,6 @@ async def chat_api(req: ChatRequest, request: Request):
             })
 
     # 1. Query live Fine-Tuned Model (AravKataria/vajra-lora) running on HF Spaces
-    hf_token = req.hf_token or request.headers.get("X-HF-Token") or os.environ.get("HF_TOKEN")
     model_res = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files, hf_token)
     if model_res and model_res.get("reply"):
         return JSONResponse({

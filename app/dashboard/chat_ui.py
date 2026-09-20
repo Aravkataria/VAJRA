@@ -1906,11 +1906,11 @@ CHAT_HTML = r"""<!DOCTYPE html>
       return "<p>" + text + "</p>";
     }
 
-    function appendSessionMessage(role, contentHtml) {
+    function appendSessionMessage(role, contentHtml, tierBadge) {
       removeTypingIndicator();
       var sess = getActiveSession();
       var timeStr = new Date().toLocaleTimeString();
-      sess.messages.push({ role: role, html: contentHtml, time: timeStr });
+      sess.messages.push({ role: role, html: contentHtml, time: timeStr, tier: tierBadge });
       saveSessions();
 
       var hero = document.getElementById("ledgerHero");
@@ -1920,7 +1920,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
       var group = document.createElement("div");
       group.className = "msg-group " + role;
 
-      var label = role === "user" ? "USER INSTRUCTION" : "VAJRA REASONING AUDIT";
+      var label = role === "user" ? "USER INSTRUCTION" : (tierBadge || "VAJRA REASONING AUDIT");
       group.innerHTML =
         '<div class="msg-header"><span>[' + label + ']</span> <span>' + timeStr + '</span></div>' +
         '<div class="msg-card">' + contentHtml + '</div>';
@@ -2183,7 +2183,17 @@ CHAT_HTML = r"""<!DOCTYPE html>
       .then(function (data) {
         if (data && data.reply) {
           var formatted = formatBotMarkdown(data.reply);
-          appendSessionMessage("bot", formatted);
+          var badge = "";
+          if (data.tier === "ultra_lite" || data.tier === "ultra_lite_fallback") {
+            badge = "VAJRA ULTRA-LITE [0.5B]";
+          } else if (data.tier === "standard") {
+            badge = "VAJRA STANDARD [7B]";
+          } else if (data.tier === "max") {
+            badge = "VAJRA MAX [7B LoRA]";
+          } else if (data.model) {
+            badge = data.model;
+          }
+          appendSessionMessage("bot", formatted, badge);
         } else {
           throw new Error("Empty response");
         }

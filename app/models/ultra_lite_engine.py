@@ -67,6 +67,76 @@ STEM_FOUNDATIONS = {
         "3. **Third Law (Action & Reaction)**: Every action has an equal and opposite reaction:\n"
         r"   $$\vec{F}_{A \to B} = -\vec{F}_{B \to A}$$"
     ),
+    "binary search": (
+        "### Binary Search Algorithm\n\n"
+        "**What Is It?**\n"
+        "Binary search is an efficient divide-and-conquer search algorithm that finds the position of a target value within a **sorted array**.\n\n"
+        "**How It Works:**\n"
+        "1. Compare the target value to the middle element of the array.\n"
+        "2. If equal, search is complete.\n"
+        "3. If target is less than the middle element, continue search on the left subarray.\n"
+        "4. If target is greater, continue search on the right subarray.\n"
+        "5. Repeat until the target is found or the subarray is empty.\n\n"
+        "**Time & Space Complexity:**\n"
+        r"- **Time Complexity:** $O(\log n)$ (halves search space every step)" "\n"
+        r"- **Space Complexity:** $O(1)$ iterative, $O(\log n)$ recursive" "\n\n"
+        "**Python Implementation:**\n"
+        "```python\n"
+        "def binary_search(arr, target):\n"
+        "    left, right = 0, len(arr) - 1\n"
+        "    while left <= right:\n"
+        "        mid = (left + right) // 2\n"
+        "        if arr[mid] == target:\n"
+        "            return mid\n"
+        "        elif arr[mid] < target:\n"
+        "            left = mid + 1\n"
+        "        else:\n"
+        "            right = mid - 1\n"
+        "    return -1\n"
+        "```"
+    ),
+    "quicksort": (
+        "### Quicksort Algorithm\n\n"
+        "**What Is It?**\n"
+        "Developed by British computer scientist Tony Hoare in 1959, Quicksort is an in-place, divide-and-conquer sorting algorithm.\n\n"
+        "**How It Works:**\n"
+        "1. Select a 'pivot' element from the array.\n"
+        "2. Partition the other elements into two sub-arrays according to whether they are less than or greater than the pivot.\n"
+        "3. Recursively apply the process to the sub-arrays.\n\n"
+        "**Complexity:**\n"
+        r"- **Average Time:** $O(n \log n)$" "\n"
+        r"- **Worst-case Time:** $O(n^2)$ (mitigated with randomized/median-of-three pivot)" "\n"
+        r"- **Auxiliary Space:** $O(\log n)$ call stack"
+    ),
+    "big o": (
+        "### Big-O Notation & Computational Complexity\n\n"
+        "**What Is It?**\n"
+        "Big-O notation describes the limiting behavior of a function when the argument tends towards infinity, classifying algorithms according to how their run time or space requirements grow as the input size $n$ grows.\n\n"
+        "**Common Time Complexities (Fastest to Slowest):**\n"
+        r"- $O(1)$: Constant (e.g. Hash map lookup, array indexing)" "\n"
+        r"- $O(\log n)$: Logarithmic (e.g. Binary search)" "\n"
+        r"- $O(n)$: Linear (e.g. Linear scan through an array)" "\n"
+        r"- $O(n \log n)$: Linearithmic (e.g. Mergesort, Quicksort, Timsort)" "\n"
+        r"- $O(n^2)$: Quadratic (e.g. Nested loops, Bubble sort)" "\n"
+        r"- $O(2^n)$: Exponential (e.g. Recursive Fibonacci without memoization)" "\n"
+        r"- $O(n!)$: Factorial (e.g. Traveling Salesperson brute-force)"
+    ),
+    "rest api": (
+        "### REST API (Representational State Transfer)\n\n"
+        "**What Is It?**\n"
+        "Defined by Roy Fielding in 2000, REST is an architectural style for distributed hypermedia systems communicating over HTTP.\n\n"
+        "**Core Principles:**\n"
+        "1. **Client-Server Architecture**: Separation of concerns between client UI and server storage.\n"
+        "2. **Stateless**: Each request from client to server must contain all of the information necessary to understand and process the request.\n"
+        "3. **Cacheable**: Responses must define themselves as cacheable or non-cacheable.\n"
+        "4. **Uniform Interface**: Resources identified by URIs; standard HTTP verbs (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`).\n\n"
+        "**Standard HTTP Methods:**\n"
+        "- `GET`: Retrieve resource representation (Idempotent, Safe)\n"
+        "- `POST`: Create a new resource or process data\n"
+        "- `PUT`: Replace resource state entirely (Idempotent)\n"
+        "- `PATCH`: Partial modification of resource state\n"
+        "- `DELETE`: Remove resource (Idempotent)"
+    ),
 }
 
 
@@ -120,7 +190,12 @@ class UltraLiteEngine:
             self._load_failed = True
             return False
 
-    def generate(self, prompt: str, max_tokens: int = 1024) -> Optional[str]:
+    def generate(
+        self,
+        prompt: str,
+        max_tokens: int = 1024,
+        hf_token: Optional[str] = None,
+    ) -> Optional[str]:
         cache_key = prompt.lower().strip()
         now = time.time()
         if cache_key in _ultra_lite_cache:
@@ -128,7 +203,7 @@ class UltraLiteEngine:
             if now - ts < CACHE_TTL:
                 return cached
 
-        # 0. Check fast foundational STEM topics (Sub-millisecond latency, zero RAM)
+        # 0. Check foundational STEM & Computer Science knowledge base
         for keyword, synthesis in STEM_FOUNDATIONS.items():
             if keyword in cache_key:
                 _ultra_lite_cache[cache_key] = (now, synthesis)
@@ -168,8 +243,8 @@ class UltraLiteEngine:
                 logger.warning(f"Local 0.5B inference error: {e}")
 
         # 2. Try Hugging Face Free Serverless Inference API (0 MB local RAM, 100% free)
-        hf_token = os.environ.get("HF_TOKEN")
-        if hf_token:
+        token = hf_token or os.environ.get("HF_TOKEN")
+        if token:
             try:
                 import json
                 import urllib.request
@@ -177,7 +252,7 @@ class UltraLiteEngine:
                 headers = {
                     "Content-Type": "application/json",
                     "User-Agent": "VAJRA-UltraLite-Router/1.0",
-                    "Authorization": f"Bearer {hf_token}",
+                    "Authorization": f"Bearer {token}",
                 }
 
                 api_url = f"https://router.huggingface.co/hf-inference/models/{ULTRA_LITE_MODEL_ID}"
@@ -199,8 +274,8 @@ class UltraLiteEngine:
                             if gen_text:
                                 _ultra_lite_cache[cache_key] = (now, gen_text)
                                 return gen_text
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"HF Router inference error: {e}")
 
         return None
 
