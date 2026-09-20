@@ -1,16 +1,14 @@
 ---
-title: VAJRA Inference Gateway
-emoji: 🛡️
-colorFrom: yellow
+title: VAJRA
+emoji: ⚡
+colorFrom: purple
 colorTo: blue
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 4.44.1
+app_file: app.py
 pinned: false
 license: apache-2.0
 ---
 
-# 🛡️ VAJRA Autonomous Cyber-Reasoning Engine & Inference Gateway
-
-High-performance, 24/7 dedicated FastAPI inference gateway for **VAJRA**, engineered by **Arav Kataria**.
-
-Powered by **Qwen2.5-Coder-7B** on Hugging Face Spaces with **16 GB RAM**.
+# 🛡️ VAJRA Cyber-Reasoning Engine & API Gateway
+Fine-Tuned by Arav Kataria | ZeroGPU | FastAPI + Gradio
