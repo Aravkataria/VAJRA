@@ -45,6 +45,8 @@ from app.services.cache_manager import get_cache
 from app.services.model_manager import get_model_manager
 from app.storage.db import get_db
 from app.verification.verifier import build_default_verifier
+from app.models import ModelTier, route_query
+from app.models.ultra_lite_engine import get_ultra_lite_engine
 
 # Application-level singletons
 model_manager = get_model_manager()
@@ -843,6 +845,24 @@ async def chat_api(req: ChatRequest, request: Request):
                 "model": "VAJRA-Cyber-Reasoning",
             })
 
+    # 0. Cascading Complexity Router:
+    tier, tier_config, route_reason = route_query(prompt_clean, req.files, req.model)
+
+    # Tier 1 (Ultra-Lite): For general STEM, definitions, syntax, or lightweight prompts
+    if tier == ModelTier.ULTRA_LITE:
+        ultra_engine = get_ultra_lite_engine()
+        ultra_reply = await asyncio.to_thread(ultra_engine.generate, prompt_clean)
+        if ultra_reply:
+            return JSONResponse({
+                "success": True,
+                "reply": ultra_reply,
+                "model": "VAJRA-Ultra-Lite (Qwen2.5-Coder-0.5B)",
+                "tier": tier.value,
+                "route_reason": route_reason,
+                "shield": "Zero-Retention Verified",
+                "source": "ultra-lite-model",
+            })
+
     # 1. Query live Fine-Tuned Model (AravKataria/vajra-lora) running on HF Spaces
     hf_token = req.hf_token or request.headers.get("X-HF-Token") or os.environ.get("HF_TOKEN")
     model_res = await asyncio.to_thread(query_vajra_fine_tuned_model, prompt_clean, req.files, hf_token)
@@ -851,12 +871,26 @@ async def chat_api(req: ChatRequest, request: Request):
             "success": True,
             "reply": model_res["reply"],
             "model": "AravKataria/vajra-lora (Fine-Tuned Qwen2.5-Coder-7B)",
+            "tier": tier.value,
             "shield": "Zero-Retention Verified",
             "source": "fine-tuned-model",
         })
 
     # If the upstream inference engine is rate limited or GPU quota exhausted:
     if model_res and model_res.get("rate_limited"):
+        # Attempt emergency Ultra-Lite fallback so user receives an answer instead of being blocked
+        ultra_engine = get_ultra_lite_engine()
+        emergency_reply = await asyncio.to_thread(ultra_engine.generate, prompt_clean)
+        if emergency_reply:
+            return JSONResponse({
+                "success": True,
+                "reply": emergency_reply,
+                "model": "VAJRA-Ultra-Lite (Automatic Quota Fallback)",
+                "tier": "ultra_lite_fallback",
+                "shield": "Quota-Protection Active",
+                "source": "ultra-lite-fallback",
+            })
+
         retry_sec = min(model_res.get("retry_after") or 30, 30)
 
         return JSONResponse({
