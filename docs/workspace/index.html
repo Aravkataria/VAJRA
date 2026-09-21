@@ -4217,7 +4217,7 @@
           method: "POST",
           headers: directHeaders,
           body: JSON.stringify({ data: [userPrompt] }),
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(15000)
         });
         if (callResp.ok) {
           var callData = await callResp.json();
@@ -4225,7 +4225,7 @@
           if (eventId) {
             var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply/" + eventId, {
               headers: directHeaders,
-              signal: AbortSignal.timeout(6000)
+              signal: AbortSignal.timeout(60000)
             });
             if (streamResp.ok && streamResp.body) {
               var reader = streamResp.body.getReader();
