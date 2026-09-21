@@ -4330,12 +4330,27 @@
     }
 
     async function tryFastDraftQuery(userPrompt, directHeaders) {
+      // 1. Direct FastAPI /api/draft (Fastest, ~1.5s, zero Gradio SSE overhead)
+      try {
+        var dResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/api/draft", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ prompt: userPrompt, data: [userPrompt] }),
+          signal: getActiveSignal(8000)
+        });
+        if (dResp.ok) {
+          var dData = await dResp.json();
+          if (dData && dData.reply) return String(dData.reply).trim();
+        }
+      } catch (e) {}
+
+      // 2. Gradio 4 SSE Endpoint (/call/generate_draft_reply)
       try {
         var callResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply", {
           method: "POST",
           headers: directHeaders,
           body: JSON.stringify({ data: [userPrompt] }),
-          signal: getActiveSignal(15000)
+          signal: getActiveSignal(10000)
         });
         if (callResp.ok) {
           var callData = await callResp.json();
@@ -4343,7 +4358,7 @@
           if (eventId) {
             var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply/" + eventId, {
               headers: directHeaders,
-              signal: getActiveSignal(60000)
+              signal: getActiveSignal(25000)
             });
             if (streamResp.ok && streamResp.body) {
               var reader = streamResp.body.getReader();
@@ -4373,20 +4388,6 @@
         }
       } catch (e) {}
 
-      // Fallback: try FastAPI /api/draft on 2 vCPU space
-      try {
-        var dResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/api/draft", {
-          method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({ prompt: userPrompt }),
-          signal: getActiveSignal(6000)
-        });
-        if (dResp.ok) {
-          var dData = await dResp.json();
-          if (dData && dData.reply) return dData.reply;
-        }
-      } catch (e) {}
-
       return null;
     }
 
@@ -4410,7 +4411,7 @@
         }
 
         // Check if user provided an HF Token (for instant ZeroGPU acceleration) or query is high complexity
-        var isComplex = Boolean(storedHfToken) || fullPrompt.length > 500 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|exploit|cwe-\d+|vulnerability|disassembl|audit\s+this/i.test(fullPrompt);
+        var isComplex = Boolean(storedHfToken) || fullPrompt.length > 500 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|integrate|matrix|equation|exploit|cwe-\d+|vulnerability|disassembl|audit\s+this/i.test(fullPrompt);
 
         if (isComplex) {
           // Complex queries -> Route to ZeroGPU A10G burst first (<9s latency)
@@ -4419,9 +4420,9 @@
               VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              35000,
+              25000,
               function(chunk) {
-                if (onToken) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
               }
             );
             if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) {
@@ -4433,15 +4434,15 @@
             }
           } catch (gpuErr) {}
 
-          // Fallback to 2 vCPU if ZeroGPU unavailable
+          // Fallback to 2 vCPU if ZeroGPU unavailable (Max 42s ceiling)
           try {
             var vcpuRes = await _executeSingleHfSpaceQuery(
               VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              240000,
+              42000,
               function(chunk) {
-                if (onToken) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
               }
             );
             if (vcpuRes && vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes.isRateLimited) {
@@ -4454,15 +4455,15 @@
           } catch (vcpuErr) {}
 
         } else {
-          // Standard queries -> Route to 2 vCPU Space first (saving ZeroGPU quota)
+          // Standard queries -> Route to 2 vCPU Space with max 42s ceiling (saving ZeroGPU quota)
           try {
             var vcpuRes2 = await _executeSingleHfSpaceQuery(
               VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              240000,
+              42000,
               function(chunk) {
-                if (onToken) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
               }
             );
             if (vcpuRes2 && vcpuRes2.reply) {
@@ -4477,15 +4478,15 @@
             }
           } catch (vcpuErr) {}
 
-          // Overflow to ZeroGPU if 2 vCPU is busy
+          // Overflow to ZeroGPU if 2 vCPU is busy or timed out
           try {
             var gpuRes2 = await _executeSingleHfSpaceQuery(
               VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              35000,
+              25000,
               function(chunk) {
-                if (onToken) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
               }
             );
             if (gpuRes2 && gpuRes2.reply && !gpuRes2.isRateLimited) {
@@ -5187,17 +5188,17 @@
         var isDeepResolved = false;
         var draftReplyText = null;
 
-        // Hard Ceiling Timer: Dissolves glass at second 75 so user NEVER waits until second 91
+        // Hard Ceiling Timer: Dissolves glass at second 45 so user NEVER waits until second 91
         var glassCeilingTimer = setTimeout(function() {
           if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
-            console.warn("⏱️ [VAJRA Guard] 75s Ceiling reached: dissolving glass overlay and presenting draft response.");
+            console.warn("⏱️ [VAJRA Guard] 45s Ceiling reached: dissolving glass overlay and presenting draft response.");
             typewriter.removeGlassOverlay();
             typewriter.updateBadge("VAJRA SPECULATIVE [0.5B]");
             if (draftReplyText) {
               typewriter.finish(draftReplyText, { tier: "ultra_lite", model: "VAJRA SPECULATIVE [0.5B]" });
             }
           }
-        }, 75000);
+        }, 45000);
 
         // Launch Channel A in background
         var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
@@ -5218,7 +5219,7 @@
 
         // Handle streaming chunks from Channel B (if available)
         function handleStreamChunk(chunkText, badge) {
-          if (!chunkText || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+          if (!chunkText || chunkText.trim().length === 0 || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
             return;
           }
           if (!typewriter) {

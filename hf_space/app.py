@@ -400,8 +400,15 @@ async def chat_api(req: ChatRequest, request: Request):
     })
 
 @demo.app.post("/api/draft")
-async def draft_api(req: ChatRequest):
-    reply = generate_ultra_lite_reply(req.prompt)
+async def draft_api(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    p = body.get("prompt", "")
+    if not p and isinstance(body.get("data"), list) and len(body["data"]) > 0:
+        p = str(body["data"][0])
+    reply = generate_ultra_lite_reply(str(p).strip()) if p else ""
     return JSONResponse({
         "success": bool(reply),
         "reply": reply,
