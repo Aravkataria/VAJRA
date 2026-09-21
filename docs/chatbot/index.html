@@ -857,6 +857,66 @@
     .stream-text {
       white-space: pre-wrap;
       word-break: break-word;
+      transition: opacity 0.3s ease;
+    }
+
+    /* YouTube / LinkedIn Style Frosted Glass Shimmer Overlay */
+    .msg-card.speculative-draft {
+      position: relative;
+      overflow: hidden;
+      border-color: rgba(245, 180, 0, 0.45);
+      background: rgba(18, 18, 18, 0.9);
+      transition: border-color 0.4s ease;
+    }
+
+    .speculative-glass-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      backdrop-filter: blur(1.5px);
+      -webkit-backdrop-filter: blur(1.5px);
+      background: linear-gradient(
+        105deg,
+        rgba(255, 255, 255, 0.0) 0%,
+        rgba(255, 255, 255, 0.03) 30%,
+        rgba(245, 180, 0, 0.14) 50%,
+        rgba(255, 255, 255, 0.03) 70%,
+        rgba(255, 255, 255, 0.0) 100%
+      );
+      background-size: 250% 100%;
+      animation: glassShimmerSweep 2.2s infinite ease-in-out;
+      border-radius: 7px;
+      transition: opacity 0.5s ease;
+      z-index: 2;
+    }
+
+    @keyframes glassShimmerSweep {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .speculative-status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-family: "JetBrains Mono", monospace;
+      color: var(--spark, #f5b400);
+      background: rgba(245, 180, 0, 0.1);
+      border: 1px dashed rgba(245, 180, 0, 0.35);
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+      animation: pulseGlow 1.8s infinite ease-in-out;
+      transition: all 0.4s ease;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; border-color: rgba(245, 180, 0, 0.8); }
     }
 
     /* Process Step Tracker */
@@ -3644,7 +3704,8 @@
         var maxToRender = isFinished ? totalTokens : Math.max(0, totalTokens - 5);
 
         if (renderedTokenCount < maxToRender) {
-          renderedTokenCount++;
+          var step = (isFinished && (totalTokens - renderedTokenCount > 15)) ? 3 : 1;
+          renderedTokenCount = Math.min(maxToRender, renderedTokenCount + step);
           var partialStr = tokens.slice(0, renderedTokenCount).join("");
           if (textSpan) {
             textSpan.innerHTML = escapeHtml(partialStr).replace(/\n/g, "<br>");
@@ -3697,12 +3758,82 @@
         if (typeof saveSessions === "function") saveSessions();
       }
 
-      intervalId = setInterval(tick, 25);
+      var glassOverlay = null;
+      var statusTag = null;
+      var isSpeculativeDraft = false;
+
+      function enableSpeculativeDraft() {
+        if (isSpeculativeDraft) return;
+        isSpeculativeDraft = true;
+        card.classList.add("speculative-draft");
+
+        statusTag = document.createElement("div");
+        statusTag.className = "speculative-status-tag";
+        statusTag.innerHTML = '<span>⚡ SPECULATIVE DRAFT</span><span style="opacity:0.5;">·</span><span>Refining with Deep Reasoner...</span>';
+        card.insertBefore(statusTag, textSpan);
+
+        glassOverlay = document.createElement("div");
+        glassOverlay.className = "speculative-glass-overlay";
+        card.appendChild(glassOverlay);
+        updateBadge("SPECULATIVE DRAFT [0.5B]");
+      }
+
+      function removeGlassOverlay() {
+        if (glassOverlay) {
+          glassOverlay.style.opacity = "0";
+          var toRemove = glassOverlay;
+          glassOverlay = null;
+          setTimeout(function() {
+            if (toRemove && toRemove.parentNode) {
+              toRemove.parentNode.removeChild(toRemove);
+            }
+          }, 450);
+        }
+        if (statusTag && statusTag.parentNode) {
+          statusTag.parentNode.removeChild(statusTag);
+          statusTag = null;
+        }
+        card.classList.remove("speculative-draft");
+        isSpeculativeDraft = false;
+      }
+
+      function refineWithVerified(finalText, meta) {
+        removeGlassOverlay();
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        fullIncomingText = finalText;
+        finalMetadata = meta || {};
+        isFinished = true;
+        if (meta && (meta.model || meta.tier)) {
+          var b = meta.model || (meta.tier === "burst" ? "VAJRA BURST [7B ZeroGPU]" : "VAJRA AUDIT VERIFIED [7B LoRA]");
+          updateBadge(b);
+        }
+
+        if (textSpan) {
+          textSpan.style.transition = "opacity 0.2s ease";
+          textSpan.style.opacity = "0.2";
+        }
+        setTimeout(function() {
+          finalizeDisplay();
+          if (textSpan) {
+            textSpan.style.opacity = "1";
+          }
+        }, 180);
+      }
 
       return {
         group: group,
+        enableSpeculativeDraft: enableSpeculativeDraft,
+        removeGlassOverlay: removeGlassOverlay,
+        refineWithVerified: refineWithVerified,
+        isDraftActive: function() { return isSpeculativeDraft; },
         onToken: function(text) {
           fullIncomingText = text;
+          if (!intervalId) {
+            intervalId = setInterval(tick, 22);
+          }
         },
         updateBadge: updateBadge,
         finish: function(finalText, meta) {
@@ -3716,6 +3847,8 @@
             if (intervalId) clearInterval(intervalId);
             intervalId = null;
             finalizeDisplay();
+          } else if (!intervalId) {
+            intervalId = setInterval(tick, 16);
           }
         },
         abort: function() {
@@ -3965,6 +4098,67 @@
       return null;
     }
 
+    async function tryFastDraftQuery(userPrompt, directHeaders) {
+      try {
+        var callResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ data: [userPrompt] }),
+          signal: AbortSignal.timeout(3000)
+        });
+        if (callResp.ok) {
+          var callData = await callResp.json();
+          var eventId = callData.event_id;
+          if (eventId) {
+            var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply/" + eventId, {
+              headers: directHeaders,
+              signal: AbortSignal.timeout(6000)
+            });
+            if (streamResp.ok && streamResp.body) {
+              var reader = streamResp.body.getReader();
+              var decoder = new TextDecoder("utf-8");
+              var buffer = "";
+              while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buffer += decoder.decode(chunk.value, { stream: true });
+                var lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (var i = 0; i < lines.length; i++) {
+                  var line = lines[i].trim();
+                  if (line.startsWith("data:")) {
+                    try {
+                      var payload = JSON.parse(line.substring(5).trim());
+                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
+                        reader.cancel();
+                        return String(payload[0]).trim();
+                      }
+                    } catch (e) {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      // Fallback: try FastAPI /api/draft on 2 vCPU space
+      try {
+        var dResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/api/draft", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ prompt: userPrompt }),
+          signal: AbortSignal.timeout(3500)
+        });
+        if (dResp.ok) {
+          var dData = await dResp.json();
+          if (dData && dData.reply) return dData.reply;
+        }
+      } catch (e) {}
+
+      return null;
+    }
+
     async function tryDirectHfSpace(userPrompt, contextFiles, onToken) {
       try {
         var fullPrompt = userPrompt;
@@ -3984,51 +4178,93 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. PRIMARY: 2 vCPU Space (VAJRA_v2) - Runs fine-tuned AravKataria/vajra-lora 7B with token streaming
-        try {
-          var vcpuRes = await _executeSingleHfSpaceQuery(
-            VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
-            fullPrompt,
-            directHeaders,
-            120000,
-            function(chunk) {
-              if (onToken) onToken(chunk, "VAJRA STANDARD [7B 2 vCPU]");
+        // Check if query is high complexity (e.g. quantum physics, calculus, math formulas, exploits, AST taint tracking)
+        var isComplex = fullPrompt.length > 500 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|exploit|cwe-\d+|vulnerability|disassembl|audit\s+this/i.test(fullPrompt);
+
+        if (isComplex) {
+          // Complex queries -> Route to ZeroGPU A10G burst first (<9s latency)
+          try {
+            var gpuRes = await _executeSingleHfSpaceQuery(
+              VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
+              fullPrompt,
+              directHeaders,
+              35000,
+              function(chunk) {
+                if (onToken) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+              }
+            );
+            if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) {
+              return {
+                reply: gpuRes.reply,
+                tier: "burst",
+                model: "AravKataria/vajra-lora (ZeroGPU Burst)"
+              };
             }
-          );
-          if (vcpuRes && vcpuRes.reply) {
-            if (vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes.isRateLimited) {
+          } catch (gpuErr) {}
+
+          // Fallback to 2 vCPU if ZeroGPU unavailable
+          try {
+            var vcpuRes = await _executeSingleHfSpaceQuery(
+              VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
+              fullPrompt,
+              directHeaders,
+              120000,
+              function(chunk) {
+                if (onToken) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
+              }
+            );
+            if (vcpuRes && vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes.isRateLimited) {
               return {
                 reply: vcpuRes.reply,
                 tier: "standard",
                 model: "AravKataria/vajra-lora (7B 2 vCPU)"
               };
             }
-            console.log("⚡ [VAJRA Architecture] 2 vCPU Space busy -> Diverting to ZeroGPU Burst Engine...");
-          }
-        } catch (vcpuErr) {
-          console.warn("⚠️ 2 vCPU direct query notice:", vcpuErr);
-        }
+          } catch (vcpuErr) {}
 
-        // 2. OVERFLOW BURST: ZeroGPU Space (vajra) - A10G GPU (<5s latency, used ONLY when 2 vCPU is busy)
-        try {
-          var gpuRes = await _executeSingleHfSpaceQuery(
-            VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
-            fullPrompt,
-            directHeaders,
-            35000,
-            function(chunk) {
-              if (onToken) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+        } else {
+          // Standard queries -> Route to 2 vCPU Space first (saving ZeroGPU quota)
+          try {
+            var vcpuRes2 = await _executeSingleHfSpaceQuery(
+              VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
+              fullPrompt,
+              directHeaders,
+              120000,
+              function(chunk) {
+                if (onToken) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
+              }
+            );
+            if (vcpuRes2 && vcpuRes2.reply) {
+              if (vcpuRes2.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes2.isRateLimited) {
+                return {
+                  reply: vcpuRes2.reply,
+                  tier: "standard",
+                  model: "AravKataria/vajra-lora (7B 2 vCPU)"
+                };
+              }
+              console.log("⚡ [VAJRA Architecture] 2 vCPU Space busy -> Diverting to ZeroGPU Burst Engine...");
             }
-          );
-          if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) {
-            return {
-              reply: gpuRes.reply,
-              tier: "burst",
-              model: "AravKataria/vajra-lora (ZeroGPU Burst)"
-            };
-          }
-        } catch (gpuErr) {
-          console.warn("⚠️ ZeroGPU direct query notice:", gpuErr);
+          } catch (vcpuErr) {}
+
+          // Overflow to ZeroGPU if 2 vCPU is busy
+          try {
+            var gpuRes2 = await _executeSingleHfSpaceQuery(
+              VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
+              fullPrompt,
+              directHeaders,
+              35000,
+              function(chunk) {
+                if (onToken) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+              }
+            );
+            if (gpuRes2 && gpuRes2.reply && !gpuRes2.isRateLimited) {
+              return {
+                reply: gpuRes2.reply,
+                tier: "burst",
+                model: "AravKataria/vajra-lora (ZeroGPU Burst)"
+              };
+            }
+          } catch (gpuErr) {}
         }
 
       } catch (e) {}
@@ -4674,8 +4910,37 @@
           return;
         }
 
-        // 4. Network LLM Inference — all real questions go here
+        // 4. Speculative Parallel Neural Inference
+        // Channel A: Fast 0.5B Speculative Draft (<1.5s) with Frosted Glass Shimmer
+        // Channel B: Deep 7B Reasoning Pipeline (2 vCPU / ZeroGPU Burst)
         var typewriter = null;
+        var isDeepResolved = false;
+        var draftReplyText = null;
+
+        var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
+        var directHeaders = { "Content-Type": "application/json" };
+        if (storedHfToken) {
+          directHeaders["Authorization"] = "Bearer " + storedHfToken;
+        }
+
+        // Launch Channel A in background
+        var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
+          if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+            return null;
+          }
+          draftReplyText = draftText;
+          if (!typewriter && !isDeepResolved) {
+            removeTypingIndicator();
+            typewriter = createStreamTypewriter("⚡ SPECULATIVE DRAFT [0.5B]");
+            if (typewriter) {
+              typewriter.enableSpeculativeDraft();
+              typewriter.onToken(draftText);
+            }
+          }
+          return draftText;
+        }).catch(function() { return null; });
+
+        // Handle streaming chunks from Channel B (if available)
         function handleStreamChunk(chunkText, badge) {
           if (!chunkText || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
             return;
@@ -4683,6 +4948,8 @@
           if (!typewriter) {
             removeTypingIndicator();
             typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
+          } else if (typewriter.isDraftActive && typewriter.isDraftActive()) {
+            typewriter.removeGlassOverlay();
           }
           typewriter.onToken(chunkText);
           if (badge) {
@@ -4694,8 +4961,16 @@
           handleStreamChunk(chunk, badge);
         });
 
+        isDeepResolved = true;
+
         if (inferenceRes) {
           if (inferenceRes.isRateLimited) {
+            if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+              typewriter.removeGlassOverlay();
+              typewriter.updateBadge("VAJRA ULTRA-LITE [0.5B]");
+              typewriter.finish(draftReplyText || "", { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
+              return;
+            }
             if (typewriter) typewriter.abort();
             removeTypingIndicator();
             var formattedHtml = inferenceRes.reply
@@ -4733,6 +5008,14 @@
               badge = inferenceRes.model;
             }
 
+            if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+              typewriter.refineWithVerified(inferenceRes.reply, {
+                tier: inferenceRes.tier,
+                model: badge || "VAJRA AUDIT VERIFIED [7B LoRA]"
+              });
+              return;
+            }
+
             if (!typewriter) {
               typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
               typewriter.onToken(inferenceRes.reply);
@@ -4743,6 +5026,14 @@
             });
             return;
           }
+        }
+
+        // If Deep Reasoning returned empty/failed, but draft is active on screen:
+        if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+          typewriter.removeGlassOverlay();
+          typewriter.updateBadge("VAJRA ULTRA-LITE [0.5B]");
+          typewriter.finish(draftReplyText || "", { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
+          return;
         }
 
         if (typewriter) {

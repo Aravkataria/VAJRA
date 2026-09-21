@@ -81,7 +81,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
         except Exception as e:
             print(f"⚠️ Ultra-Lite serverless fallback note: {e}")
 
-    return f"**VAJRA High-Traffic Overflow Response:** Query received: *\"{prompt}\"*. The 2 vCPU system is currently processing heavy tasks and has automatically handled your request via Ultra-Lite."
+    return ""
 
 # =====================================================================
 # 3. 7B MODEL LOADING ON 2 vCPU (CPU Basic • 16 GB RAM)
@@ -254,6 +254,11 @@ def gradio_generate(prompt: str):
     finally:
         inference_lock.release()
 
+def gradio_generate_draft(prompt: str) -> str:
+    clean = sanitize_and_check_injection(prompt)
+    reply = generate_ultra_lite_reply(clean)
+    return reply
+
 # =====================================================================
 # 5. GRADIO INTERFACE
 # =====================================================================
@@ -276,6 +281,15 @@ with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
         inputs=user_input,
         outputs=output_display,
         api_name="generate_vajra_reply"
+    )
+
+    draft_button = gr.Button("Draft", visible=False)
+    draft_output = gr.Markdown(visible=False)
+    draft_button.click(
+        fn=gradio_generate_draft,
+        inputs=user_input,
+        outputs=draft_output,
+        api_name="generate_draft_reply"
     )
 
 # =====================================================================
@@ -331,6 +345,15 @@ async def chat_api(req: ChatRequest, request: Request):
         "model": model_name,
         "tier": tier_name,
         "security": "Zero-Retention Verified"
+    })
+
+@demo.app.post("/api/draft")
+async def draft_api(req: ChatRequest):
+    reply = generate_ultra_lite_reply(req.prompt)
+    return JSONResponse({
+        "success": bool(reply),
+        "reply": reply,
+        "tier": "ultra_lite"
     })
 
 # Asynchronously preload 7B model into memory on boot
