@@ -676,7 +676,7 @@ def _query_single_space_endpoint(
     space_base_url: str,
     full_prompt: str,
     headers: Dict[str, str],
-    timeout: int = 25,
+    timeout: int = 80,
 ) -> Dict[str, Any]:
     """
     Queries an individual Hugging Face Space using:
