@@ -3681,57 +3681,57 @@
         }
       } catch (restErr) {}
 
-      // 2. Try Gradio 4 Client API (/call/generate_vajra_reply)
-      try {
-        var callResp = await fetch(hfEndpoint + "/call/generate_vajra_reply", {
-          method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({ data: [fullPrompt] }),
-          signal: AbortSignal.timeout(12000)
-        });
-        if (callResp.status === 429) {
-          return {
-            isRateLimited: true,
-            reply: "⚠️ **Inference Cluster Busy**\n\nThe neural reasoning engine is currently processing queued tasks or warming up. Please wait approximately **30 seconds** before trying again.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*",
-            retryAfter: 30
-          };
-        }
-        if (callResp.ok) {
-          var callData = await callResp.json();
-          var eventId = callData.event_id;
-          if (eventId) {
-            var streamResp = await fetch(hfEndpoint + "/call/generate_vajra_reply/" + eventId, {
-              headers: directHeaders,
-              signal: AbortSignal.timeout(45000)
-            });
-            if (streamResp.ok && streamResp.body) {
-              var reader = streamResp.body.getReader();
-              var decoder = new TextDecoder("utf-8");
-              var buffer = "";
-              var isComplete = false;
-              while (true) {
-                var chunk = await reader.read();
-                if (chunk.done) break;
-                buffer += decoder.decode(chunk.value, { stream: true });
-                var lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-                for (var i = 0; i < lines.length; i++) {
-                  var line = lines[i].trim();
-                  if (line.startsWith("event: complete")) {
-                    isComplete = true;
-                  } else if (isComplete && line.startsWith("data:")) {
-                    var payload = JSON.parse(line.substring(5).trim());
-                    if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
-                      reader.cancel();
-                      return { reply: String(payload[0]).trim(), tier: "max", model: "AravKataria/vajra-lora" };
+      // 2. Try Gradio 4 Client API (supports both /call/generate_vajra_reply and /call/gradio_generate)
+      var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
+      for (var k = 0; k < candidateEndpoints.length; k++) {
+        var ep = candidateEndpoints[k];
+        try {
+          var callResp = await fetch(hfEndpoint + ep, {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({ data: [fullPrompt] }),
+            signal: AbortSignal.timeout(12000)
+          });
+          if (callResp.status === 429) {
+            break;
+          }
+          if (callResp.ok) {
+            var callData = await callResp.json();
+            var eventId = callData.event_id;
+            if (eventId) {
+              var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
+                headers: directHeaders,
+                signal: AbortSignal.timeout(70000)
+              });
+              if (streamResp.ok && streamResp.body) {
+                var reader = streamResp.body.getReader();
+                var decoder = new TextDecoder("utf-8");
+                var buffer = "";
+                var isComplete = false;
+                while (true) {
+                  var chunk = await reader.read();
+                  if (chunk.done) break;
+                  buffer += decoder.decode(chunk.value, { stream: true });
+                  var lines = buffer.split("\n");
+                  buffer = lines.pop() || "";
+                  for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (line.startsWith("event: complete")) {
+                      isComplete = true;
+                    } else if (isComplete && line.startsWith("data:")) {
+                      var payload = JSON.parse(line.substring(5).trim());
+                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
+                        reader.cancel();
+                        return { reply: String(payload[0]).trim(), tier: "max", model: "AravKataria/vajra-lora" };
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
-      } catch (callErr) {}
+        } catch (callErr) {}
+      }
 
       // 3. Gradio Queue Fallback (/queue/join on fn_index 0)
       try {
@@ -3751,7 +3751,7 @@
         if (joinResp.ok) {
           var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
             headers: directHeaders,
-            signal: AbortSignal.timeout(45000)
+            signal: AbortSignal.timeout(70000)
           });
           if (dataStreamResp.ok && dataStreamResp.body) {
             var qReader = dataStreamResp.body.getReader();
@@ -3771,13 +3771,9 @@
                     qReader.cancel();
                     var out = msgObj.output || {};
                     if (out.error) {
-                      var errText = String(out.error);
-                      var isQuota = errText.toLowerCase().includes("quota") || errText.toLowerCase().includes("zerogpu");
-                      return {
-                        isRateLimited: isQuota,
-                        reply: "⚠️ **Quota Limit Reached**\n\nYou have reached the temporary AI inference limit for this session. Please wait before sending your next request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*",
-                        retryAfter: 120
-                      };
+                      // Space returned an error (e.g. ZeroGPU quota exceeded)
+                      // Return null so the system cascades cleanly to next tier without falsely locking out the user!
+                      return null;
                     }
                     var d = out.data || [];
                     if (d.length > 0 && d[0]) {
@@ -3819,11 +3815,11 @@
 
         // 1. Try Primary: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
         var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders);
-        if (vcpuRes && vcpuRes.reply) return vcpuRes;
+        if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
 
         // 2. Emergency Turbo Burst: ZeroGPU Space (vajra) - A100 GPU
         var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders);
-        if (gpuRes) return gpuRes;
+        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
 
       } catch (e) {}
       return null;
@@ -3863,23 +3859,10 @@
           signal: AbortSignal.timeout(60000)
         });
         if (hfResp.status === 429) {
-          var limitData = await hfResp.json();
-          return {
-            isRateLimited: true,
-            reply: limitData.reply || "⚠️ **Inference Limit Reached**: Please wait before sending your next request.",
-            retryAfter: limitData.retry_after || 120
-          };
-        }
-        if (hfResp.ok) {
+          // Backend busy; fall through to direct neural engine spaces
+        } else if (hfResp.ok) {
           var hfData = await hfResp.json();
-          if (hfData && hfData.rate_limited) {
-            return {
-              isRateLimited: true,
-              reply: hfData.reply,
-              retryAfter: hfData.retry_after || 60
-            };
-          }
-          if (hfData && hfData.reply) {
+          if (hfData && hfData.reply && !hfData.rate_limited) {
             return {
               reply: hfData.reply,
               model: hfData.model,
@@ -3894,10 +3877,7 @@
       // 2. Try Direct Neural Engine Gateway (Runs fine-tuned AravKataria/vajra-lora 7B model)
       try {
         var directRes = await tryDirectHfSpace(userPrompt, contextFiles);
-        if (directRes) {
-          if (directRes.isRateLimited) return directRes;
-          if (directRes.reply) return directRes;
-        }
+        if (directRes && directRes.reply) return directRes;
       } catch (e) {}
 
       // 3. Try Local FastAPI Backend (if running locally on port 8000)
