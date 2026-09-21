@@ -842,6 +842,23 @@
       40% { opacity: 1; transform: scale(1.2); }
     }
 
+    /* Stream Typewriter Progressive Display */
+    .typewriter-cursor {
+      display: inline-block;
+      color: var(--spark, #f5b400);
+      font-weight: 700;
+      margin-left: 2px;
+      animation: typewriterBlink 0.8s infinite;
+    }
+    @keyframes typewriterBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .stream-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     /* Process Step Tracker */
     .process-tracker {
       border: 1px solid var(--border-subtle);
@@ -3574,6 +3591,142 @@
       return group;
     }
 
+    function createStreamTypewriter(tierBadge) {
+      var hero = document.getElementById("ledgerHero");
+      if (hero) hero.style.display = "none";
+
+      var stream = document.getElementById("casefileStream");
+      if (!stream) return null;
+
+      var timeStr = new Date().toLocaleTimeString();
+      var label = tierBadge || "VAJRA REASONING AUDIT";
+
+      var group = document.createElement("div");
+      group.className = "msg-group bot";
+      group.innerHTML =
+        '<div class="msg-header">' +
+          '<div style="display:flex; align-items:center; gap:8px;">' +
+            '<span class="typewriter-badge">[' + label + ']</span>' +
+            '<span style="color:var(--text-muted);">' + timeStr + '</span>' +
+          '</div>' +
+          '<button type="button" class="btn-copy-msg" onclick="copyMessageText(this)" title="Copy message text" aria-label="Copy message">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '<span>Copy</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="msg-card"><span class="stream-text"></span><span class="typewriter-cursor">▌</span></div>';
+
+      stream.appendChild(group);
+      smartScrollToBottom(stream, group);
+
+      var card = group.querySelector(".msg-card");
+      var textSpan = group.querySelector(".stream-text");
+      var cursor = group.querySelector(".typewriter-cursor");
+      var badgeSpan = group.querySelector(".typewriter-badge");
+
+      var fullIncomingText = "";
+      var renderedTokenCount = 0;
+      var isFinished = false;
+      var finalMetadata = null;
+      var intervalId = null;
+
+      function updateBadge(newBadge) {
+        if (badgeSpan && newBadge) {
+          badgeSpan.textContent = "[" + newBadge + "]";
+        }
+      }
+
+      function tick() {
+        var tokens = fullIncomingText.match(/(\S+|\s+)/g) || [];
+        var totalTokens = tokens.length;
+
+        // Keep 2-3 words behind (approx 4-6 tokens with whitespace) while streaming
+        var maxToRender = isFinished ? totalTokens : Math.max(0, totalTokens - 5);
+
+        if (renderedTokenCount < maxToRender) {
+          renderedTokenCount++;
+          var partialStr = tokens.slice(0, renderedTokenCount).join("");
+          if (textSpan) {
+            textSpan.innerHTML = escapeHtml(partialStr).replace(/\n/g, "<br>");
+          }
+          smartScrollToBottom(stream, group);
+        } else if (isFinished && renderedTokenCount >= totalTokens) {
+          clearInterval(intervalId);
+          intervalId = null;
+          finalizeDisplay();
+        }
+      }
+
+      function finalizeDisplay() {
+        if (cursor && cursor.parentNode) {
+          cursor.parentNode.removeChild(cursor);
+        }
+
+        var rawText = fullIncomingText.trim();
+        var codeBlockMatch = rawText.match(/```(html|htm|python|py|javascript|js)?\s*([\s\S]+?)```/i);
+        var artifactCardHtml = "";
+        if (codeBlockMatch && codeBlockMatch[2] && codeBlockMatch[2].length > 60) {
+          var lang = (codeBlockMatch[1] || "html").toLowerCase();
+          var codeContent = codeBlockMatch[2].trim();
+          var genExt = lang.includes("py") ? "main.py" : (lang.includes("js") ? "script.js" : "index.html");
+          var genType = lang.includes("py") ? "PYTHON" : (lang.includes("js") ? "JS" : "HTML");
+          var fId = registerArtifactFile(genExt, codeContent, genType);
+          artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
+        }
+
+        var formattedHtml = formatBotMarkdown(rawText);
+        if (artifactCardHtml) {
+          formattedHtml += "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml;
+        }
+
+        if (card) {
+          card.innerHTML = formattedHtml;
+        }
+        renderMath(group);
+        smartScrollToBottom(stream, group);
+
+        var sess = getActiveSession();
+        if (!sess) sess = { messages: [] };
+        if (!sess.messages) sess.messages = [];
+        sess.messages.push({
+          role: "bot",
+          html: formattedHtml,
+          time: timeStr,
+          tier: (finalMetadata && (finalMetadata.tier || finalMetadata.model)) || label
+        });
+        if (typeof saveSessions === "function") saveSessions();
+      }
+
+      intervalId = setInterval(tick, 25);
+
+      return {
+        group: group,
+        onToken: function(text) {
+          fullIncomingText = text;
+        },
+        updateBadge: updateBadge,
+        finish: function(finalText, meta) {
+          if (finalText) fullIncomingText = finalText;
+          finalMetadata = meta || {};
+          isFinished = true;
+          if (meta && meta.model) {
+            updateBadge(meta.model);
+          }
+          if (!fullIncomingText) {
+            if (intervalId) clearInterval(intervalId);
+            intervalId = null;
+            finalizeDisplay();
+          }
+        },
+        abort: function() {
+          if (intervalId) clearInterval(intervalId);
+          if (group && group.parentNode) {
+            group.parentNode.removeChild(group);
+          }
+        }
+      };
+    }
+
     function createPipelineTracker() {
       var html =
         '<div class="process-tracker" id="activeTracker">' +
@@ -3660,7 +3813,7 @@
       }, 1000);
     }
 
-    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs) {
+    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken) {
       var sTimeout = streamTimeoutMs || 85000;
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
@@ -3693,6 +3846,8 @@
                 var decoder = new TextDecoder("utf-8");
                 var buffer = "";
                 var isComplete = false;
+                var currentEvent = "";
+                var latestText = "";
                 while (true) {
                   var chunk = await reader.read();
                   if (chunk.done) break;
@@ -3701,19 +3856,33 @@
                   buffer = lines.pop() || "";
                   for (var i = 0; i < lines.length; i++) {
                     var line = lines[i].trim();
-                    if (line.startsWith("event: complete")) {
-                      isComplete = true;
-                    } else if (line.startsWith("event: error")) {
-                      reader.cancel();
-                      break;
-                    } else if (isComplete && line.startsWith("data:")) {
-                      var payload = JSON.parse(line.substring(5).trim());
-                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
+                    if (line.startsWith("event:")) {
+                      currentEvent = line.substring(6).trim();
+                      if (currentEvent === "complete") {
+                        isComplete = true;
+                      } else if (currentEvent === "error") {
                         reader.cancel();
-                        return { reply: String(payload[0]).trim(), tier: "max", model: "AravKataria/vajra-lora" };
+                        break;
                       }
+                    } else if (line.startsWith("data:")) {
+                      try {
+                        var payload = JSON.parse(line.substring(5).trim());
+                        if (Array.isArray(payload) && payload.length > 0 && payload[0] !== undefined) {
+                          latestText = String(payload[0]);
+                          if (onToken && typeof onToken === "function") {
+                            onToken(latestText);
+                          }
+                          if (isComplete || currentEvent === "complete") {
+                            reader.cancel();
+                            return { reply: latestText.trim(), tier: "max", model: "AravKataria/vajra-lora" };
+                          }
+                        }
+                      } catch (jsonErr) {}
                     }
                   }
+                }
+                if (latestText) {
+                  return { reply: latestText.trim(), tier: "max", model: "AravKataria/vajra-lora" };
                 }
               }
             }
@@ -3721,7 +3890,7 @@
         } catch (callErr) {}
       }
 
-      // 3. Gradio Queue Fallback (/queue/join on fn_index 0)
+      // 2. Gradio Queue Fallback (/queue/join on fn_index 0)
       try {
         var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
         var joinResp = await fetch(hfEndpoint + "/queue/join", {
@@ -3745,6 +3914,7 @@
             var qReader = dataStreamResp.body.getReader();
             var qDecoder = new TextDecoder("utf-8");
             var qBuffer = "";
+            var qLatestText = "";
             while (true) {
               var qChunk = await qReader.read();
               if (qChunk.done) break;
@@ -3754,24 +3924,39 @@
               for (var j = 0; j < qLines.length; j++) {
                 var qLine = qLines[j].trim();
                 if (qLine.startsWith("data:")) {
-                  var msgObj = JSON.parse(qLine.substring(5).trim());
-                  if (msgObj.msg === "process_completed") {
-                    qReader.cancel();
-                    var out = msgObj.output || {};
-                    if (out.error) {
-                      return null;
+                  try {
+                    var msgObj = JSON.parse(qLine.substring(5).trim());
+                    if (msgObj.msg === "process_generating" || msgObj.msg === "process_completed") {
+                      var out = msgObj.output || {};
+                      if (out.error) {
+                        return null;
+                      }
+                      var d = out.data || [];
+                      if (d.length > 0 && d[0] !== undefined) {
+                        qLatestText = String(d[0]);
+                        if (onToken && typeof onToken === "function") {
+                          onToken(qLatestText);
+                        }
+                        if (msgObj.msg === "process_completed") {
+                          qReader.cancel();
+                          return {
+                            reply: qLatestText.trim(),
+                            tier: "max",
+                            model: "AravKataria/vajra-lora"
+                          };
+                        }
+                      }
                     }
-                    var d = out.data || [];
-                    if (d.length > 0 && d[0]) {
-                      return {
-                        reply: String(d[0]).trim(),
-                        tier: "max",
-                        model: "AravKataria/vajra-lora"
-                      };
-                    }
-                  }
+                  } catch (qErr) {}
                 }
               }
+            }
+            if (qLatestText) {
+              return {
+                reply: qLatestText.trim(),
+                tier: "max",
+                model: "AravKataria/vajra-lora"
+              };
             }
           }
         }
@@ -3780,7 +3965,7 @@
       return null;
     }
 
-    async function tryDirectHfSpace(userPrompt, contextFiles) {
+    async function tryDirectHfSpace(userPrompt, contextFiles, onToken) {
       try {
         var fullPrompt = userPrompt;
         if (contextFiles && Object.keys(contextFiles).length > 0) {
@@ -3799,19 +3984,58 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try High-Speed Turbo Burst: ZeroGPU Space (vajra) - A10G GPU (<3s latency)
-        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 30000);
-        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
+        // 1. PRIMARY: 2 vCPU Space (VAJRA_v2) - Runs fine-tuned AravKataria/vajra-lora 7B with token streaming
+        try {
+          var vcpuRes = await _executeSingleHfSpaceQuery(
+            VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
+            fullPrompt,
+            directHeaders,
+            120000,
+            function(chunk) {
+              if (onToken) onToken(chunk, "VAJRA STANDARD [7B 2 vCPU]");
+            }
+          );
+          if (vcpuRes && vcpuRes.reply) {
+            if (vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes.isRateLimited) {
+              return {
+                reply: vcpuRes.reply,
+                tier: "standard",
+                model: "AravKataria/vajra-lora (7B 2 vCPU)"
+              };
+            }
+            console.log("⚡ [VAJRA Architecture] 2 vCPU Space busy -> Diverting to ZeroGPU Burst Engine...");
+          }
+        } catch (vcpuErr) {
+          console.warn("⚠️ 2 vCPU direct query notice:", vcpuErr);
+        }
 
-        // 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
-        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 120000);
-        if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
+        // 2. OVERFLOW BURST: ZeroGPU Space (vajra) - A10G GPU (<5s latency, used ONLY when 2 vCPU is busy)
+        try {
+          var gpuRes = await _executeSingleHfSpaceQuery(
+            VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
+            fullPrompt,
+            directHeaders,
+            35000,
+            function(chunk) {
+              if (onToken) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+            }
+          );
+          if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) {
+            return {
+              reply: gpuRes.reply,
+              tier: "burst",
+              model: "AravKataria/vajra-lora (ZeroGPU Burst)"
+            };
+          }
+        } catch (gpuErr) {
+          console.warn("⚠️ ZeroGPU direct query notice:", gpuErr);
+        }
 
       } catch (e) {}
       return null;
     }
 
-    async function tryFastLlmInference(userPrompt, sess, extraFiles) {
+    async function tryFastLlmInference(userPrompt, sess, extraFiles, onToken) {
       var contextFiles = null;
       if (extraFiles && Object.keys(extraFiles).length > 0) {
         contextFiles = extraFiles;
@@ -3821,6 +4045,13 @@
 
       var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
 
+      // 1. Primary & Overflow Direct Spaces: 2 vCPU Primary -> ZeroGPU Overflow (if 2 vCPU busy)
+      try {
+        var directRes = await tryDirectHfSpace(userPrompt, contextFiles, onToken);
+        if (directRes && directRes.reply) return directRes;
+      } catch (e) {}
+
+      // 2. Safety Fallback: 24/7 Cloud Backend Gateway (Render)
       var payload = JSON.stringify({
         prompt: userPrompt,
         files: contextFiles,
@@ -3829,7 +4060,6 @@
         hf_token: storedHfToken || null
       });
 
-      // 1. Try 24/7 Cloud Backend Gateway
       try {
         var backendHeaders = {
           "Content-Type": "application/json"
@@ -3842,31 +4072,23 @@
           method: "POST",
           headers: backendHeaders,
           body: payload,
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(15000)
         });
-        if (hfResp.status === 429) {
-          // Backend busy; fall through to direct neural engine spaces
-        } else if (hfResp.ok) {
+        if (hfResp.ok) {
           var hfData = await hfResp.json();
           if (hfData && hfData.reply && !hfData.rate_limited) {
             return {
               reply: hfData.reply,
-              model: hfData.model,
-              tier: hfData.tier
+              model: hfData.model || "VAJRA Cloud Gateway",
+              tier: hfData.tier || "gateway"
             };
           }
         }
       } catch (e) {
-        // Backend starting or timeout, proceed to neural gateway fallback
+        // Backend starting or timeout, proceed to local fallbacks
       }
 
-      // 2. Try Direct Neural Engine Gateway (Runs fine-tuned AravKataria/vajra-lora 7B model)
-      try {
-        var directRes = await tryDirectHfSpace(userPrompt, contextFiles);
-        if (directRes && directRes.reply) return directRes;
-      } catch (e) {}
-
-      // 3. Try Local FastAPI Backend (if running locally on port 8000)
+      // 3. Local FastAPI Backend (if running locally on port 8000)
       try {
         var localResp = await fetch(VAJRA_LOCAL_BACKEND + "/api/chat", {
           method: "POST",
@@ -3886,13 +4108,6 @@
         }
         if (localResp.ok) {
           var lData = await localResp.json();
-          if (lData && lData.rate_limited) {
-            return {
-              isRateLimited: true,
-              reply: lData.reply,
-              retryAfter: lData.retry_after || 60
-            };
-          }
           if (lData && lData.reply) {
             return {
               reply: lData.reply,
@@ -3903,7 +4118,7 @@
         }
       } catch (e) {}
 
-      // 4. Try Local Ollama Endpoint (if running locally on port 11434)
+      // 4. Local Ollama Endpoint (if running locally on port 11434)
       try {
         var messages = [{ role: "system", content: VAJRA_SYSTEM_PROMPT }];
         if (contextFiles) {
@@ -3929,7 +4144,7 @@
         if (ollamaResp.ok) {
           var oData = await ollamaResp.json();
           if (oData && oData.choices && oData.choices[0] && oData.choices[0].message) {
-            return { reply: oData.choices[0].message.content };
+            return { reply: oData.choices[0].message.content, model: "Ollama (Local)", tier: "local" };
           }
         }
       } catch (e) {}
@@ -4460,10 +4675,29 @@
         }
 
         // 4. Network LLM Inference — all real questions go here
-        var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles);
+        var typewriter = null;
+        function handleStreamChunk(chunkText, badge) {
+          if (!chunkText || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+            return;
+          }
+          if (!typewriter) {
+            removeTypingIndicator();
+            typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
+          }
+          typewriter.onToken(chunkText);
+          if (badge) {
+            typewriter.updateBadge(badge);
+          }
+        }
+
+        var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles, function(chunk, badge) {
+          handleStreamChunk(chunk, badge);
+        });
+
         if (inferenceRes) {
-          removeTypingIndicator();
           if (inferenceRes.isRateLimited) {
+            if (typewriter) typewriter.abort();
+            removeTypingIndicator();
             var formattedHtml = inferenceRes.reply
               .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
               .replace(/\n/g, "<br>")
@@ -4485,30 +4719,34 @@
           }
 
           if (inferenceRes.reply) {
-            var codeBlockMatch = inferenceRes.reply.match(/```(html|htm|python|py|javascript|js)?\s*([\s\S]+?)```/i);
-            var artifactCardHtml = "";
-            if (codeBlockMatch && codeBlockMatch[2] && codeBlockMatch[2].length > 60) {
-              var lang = (codeBlockMatch[1] || "html").toLowerCase();
-              var codeContent = codeBlockMatch[2].trim();
-              var genExt = lang.includes("py") ? "main.py" : (lang.includes("js") ? "script.js" : "index.html");
-              var genType = lang.includes("py") ? "PYTHON" : (lang.includes("js") ? "JS" : "HTML");
-              var fId = registerArtifactFile(genExt, codeContent, genType);
-              artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
-            }
-            var formattedHtml2 = formatBotMarkdown(inferenceRes.reply);
+            removeTypingIndicator();
             var badge = "";
             if (inferenceRes.tier === "ultra_lite" || inferenceRes.tier === "ultra_lite_fallback") {
               badge = "VAJRA ULTRA-LITE [0.5B]";
             } else if (inferenceRes.tier === "standard") {
-              badge = "VAJRA STANDARD [7B]";
+              badge = "VAJRA STANDARD [7B 2 vCPU]";
+            } else if (inferenceRes.tier === "burst") {
+              badge = "VAJRA BURST [7B ZeroGPU]";
             } else if (inferenceRes.tier === "max") {
               badge = "VAJRA MAX [7B LoRA]";
             } else if (inferenceRes.model) {
               badge = inferenceRes.model;
             }
-            appendSessionMessage("bot", formattedHtml2 + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""), badge);
+
+            if (!typewriter) {
+              typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
+              typewriter.onToken(inferenceRes.reply);
+            }
+            typewriter.finish(inferenceRes.reply, {
+              tier: inferenceRes.tier,
+              model: badge
+            });
             return;
           }
+        }
+
+        if (typewriter) {
+          typewriter.abort();
         }
 
         // 5. Final static fallback (network failed AND no local match)
