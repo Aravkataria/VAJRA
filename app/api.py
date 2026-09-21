@@ -828,19 +828,8 @@ def query_vajra_fine_tuned_model(
     if secret_key:
         headers["X-Vajra-Signature"] = secret_key
 
-    # 1. Primary 24/7 Unlimited Engine: VAJRA_v2 Space (2 vCPU • 0 GPU quota • <4s latency)
-    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=30)
-    if res_vcpu and res_vcpu.get("reply"):
-        if not res_vcpu.get("tier"):
-            res_vcpu["tier"] = "standard"
-        if not res_vcpu.get("model"):
-            res_vcpu["model"] = "AravKataria/vajra-v2 (2 vCPU Fast Engine)"
-        if not context_files:
-            _backend_query_cache[cache_key] = (now, res_vcpu["reply"])
-        return res_vcpu
-
-    # 2. Turbo Burst: ZeroGPU Space (vajra) - High-speed A10G / A100 GPU
-    res_gpu = _query_single_space_endpoint(VAJRA_HF_ZEROGPU_URL, full_prompt, headers, timeout=20)
+    # 1. Primary Turbo Burst: ZeroGPU Space (vajra) - High-speed A10G / A100 GPU (<3s latency)
+    res_gpu = _query_single_space_endpoint(VAJRA_HF_ZEROGPU_URL, full_prompt, headers, timeout=25)
     if res_gpu and res_gpu.get("reply"):
         if not res_gpu.get("tier"):
             res_gpu["tier"] = "max"
@@ -849,6 +838,18 @@ def query_vajra_fine_tuned_model(
         if not context_files:
             _backend_query_cache[cache_key] = (now, res_gpu["reply"])
         return res_gpu
+
+    # 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 24/7 unlimited queries, 0 GPU quota
+    logger.info("ZeroGPU in standby or warming up; routing to 2 vCPU Space...")
+    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=85)
+    if res_vcpu and res_vcpu.get("reply"):
+        if not res_vcpu.get("tier"):
+            res_vcpu["tier"] = "standard"
+        if not res_vcpu.get("model"):
+            res_vcpu["model"] = "AravKataria/vajra-lora (7B 2 vCPU)"
+        if not context_files:
+            _backend_query_cache[cache_key] = (now, res_vcpu["reply"])
+        return res_vcpu
 
     if res_gpu and res_gpu.get("rate_limited"):
         return res_gpu
