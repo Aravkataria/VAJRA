@@ -87,17 +87,83 @@ def load_model():
     model.eval()
     print("🚀 [VAJRA ZeroGPU] A100 Burst Engine ONLINE!")
 
+STEM_FOUNDATIONS = {
+    "kirchhoff": (
+        "### Kirchhoff's Circuit Laws\n\n"
+        "**Who Discovered Them?**\n"
+        "Formulated in 1845 by German physicist **Gustav Kirchhoff**.\n\n"
+        "**1. Kirchhoff's Current Law (KCL - Junction Rule):**\n"
+        "$$\\sum I_{\\text{in}} = \\sum I_{\\text{out}}$$\n"
+        "*Principle: Conservation of Electric Charge.*\n\n"
+        "**2. Kirchhoff's Voltage Law (KVL - Loop Rule):**\n"
+        "$$\\sum \\Delta V = 0$$\n"
+        "*Principle: Conservation of Energy.*"
+    ),
+    "ohm": (
+        "### Ohm's Law\n\n"
+        "**Who Discovered It?**\n"
+        "Formulated in 1827 by German physicist **Georg Simon Ohm**.\n\n"
+        "**Fundamental Formula:**\n"
+        "$$V = I \\cdot R$$\n"
+        "- $V$: Potential difference / Voltage in Volts (V)\n"
+        "- $I$: Electric current in Amperes (A)\n"
+        "- $R$: Resistance in Ohms ($\\Omega$)"
+    ),
+    "heisenberg": (
+        "### Heisenberg's Uncertainty Principle\n\n"
+        "**Who Discovered It?**\n"
+        "Formulated in 1927 by German theoretical physicist and Nobel laureate **Werner Heisenberg**.\n\n"
+        "**Fundamental Inequality (Position & Momentum):**\n"
+        "$$\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$$\n\n"
+        "Where:\n"
+        "- $\\Delta x$: Standard deviation / uncertainty in spatial position.\n"
+        "- $\\Delta p$: Standard deviation / uncertainty in linear momentum ($p = m \\cdot v$).\n"
+        "- $\\hbar = \\frac{h}{2\\pi} \\approx 1.05457 \\times 10^{-34}\\ \\text{J}\\cdot\\text{s}$: Reduced Planck constant.\n\n"
+        "**Core Physical Principles:**\n"
+        "1. **Intrinsic Quantum Nature**: Uncertainty is not an apparatus limitation, but a fundamental mathematical property of non-commuting quantum observables ($[\\hat{x}, \\hat{p}] = i\\hbar$).\n"
+        "2. **Wave-Particle Duality**: A localized wave packet requires a Fourier superposition of multiple momentum frequencies."
+    ),
+    "uncertainty principle": (
+        "### Heisenberg's Uncertainty Principle\n\n"
+        "**Fundamental Inequality:**\n"
+        "$$\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$$\n\n"
+        "The more precisely position $\\Delta x$ is determined, the less precisely momentum $\\Delta p$ can be known, and vice versa."
+    ),
+    "what do you think about ai": (
+        "### VAJRA on Artificial Intelligence\n\n"
+        "As an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered and fine-tuned by **Arav Kataria**, I view Artificial Intelligence as a transformative framework for automated defensive engineering:\n\n"
+        "1. **From Statistical Guessing to Formal Proofs**: Traditional generative models excel at statistical interpolation, but true software safety requires pairing neural models with Abstract Syntax Tree (AST) validation and SMT theorem provers.\n\n"
+        "2. **Defensive Asymmetry**: Cyber adversaries increasingly deploy automated exploit scripts. Autonomous defensive AI levels the playing field by discovering zero-days and synthesizing verified patches in milliseconds.\n\n"
+        "3. **Zero-Trust Boundaries**: Strict sandboxing, cryptographic signature validation, and zero-retention privacy guards are essential."
+    ),
+    "about ai": (
+        "### VAJRA on Artificial Intelligence\n\n"
+        "Artificial Intelligence represents a major computational leap in automated pattern discovery and reasoning. Engineered by **Arav Kataria**, VAJRA combines fine-tuned causal code models with deterministic AST security verifiers to deliver autonomous vulnerability discovery and provably safe repairs."
+    ),
+    "binary search": (
+        "### Binary Search Algorithm\n\n"
+        "Binary search is an efficient divide-and-conquer algorithm that finds the position of a target value within a **sorted array**.\n\n"
+        "**Complexity:** $O(\\log n)$ time, $O(1)$ auxiliary space."
+    ),
+}
+
 VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
 Answer software security, code auditing, AST verification, threat modeling, and general technical questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 250 to 320 words that naturally conclude without trailing off mid-sentence."""
 
 # =====================================================================
-# 3. ZEROGPU INFERENCE (Optimized 20s Duration)
+# 3. ZEROGPU INFERENCE (Optimized 20s Duration with Instant Cache)
 # =====================================================================
-@spaces.GPU(duration=20)
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
-    load_model()
-
     clean_prompt = sanitize_and_check_injection(prompt)
+    prompt_lower = clean_prompt.lower().strip()
+    for kw, resp in STEM_FOUNDATIONS.items():
+        if kw in prompt_lower:
+            return resp
+    return _gpu_generate(clean_prompt, context_files)
+
+@spaces.GPU(duration=20)
+def _gpu_generate(clean_prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
+    load_model()
     messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
 
     if context_files and isinstance(context_files, dict):
