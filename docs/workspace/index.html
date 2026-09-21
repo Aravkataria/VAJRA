@@ -600,8 +600,10 @@
 
     .pane {
       display: none;
-      flex: 1;
-      overflow-y: auto;
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
       position: relative;
     }
 
@@ -611,35 +613,40 @@
     }
 
     .chat-stream {
-      flex: 1;
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
-      padding: 2rem 1.5rem 9rem 1.5rem;
+      overflow-x: hidden;
+      padding: 1.5rem 1.5rem 1.25rem 1.5rem;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1.5rem;
+      gap: 1.25rem;
       scroll-behavior: smooth;
+      box-sizing: border-box;
+      width: 100%;
     }
 
     .chat-stream > * {
       width: 100%;
       max-width: 960px;
+      flex-shrink: 0;
     }
 
-    @media (max-width: 1300px) { .chat-stream { padding: 2rem 1.25rem 9rem 1.25rem; } }
-    @media (max-width: 900px) { .chat-stream { padding: 1.5rem 1rem 8rem 1rem; } }
+    @media (max-width: 1300px) { .chat-stream { padding: 1.25rem 1.25rem 1rem 1.25rem; } }
+    @media (max-width: 900px) { .chat-stream { padding: 1rem 0.85rem 0.85rem 0.85rem; } }
 
     /* Modern Centered Hero */
     .hero-container {
-      margin: auto;
+      margin: auto 0;
       max-width: 640px;
       width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      gap: 1.5rem;
-      padding: 1.5rem 0;
+      gap: 1.25rem;
+      padding: 1.25rem 0;
       animation: fadeIn 0.25s ease;
     }
 
@@ -947,13 +954,16 @@
        4. COMPOSER BAR
        ========================================================================== */
     .composer-shell {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      padding: 1rem 1.5rem 1.25rem 1.5rem;
-      background: linear-gradient(180deg, transparent 0%, var(--bg-base) 40%);
+      position: relative;
+      flex-shrink: 0;
+      width: 100%;
+      padding: 0.75rem 1.5rem;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
       z-index: 20;
       display: flex;
       justify-content: center;
+      box-sizing: border-box;
     }
 
     .composer-panel {
@@ -1694,6 +1704,8 @@
       pointer-events: none;
       transition: opacity 0.15s ease;
       padding: 1rem;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .modal-backdrop.active { opacity: 1; pointer-events: auto; }
@@ -1704,11 +1716,14 @@
       border-radius: 8px;
       width: 100%;
       max-width: 480px;
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
       padding: 1.35rem;
       display: flex;
       flex-direction: column;
       gap: 1rem;
       box-shadow: var(--shadow-lg);
+      margin: auto;
     }
 
     .modal-input {
@@ -1832,7 +1847,7 @@
       }
       
       .chat-stream {
-        padding: 1.25rem 0.85rem 7.5rem 0.85rem;
+        padding: 1rem 0.85rem 0.85rem 0.85rem;
         gap: 1rem;
       }
       .hero-container {
@@ -1851,7 +1866,7 @@
       }
       
       .composer-shell {
-        padding: 0.5rem 0.75rem 0.85rem 0.75rem;
+        padding: 0.5rem 0.75rem;
       }
       .composer-panel {
         padding: 0.55rem 0.75rem;
@@ -1909,11 +1924,14 @@
         max-width: 105px;
       }
       .chat-stream {
-        padding: 0.85rem 0.65rem 7rem 0.65rem;
+        padding: 0.75rem 0.5rem 0.5rem 0.5rem;
       }
       .msg-card {
         padding: 0.85rem 0.95rem;
         font-size: 0.84rem;
+      }
+      .composer-shell {
+        padding: 0.4rem 0.5rem;
       }
       .modal-frame {
         max-width: 95vw;
@@ -1924,6 +1942,52 @@
       }
       .hero-subtitle {
         font-size: 0.82rem;
+      }
+    }
+
+    /* Dedicated height queries for short displays (laptops, landscape phones, split-screen) */
+    @media (max-height: 650px) {
+      .top-bar {
+        height: 44px;
+        padding: 0 0.85rem;
+      }
+      .hero-container {
+        margin: 0 auto;
+        gap: 0.65rem;
+        padding: 0.5rem 0;
+      }
+      .hero-shield-icon {
+        width: 32px;
+        height: 32px;
+      }
+      .hero-title {
+        font-size: 1.2rem;
+      }
+      .hero-subtitle {
+        font-size: 0.8rem;
+        line-height: 1.35;
+      }
+      .hero-quick-cards {
+        gap: 0.35rem;
+      }
+      .quick-card {
+        padding: 0.45rem 0.65rem;
+      }
+      .composer-shell {
+        padding: 0.4rem 1rem;
+      }
+      .composer-panel {
+        padding: 0.45rem 0.65rem;
+        gap: 0.3rem;
+      }
+      .composer-input {
+        max-height: 80px;
+        font-size: 0.85rem;
+      }
+      .modal-frame {
+        padding: 0.95rem;
+        gap: 0.55rem;
+        max-height: calc(100vh - 1rem);
       }
     }
   </style>
@@ -2041,7 +2105,7 @@
     <div class="viewport">
 
       <!-- VIEW 1: AUDIT LOG -->
-      <div class="pane active" id="chatPane">
+      <div class="pane chat-column active" id="chatPane">
         <div class="chat-stream" id="casefileStream">
           
           <!-- Modern Center Hero -->
@@ -2771,7 +2835,11 @@
           stream.appendChild(group);
         });
         renderMath(stream);
-        stream.scrollTop = stream.scrollHeight;
+        if (stream.scrollHeight > stream.clientHeight) {
+          stream.scrollTop = stream.scrollHeight;
+        } else {
+          stream.scrollTop = 0;
+        }
       }
 
       updateTabPanesWithScanData(sess.scanData, sess.workspaceId);
@@ -3330,7 +3398,7 @@
         '</div>';
 
       stream.appendChild(typingDiv);
-      stream.scrollTop = stream.scrollHeight;
+      smartScrollToBottom(stream, typingDiv);
       return typingDiv;
     }
 
@@ -3341,6 +3409,30 @@
     function removeTypingIndicator() {
       var el = document.getElementById("activeTypingIndicator");
       if (el) el.remove();
+    }
+
+    function smartScrollToBottom(stream, targetEl) {
+      if (!stream) return;
+      requestAnimationFrame(function() {
+        if (stream.scrollHeight <= stream.clientHeight) {
+          stream.scrollTop = 0;
+          return;
+        }
+        if (targetEl && targetEl.offsetTop !== undefined) {
+          var elTop = targetEl.offsetTop;
+          var elHeight = targetEl.offsetHeight;
+          var streamHeight = stream.clientHeight;
+          // If the message is taller than 65% of the viewport, align to its top with margin
+          // so user can read from the start of the reasoning audit / message
+          if (elHeight > streamHeight * 0.65) {
+            stream.scrollTop = Math.max(0, elTop - 12);
+          } else {
+            stream.scrollTop = stream.scrollHeight;
+          }
+        } else {
+          stream.scrollTop = stream.scrollHeight;
+        }
+      });
     }
 
     function renderMath(targetEl) {
@@ -3366,6 +3458,22 @@
     function formatBotMarkdown(rawText) {
       if (!rawText) return "";
       var text = rawText;
+
+      // Auto-close unbalanced inline math \( ... \) or $$ ... $$ or \[ ... \]
+      var openParenMath = (text.match(/\\\(/g) || []).length;
+      var closeParenMath = (text.match(/\\\)/g) || []).length;
+      if (openParenMath > closeParenMath) {
+        text += " \\)".repeat(openParenMath - closeParenMath);
+      }
+      var openBracketMath = (text.match(/\\\[/g) || []).length;
+      var closeBracketMath = (text.match(/\\\]/g) || []).length;
+      if (openBracketMath > closeBracketMath) {
+        text += " \\]".repeat(openBracketMath - closeBracketMath);
+      }
+      var doubleDollarCount = (text.match(/\$\$/g) || []).length;
+      if (doubleDollarCount % 2 !== 0) {
+        text += " $$";
+      }
 
       // 1. Normalize multiline block math so newlines don't get broken by <br>
       text = text.replace(/\\\[([\s\S]*?)\\\]/g, function(match, formula) {
@@ -3462,7 +3570,7 @@
 
       stream.appendChild(group);
       renderMath(group);
-      stream.scrollTop = stream.scrollHeight;
+      smartScrollToBottom(stream, group);
       return group;
     }
 
@@ -4638,7 +4746,8 @@
       composerTextarea.style.height = "auto";
       var scrollH = composerTextarea.scrollHeight;
       var isMobile = window.innerWidth <= 600;
-      var maxHeight = isMobile ? 120 : 220;
+      var isShortScreen = window.innerHeight <= 650;
+      var maxHeight = isShortScreen ? 90 : (isMobile ? 120 : 220);
       if (scrollH > maxHeight) {
         composerTextarea.style.height = maxHeight + "px";
         composerTextarea.style.overflowY = "auto";
