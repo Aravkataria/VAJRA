@@ -80,52 +80,46 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 # 3. ZEROGPU INFERENCE FUNCTION
 # =====================================================================
 @spaces.GPU(duration=60)
-def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
-    clean_prompt = sanitize_and_check_injection(prompt)
-    messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
+def generate_vajra_reply(prompt: str) -> str:
+    try:
+        clean_prompt = sanitize_and_check_injection(prompt)
+        messages = [
+            {"role": "system", "content": VAJRA_SYSTEM_PROMPT},
+            {"role": "user", "content": clean_prompt}
+        ]
 
-    if context_files and isinstance(context_files, dict):
-        summary_text = ""
-        for fname, fcontent in list(context_files.items())[:3]:
-            safe_c = str(fcontent)[:1000].replace("\x00", "")
-            summary_text += f"\n--- File: {fname} ---\n{safe_c}"
-        if summary_text:
-            messages.append({"role": "system", "content": f"Workspace Files:\n{summary_text}"})
-
-    messages.append({"role": "user", "content": clean_prompt})
-
-    text_input = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    model_inputs = tokenizer([text_input], return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-        generated_ids = model.generate(
-            **model_inputs,
-            max_new_tokens=512,
-            temperature=0.2,
-            top_p=0.9,
-            repetition_penalty=1.1,
-            do_sample=True,
-            eos_token_id=tokenizer.eos_token_id,
-            pad_token_id=tokenizer.eos_token_id
+        text_input = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
         )
 
-    in_len = model_inputs.input_ids.shape[1]
-    res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
-    if res_text.count("```") % 2 != 0:
-        res_text += "\n```"
+        model_inputs = tokenizer([text_input], return_tensors="pt").to("cuda")
 
-    del model_inputs, generated_ids
-    gc.collect()
+        with torch.no_grad():
+            generated_ids = model.generate(
+                **model_inputs,
+                max_new_tokens=450,
+                temperature=0.2,
+                top_p=0.9,
+                repetition_penalty=1.1,
+                do_sample=True,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id
+            )
 
-    return res_text
+        in_len = model_inputs.input_ids.shape[1]
+        res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
+        if res_text.count("```") % 2 != 0:
+            res_text += "\n```"
 
-def gradio_generate(prompt: str) -> str:
-    return generate_vajra_reply(prompt, None)
+        del model_inputs, generated_ids
+        gc.collect()
+
+        return res_text
+    except Exception as exc:
+        print(f"ZeroGPU Generation error: {exc}")
+        return f"[VAJRA ZeroGPU Engine Note: {exc}]"
 
 # =====================================================================
 # 4. GRADIO INTERFACE
@@ -145,7 +139,7 @@ with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
     output_display = gr.Markdown(label="VAJRA Analysis Output")
 
     send_button.click(
-        fn=gradio_generate,
+        fn=generate_vajra_reply,
         inputs=user_input,
         outputs=output_display,
         api_name="generate_vajra_reply"
@@ -193,7 +187,7 @@ async def chat_api(req: ChatRequest, request: Request):
         if not check_rate_limit(client_ip):
             raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
 
-    reply = generate_vajra_reply(req.prompt, req.files)
+    reply = generate_vajra_reply(req.prompt)
     return JSONResponse({
         "success": True,
         "reply": reply,
