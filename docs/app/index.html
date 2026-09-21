@@ -3661,67 +3661,64 @@
     }
 
     async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs) {
-      var sTimeout = streamTimeoutMs || 85000;
+      var sTimeout = streamTimeoutMs || 35000;
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
-      var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
-      for (var k = 0; k < candidateEndpoints.length; k++) {
-        var ep = candidateEndpoints[k];
-        try {
-          var callResp = await fetch(hfEndpoint + ep, {
-            method: "POST",
-            headers: directHeaders,
-            body: JSON.stringify({ data: [fullPrompt] }),
-            signal: AbortSignal.timeout(10000)
-          });
-          if (callResp.status === 429) {
-            break;
-          }
-          if (callResp.ok) {
-            var callData = await callResp.json();
-            var eventId = callData.event_id;
-            if (eventId) {
-              var streamHeaders = {};
-              if (directHeaders && directHeaders["Authorization"]) {
-                streamHeaders["Authorization"] = directHeaders["Authorization"];
-              }
-              var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
-                headers: streamHeaders,
-                signal: AbortSignal.timeout(sTimeout)
-              });
-              if (streamResp.ok && streamResp.body) {
-                var reader = streamResp.body.getReader();
-                var decoder = new TextDecoder("utf-8");
-                var buffer = "";
-                var isComplete = false;
-                while (true) {
-                  var chunk = await reader.read();
-                  if (chunk.done) break;
-                  buffer += decoder.decode(chunk.value, { stream: true });
-                  var lines = buffer.split("\n");
-                  buffer = lines.pop() || "";
-                  for (var i = 0; i < lines.length; i++) {
-                    var line = lines[i].trim();
-                    if (line.startsWith("event: complete")) {
-                      isComplete = true;
-                    } else if (line.startsWith("event: error")) {
+      try {
+        var callResp = await fetch(hfEndpoint + "/call/generate_vajra_reply", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ data: [fullPrompt] }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (callResp.ok) {
+          var callData = await callResp.json();
+          var eventId = callData.event_id;
+          if (eventId) {
+            var streamHeaders = {};
+            if (directHeaders && directHeaders["Authorization"]) {
+              streamHeaders["Authorization"] = directHeaders["Authorization"];
+            }
+            var streamResp = await fetch(hfEndpoint + "/call/generate_vajra_reply/" + eventId, {
+              headers: streamHeaders,
+              signal: AbortSignal.timeout(sTimeout)
+            });
+            if (streamResp.ok && streamResp.body) {
+              var reader = streamResp.body.getReader();
+              var decoder = new TextDecoder("utf-8");
+              var buffer = "";
+              var isComplete = false;
+              while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buffer += decoder.decode(chunk.value, { stream: true });
+                var lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (var i = 0; i < lines.length; i++) {
+                  var line = lines[i].trim();
+                  if (line.startsWith("event: complete")) {
+                    isComplete = true;
+                  } else if (line.startsWith("event: error")) {
+                    reader.cancel();
+                    return null;
+                  } else if (isComplete && line.startsWith("data:")) {
+                    var payload = JSON.parse(line.substring(5).trim());
+                    if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
                       reader.cancel();
-                      break;
-                    } else if (isComplete && line.startsWith("data:")) {
-                      var payload = JSON.parse(line.substring(5).trim());
-                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
-                        reader.cancel();
-                        return { reply: String(payload[0]).trim(), tier: "max", model: "AravKataria/vajra-lora" };
+                      var ans = String(payload[0]).trim();
+                      if (ans.includes("exceeded your ZeroGPU quota") || ans.startsWith("[VAJRA ZeroGPU Quota")) {
+                        return null;
                       }
+                      return { reply: ans, tier: "standard", model: "AravKataria/vajra-v2" };
                     }
                   }
                 }
               }
             }
           }
-        } catch (callErr) {}
-      }
+        }
+      } catch (callErr) {}
 
-      // 3. Gradio Queue Fallback (/queue/join on fn_index 0)
+      // 2. Gradio Queue Fallback (/queue/join on fn_index 0)
       try {
         var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
         var joinResp = await fetch(hfEndpoint + "/queue/join", {
@@ -3734,7 +3731,7 @@
             session_hash: sessionHash,
             trigger_id: 7
           }),
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(10000)
         });
         if (joinResp.ok) {
           var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
@@ -3765,8 +3762,8 @@
                     if (d.length > 0 && d[0]) {
                       return {
                         reply: String(d[0]).trim(),
-                        tier: "max",
-                        model: "AravKataria/vajra-lora"
+                        tier: "standard",
+                        model: "AravKataria/vajra-v2"
                       };
                     }
                   }
@@ -3799,13 +3796,13 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try High-Speed Turbo Burst: ZeroGPU Space (vajra) - A10G GPU (<3s latency)
-        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 30000);
-        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
-
-        // 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
-        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 120000);
+        // 1. Try Primary 24/7 Unlimited Space: VAJRA_v2 (2 vCPU • 0 GPU quota • <4s Latency)
+        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 30000);
         if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
+
+        // 2. High-Capacity Turbo Burst: ZeroGPU Space (vajra) - A10G GPU
+        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 20000);
+        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
 
       } catch (e) {}
       return null;
