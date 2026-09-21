@@ -3796,13 +3796,13 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try Primary 24/7 Unlimited Space: VAJRA_v2 (2 vCPU • 0 GPU quota • <4s Latency)
+        // 1. High-Speed Turbo Burst: ZeroGPU Space (vajra) - A10G GPU (6-12s latency)
+        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 18000);
+        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
+
+        // 2. Resilient Fallback: VAJRA_v2 Space (2 vCPU • 24/7 Unlimited • AVX2)
         var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 30000);
         if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
-
-        // 2. High-Capacity Turbo Burst: ZeroGPU Space (vajra) - A10G GPU
-        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 20000);
-        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
 
       } catch (e) {}
       return null;
@@ -3816,6 +3816,12 @@
         contextFiles = sess.files;
       }
 
+      // 1. Try Direct High-Speed Neural Engine Gateway first (Direct browser-to-GPU, 0 proxy overhead)
+      try {
+        var directRes = await tryDirectHfSpace(userPrompt, contextFiles);
+        if (directRes && directRes.reply) return directRes;
+      } catch (e) {}
+
       var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
 
       var payload = JSON.stringify({
@@ -3826,7 +3832,7 @@
         hf_token: storedHfToken || null
       });
 
-      // 1. Try 24/7 Cloud Backend Gateway
+      // 2. Cloud Backend Gateway Fallback (Render)
       try {
         var backendHeaders = {
           "Content-Type": "application/json"
@@ -3839,11 +3845,9 @@
           method: "POST",
           headers: backendHeaders,
           body: payload,
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(6000)
         });
-        if (hfResp.status === 429) {
-          // Backend busy; fall through to direct neural engine spaces
-        } else if (hfResp.ok) {
+        if (hfResp.ok) {
           var hfData = await hfResp.json();
           if (hfData && hfData.reply && !hfData.rate_limited) {
             return {
@@ -3854,14 +3858,8 @@
           }
         }
       } catch (e) {
-        // Backend starting or timeout, proceed to neural gateway fallback
+        // Backend starting or timeout, proceed to local/ollama fallback
       }
-
-      // 2. Try Direct Neural Engine Gateway (Runs fine-tuned AravKataria/vajra-lora 7B model)
-      try {
-        var directRes = await tryDirectHfSpace(userPrompt, contextFiles);
-        if (directRes && directRes.reply) return directRes;
-      } catch (e) {}
 
       // 3. Try Local FastAPI Backend (if running locally on port 8000)
       try {

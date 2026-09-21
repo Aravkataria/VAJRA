@@ -79,7 +79,7 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 # =====================================================================
 # 3. ZEROGPU INFERENCE FUNCTION
 # =====================================================================
-@spaces.GPU(duration=60)
+@spaces.GPU(duration=25)
 def generate_vajra_reply(prompt: str) -> str:
     try:
         clean_prompt = sanitize_and_check_injection(prompt)
@@ -99,7 +99,7 @@ def generate_vajra_reply(prompt: str) -> str:
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=450,
+                max_new_tokens=260,
                 temperature=0.2,
                 top_p=0.9,
                 repetition_penalty=1.1,

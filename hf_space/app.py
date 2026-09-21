@@ -89,7 +89,31 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None):
     clean_prompt = sanitize_and_check_injection(prompt)
 
-    # Acquire lock with a 10s wait for concurrent requests
+    # 1. High-Speed Cloud GPU Burst (<2s latency) via router if token configured
+    token = HF_TOKEN or os.getenv("HF_TOKEN")
+    if token:
+        try:
+            api_url = f"https://router.huggingface.co/hf-inference/models/{CPU_MODEL_ID}"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+                "User-Agent": "VAJRA-v2/1.0"
+            }
+            payload = json.dumps({
+                "inputs": f"<|im_start|>system\n{VAJRA_SYSTEM_PROMPT}<|im_end|>\n<|im_start|>user\n{clean_prompt}<|im_end|>\n<|im_start|>assistant\n",
+                "parameters": {"max_new_tokens": 240, "temperature": 0.3, "return_full_text": False}
+            }).encode("utf-8")
+            req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=5) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                if isinstance(result, list) and len(result) > 0:
+                    text = result[0].get("generated_text", "").strip()
+                    if text:
+                        return text, "AravKataria/vajra-v2 (Cloud GPU Turbo)", "standard"
+        except Exception:
+            pass
+
+    # 2. Resilient Local CPU Generation (Optimized 2 vCPU AVX2)
     acquired = inference_lock.acquire(blocking=True, timeout=10.0)
     if not acquired:
         return "VAJRA inference queue is currently handling high traffic. Please retry in a few seconds.", "VAJRA-Engine (Busy)", "standard"
@@ -117,7 +141,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=320,
+                max_new_tokens=220,
                 temperature=0.3,
                 top_p=0.9,
                 repetition_penalty=1.1,
