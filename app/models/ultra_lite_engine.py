@@ -57,47 +57,6 @@ STEM_FOUNDATIONS = {
         r"- $I$: Current in Amperes ($\text{A}$)" "\n"
         r"- $R$: Resistance in Ohms ($\Omega$)"
     ),
-    "heisenberg": (
-        "### Heisenberg's Uncertainty Principle\n\n"
-        "**Who Discovered It?**\n"
-        "Formulated in 1927 by German theoretical physicist and Nobel laureate **Werner Heisenberg**.\n\n"
-        "**Fundamental Inequality (Position & Momentum):**\n"
-        r"$$\Delta x \cdot \Delta p \ge \frac{\hbar}{2}$$" "\n\n"
-        "Where:\n"
-        r"- $\Delta x$: Standard deviation / uncertainty in spatial position." "\n"
-        r"- $\Delta p$: Standard deviation / uncertainty in linear momentum ($p = m \cdot v$)." "\n"
-        r"- $\hbar = \frac{h}{2\pi} \approx 1.05457 \times 10^{-34}\ \text{J}\cdot\text{s}$: Reduced Planck constant." "\n\n"
-        "**Energy-Time Uncertainty Formulation:**\n"
-        r"$$\Delta E \cdot \Delta t \ge \frac{\hbar}{2}$$" "\n\n"
-        "**Core Physical Principles:**\n"
-        r"1. **Intrinsic Quantum Nature**: Uncertainty is not an apparatus limitation or measurement disturbance, but a fundamental mathematical property of non-commuting quantum observables in Hilbert space ($[\hat{x}, \hat{p}] = i\hbar$)." "\n"
-        "2. **Wave-Particle Duality**: A particle with a well-defined wavelength has an indeterminate spatial position; conversely, a tightly localized wave packet is composed of a Fourier superposition of multiple momentum frequencies."
-    ),
-    "uncertainty principle": (
-        "### Heisenberg's Uncertainty Principle\n\n"
-        "**Who Discovered It?**\n"
-        "Formulated in 1927 by German theoretical physicist **Werner Heisenberg**.\n\n"
-        "**Fundamental Inequality:**\n"
-        r"$$\Delta x \cdot \Delta p \ge \frac{\hbar}{2}$$" "\n\n"
-        "**Key Insights:**\n"
-        r"- The more precisely the position $\Delta x$ of a subatomic particle is determined, the less precisely its momentum $\Delta p$ can be known, and vice versa." "\n"
-        r"- Arises from the non-commutativity of quantum mechanical operators: $[\hat{x}, \hat{p}] = i\hbar$."
-    ),
-    "what do you think about ai": (
-        "### VAJRA on Artificial Intelligence\n\n"
-        "As an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered and fine-tuned by **Arav Kataria**, I view Artificial Intelligence not as consciousness, but as a transformative mathematical framework for probabilistic pattern synthesis, formal logic deduction, and automated defensive engineering:\n\n"
-        "1. **From Statistical Guessing to Formal Proofs**: Traditional generative models excel at statistical interpolation, but true software safety requires deterministic verification — pairing neural patch synthesis with Abstract Syntax Tree (AST) validation and SMT theorem provers.\n\n"
-        "2. **Defensive Asymmetry**: Cyber adversaries increasingly deploy automated scanning and exploit generation. Autonomous defensive AI levels the playing field by autonomously discovering zero-day vulnerabilities, mapping cross-file taint paths, and synthesizing zero-regression invariant repairs in milliseconds.\n\n"
-        "3. **Zero-Trust Boundaries**: LLMs must be bounded by zero-trust boundaries: strict sandboxing, cryptographic signature validation, zero-retention privacy guards, and deterministic verification to prevent hallucinated vulnerabilities."
-    ),
-    "about ai": (
-        "### VAJRA on Artificial Intelligence\n\n"
-        "Artificial Intelligence represents a major computational leap in automated pattern discovery and reasoning. Engineered by **Arav Kataria**, VAJRA combines fine-tuned causal code models with deterministic AST security verifiers to deliver autonomous vulnerability discovery and provably safe repairs."
-    ),
-    "artificial intelligence": (
-        "### VAJRA on Artificial Intelligence\n\n"
-        "Artificial Intelligence represents the algorithmic synthesis of perception, reasoning, and automated decision-making. In software defense, its highest-leverage role is autonomous defensive cyber-reasoning — discovering critical software flaws and synthesizing provably safe patches before attackers can exploit them."
-    ),
     "newton": (
         "### Newton's Laws of Motion\n\n"
         "**Formulated By:** Sir Isaac Newton in *Philosophiae Naturalis Principia Mathematica* (1687).\n\n"
