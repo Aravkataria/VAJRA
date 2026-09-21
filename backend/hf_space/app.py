@@ -180,7 +180,7 @@ def load_cpu_model():
         model_load_failed = True
 
 VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
-Answer software security, code auditing, AST verification, threat modeling, and general technical questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 250 to 320 words that naturally conclude without trailing off mid-sentence."""
+Answer software security, code auditing, AST verification, threat modeling, and technical questions concisely, authoritatively, and completely. Deliver focused, high-precision explanations (under 130 words) that conclude naturally with a clear summary without trailing off mid-sentence."""
 
 # =====================================================================
 # 4. INFERENCE WITH CONCURRENCY LOCK & LOAD SHEDDING
@@ -217,7 +217,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=160,
+                max_new_tokens=190,
                 temperature=0.2,
                 top_p=0.9,
                 repetition_penalty=1.1,
@@ -273,7 +273,7 @@ def gradio_generate(prompt: str):
         gen_kwargs = dict(
             **model_inputs,
             streamer=streamer,
-            max_new_tokens=160,
+            max_new_tokens=190,
             temperature=0.2,
             top_p=0.9,
             repetition_penalty=1.1,

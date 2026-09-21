@@ -864,9 +864,9 @@
     .msg-card.speculative-draft {
       position: relative;
       overflow: hidden;
-      border-color: rgba(245, 180, 0, 0.45);
-      background: rgba(18, 18, 18, 0.9);
-      transition: border-color 0.4s ease;
+      border-color: rgba(245, 180, 0, 0.35);
+      background: rgba(20, 20, 22, 0.88);
+      transition: all 0.35s ease;
     }
 
     .speculative-glass-overlay {
@@ -876,20 +876,22 @@
       right: 0;
       bottom: 0;
       pointer-events: none;
-      backdrop-filter: blur(1.5px);
-      -webkit-backdrop-filter: blur(1.5px);
+      backdrop-filter: blur(1.1px);
+      -webkit-backdrop-filter: blur(1.1px);
       background: linear-gradient(
-        105deg,
-        rgba(255, 255, 255, 0.0) 0%,
-        rgba(255, 255, 255, 0.03) 30%,
-        rgba(245, 180, 0, 0.14) 50%,
-        rgba(255, 255, 255, 0.03) 70%,
-        rgba(255, 255, 255, 0.0) 100%
+        115deg,
+        rgba(255, 255, 255, 0.02) 0%,
+        rgba(255, 255, 255, 0.05) 30%,
+        rgba(245, 180, 0, 0.12) 50%,
+        rgba(255, 255, 255, 0.05) 70%,
+        rgba(255, 255, 255, 0.02) 100%
       );
       background-size: 250% 100%;
       animation: glassShimmerSweep 2.2s infinite ease-in-out;
       border-radius: 7px;
-      transition: opacity 0.5s ease;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.4);
+      transition: opacity 0.45s ease;
       z-index: 2;
     }
 
@@ -917,6 +919,25 @@
     @keyframes pulseGlow {
       0%, 100% { opacity: 0.8; }
       50% { opacity: 1; border-color: rgba(245, 180, 0, 0.8); }
+    }
+
+    /* Stop Generation Button & Input Lock */
+    .btn-run-scan.btn-stop-generating {
+      background: rgba(239, 68, 68, 0.14) !important;
+      border-color: rgba(239, 68, 68, 0.45) !important;
+      color: #ef4444 !important;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+      cursor: pointer;
+    }
+    .btn-run-scan.btn-stop-generating:hover {
+      background: rgba(239, 68, 68, 0.28) !important;
+      border-color: #ef4444 !important;
+      color: #ffffff !important;
+    }
+    [data-theme="light"] .btn-run-scan.btn-stop-generating {
+      background: rgba(220, 38, 38, 0.1) !important;
+      border-color: rgba(220, 38, 38, 0.4) !important;
+      color: #dc2626 !important;
     }
 
     /* Process Step Tracker */
@@ -2267,9 +2288,11 @@
                   GitHub
                 </button>
               </div>
-              <button type="submit" class="btn-run-scan" title="Send message, request project plan, or scan repository">
-                Send
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <button type="submit" class="btn-run-scan" id="btnSubmitChat" title="Send message, request project plan, or scan repository">
+                <span id="btnSubmitChatText">Send</span>
+                <span id="btnSubmitChatIcon" style="display:inline-flex; align-items:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </span>
               </button>
             </div>
           </form>
@@ -3834,6 +3857,7 @@
           tier: (finalMetadata && (finalMetadata.tier || finalMetadata.model)) || label
         });
         if (typeof saveSessions === "function") saveSessions();
+        if (typeof setGenerating === "function") setGenerating(false);
       }
 
       var glassOverlay = null;
@@ -3901,7 +3925,7 @@
         }, 180);
       }
 
-      return {
+      var selfInstance = {
         group: group,
         enableSpeculativeDraft: enableSpeculativeDraft,
         removeGlassOverlay: removeGlassOverlay,
@@ -3934,9 +3958,133 @@
           if (group && group.parentNode) {
             group.parentNode.removeChild(group);
           }
+          if (typeof setGenerating === "function") setGenerating(false);
+        },
+        stop: function() {
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+          removeGlassOverlay();
+          if (cursor && cursor.parentNode) {
+            cursor.parentNode.removeChild(cursor);
+          }
+          updateBadge("VAJRA AUDIT [STOPPED]");
+
+          var tokens = fullIncomingText.match(/(\S+|\s+)/g) || [];
+          var count = Math.max(1, renderedTokenCount);
+          var partial = tokens.slice(0, count).join("").trim();
+          if (!partial && fullIncomingText) {
+            partial = fullIncomingText.trim();
+          }
+
+          var formattedHtml = formatBotMarkdown(partial);
+          formattedHtml += '<div style="margin-top:8px; font-size:0.75rem; color:var(--text-muted); font-family:\'JetBrains Mono\',monospace;">⏹️ Generation stopped by user</div>';
+
+          if (card) {
+            card.innerHTML = formattedHtml;
+          }
+          renderMath(group);
+          smartScrollToBottom(stream, group);
+
+          var sess = getActiveSession();
+          if (!sess) sess = { messages: [] };
+          if (!sess.messages) sess.messages = [];
+          sess.messages.push({
+            role: "bot",
+            html: formattedHtml,
+            time: timeStr,
+            tier: "stopped"
+          });
+          if (typeof saveSessions === "function") saveSessions();
         }
       };
+      activeTypewriterInstance = selfInstance;
+      return selfInstance;
     }
+
+    /* ==========================================================================
+       GENERATION STATE & STOP OUTPUT CONTROLLER
+       ========================================================================== */
+    var isGenerating = false;
+    var activeGenerationAbortController = null;
+    var activeTypewriterInstance = null;
+
+    function getActiveSignal(timeoutMs) {
+      var tSig = AbortSignal.timeout(timeoutMs);
+      if (!activeGenerationAbortController) return tSig;
+      if (typeof AbortSignal.any === "function") {
+        return AbortSignal.any([activeGenerationAbortController.signal, tSig]);
+      }
+      return activeGenerationAbortController.signal;
+    }
+
+    function setGenerating(generating) {
+      isGenerating = generating;
+      var btn = document.getElementById("btnSubmitChat");
+      var btnText = document.getElementById("btnSubmitChatText");
+      var btnIcon = document.getElementById("btnSubmitChatIcon");
+      var composer = document.getElementById("composerInput");
+
+      if (generating) {
+        if (btn) {
+          btn.type = "button";
+          btn.className = "btn-run-scan btn-stop-generating";
+          btn.title = "Stop output generation immediately";
+          btn.onclick = window.stopCurrentGeneration;
+        }
+        if (btnText) btnText.textContent = "Stop";
+        if (btnIcon) {
+          btnIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
+        }
+        if (composer) {
+          composer.disabled = true;
+          composer.placeholder = "VAJRA is generating response... (Click Stop to halt)";
+        }
+      } else {
+        activeGenerationAbortController = null;
+        activeTypewriterInstance = null;
+        if (btn) {
+          btn.type = "submit";
+          btn.className = "btn-run-scan";
+          btn.title = "Send message, request project plan, or scan repository";
+          btn.onclick = null;
+        }
+        if (btnText) btnText.textContent = "Send";
+        if (btnIcon) {
+          btnIcon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+        }
+        if (composer) {
+          composer.disabled = false;
+          composer.placeholder = "Ask VAJRA to plan, reason, analyze code, or enter GitHub repo URL...";
+          composer.focus();
+        }
+      }
+    }
+
+    window.stopCurrentGeneration = function(e) {
+      if (e) {
+        try { e.preventDefault(); e.stopPropagation(); } catch(err) {}
+      }
+      if (!isGenerating) return;
+      console.log("🛑 [VAJRA User Action] Generation stopped by user.");
+
+      if (activeGenerationAbortController) {
+        try {
+          activeGenerationAbortController.abort();
+        } catch (err) {}
+        activeGenerationAbortController = null;
+      }
+
+      if (activeTypewriterInstance && typeof activeTypewriterInstance.stop === "function") {
+        try {
+          activeTypewriterInstance.stop();
+        } catch (err) {}
+      }
+
+      removeTypingIndicator();
+      setGenerating(false);
+    };
 
     function createPipelineTracker() {
       var html =
@@ -4035,7 +4183,7 @@
             method: "POST",
             headers: directHeaders,
             body: JSON.stringify({ data: [fullPrompt] }),
-            signal: AbortSignal.timeout(10000)
+            signal: getActiveSignal(10000)
           });
           if (callResp.status === 429) {
             break;
@@ -4050,7 +4198,7 @@
               }
               var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
                 headers: streamHeaders,
-                signal: AbortSignal.timeout(sTimeout)
+                signal: getActiveSignal(sTimeout)
               });
               if (streamResp.ok && streamResp.body) {
                 var reader = streamResp.body.getReader();
@@ -4119,12 +4267,12 @@
             session_hash: sessionHash,
             trigger_id: 7
           }),
-          signal: AbortSignal.timeout(12000)
+          signal: getActiveSignal(12000)
         });
         if (joinResp.ok) {
           var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
             headers: directHeaders,
-            signal: AbortSignal.timeout(sTimeout)
+            signal: getActiveSignal(sTimeout)
           });
           if (dataStreamResp.ok && dataStreamResp.body) {
             var qReader = dataStreamResp.body.getReader();
@@ -4187,7 +4335,7 @@
           method: "POST",
           headers: directHeaders,
           body: JSON.stringify({ data: [userPrompt] }),
-          signal: AbortSignal.timeout(15000)
+          signal: getActiveSignal(15000)
         });
         if (callResp.ok) {
           var callData = await callResp.json();
@@ -4195,7 +4343,7 @@
           if (eventId) {
             var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply/" + eventId, {
               headers: directHeaders,
-              signal: AbortSignal.timeout(60000)
+              signal: getActiveSignal(60000)
             });
             if (streamResp.ok && streamResp.body) {
               var reader = streamResp.body.getReader();
@@ -4231,7 +4379,7 @@
           method: "POST",
           headers: directHeaders,
           body: JSON.stringify({ prompt: userPrompt }),
-          signal: AbortSignal.timeout(6000)
+          signal: getActiveSignal(6000)
         });
         if (dResp.ok) {
           var dData = await dResp.json();
@@ -4847,6 +4995,8 @@
         return;
       }
 
+      activeGenerationAbortController = new AbortController();
+      setGenerating(true);
       showTypingIndicator();
       var sess = getActiveSession();
 
@@ -4856,6 +5006,7 @@
         if (isFinderScanIntent(q) && hasFiles && (!extraFiles || Object.keys(extraFiles).length > 1)) {
           var scanFiles = (extraFiles && Object.keys(extraFiles).length > 0) ? extraFiles : (sess && sess.files ? sess.files : {});
           removeTypingIndicator();
+          setGenerating(false);
           startScanAnalysis((sess ? sess.workspaceId : "attached_workspace"), scanFiles);
           return;
         }
@@ -4921,6 +5072,7 @@
             '</div>';
 
           appendSessionMessage("bot", responseHtml);
+          setGenerating(false);
           return;
         }
 
@@ -4990,6 +5142,7 @@
         if (localResp !== null && (!extraFiles || Object.keys(extraFiles).length === 0)) {
           removeTypingIndicator();
           appendSessionMessage("bot", localResp, "VAJRA REASONING AUDIT");
+          setGenerating(false);
           return;
         }
 
@@ -5114,6 +5267,7 @@
             );
 
             startRateLimitCooldown(Math.min(inferenceRes.retryAfter || 30, 30));
+            setGenerating(false);
             return;
           }
 
@@ -5180,9 +5334,11 @@
             '</p>';
         }
         appendSessionMessage("bot", response, "VAJRA REASONING AUDIT");
+        setGenerating(false);
       } catch (err) {
         removeTypingIndicator();
         appendSessionMessage("bot", "<p><b>VAJRA System Note:</b> Query processed. Provide a repository or source file to run the AST security audit.</p>");
+        setGenerating(false);
       }
     }
 
@@ -5406,6 +5562,7 @@
         // Enter sends message, Shift+Enter inserts newline
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
+          if (isGenerating) return;
           if (composerForm) {
             composerForm.dispatchEvent(new Event("submit"));
           }
@@ -5416,6 +5573,7 @@
     if (composerForm) {
       composerForm.addEventListener("submit", function (e) {
         e.preventDefault();
+        if (isGenerating) return;
         if (!composerTextarea) composerTextarea = document.getElementById("composerInput");
         var text = (composerTextarea ? composerTextarea.value : "").trim();
         var attachments = currentComposerAttachments.slice();
