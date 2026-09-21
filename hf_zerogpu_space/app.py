@@ -88,7 +88,7 @@ def load_model():
     print("🚀 [VAJRA ZeroGPU] A100 Burst Engine ONLINE!")
 
 VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
-Answer software security, code auditing, AST verification, threat modeling, and complex algorithmic questions concisely, authoritatively, and accurately."""
+Answer software security, code auditing, AST verification, threat modeling, and general technical questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 250 to 320 words that naturally conclude without trailing off mid-sentence."""
 
 # =====================================================================
 # 3. ZEROGPU INFERENCE (Optimized 20s Duration)
@@ -160,7 +160,8 @@ with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
     send_button.click(
         fn=generate_vajra_reply,
         inputs=user_input,
-        outputs=output_display
+        outputs=output_display,
+        api_name="generate_vajra_reply"
     )
 
 # =====================================================================

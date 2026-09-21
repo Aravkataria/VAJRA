@@ -714,34 +714,35 @@ def _query_single_space_endpoint(
     except Exception:
         pass
 
-    # 2. Try Gradio 4 Client API (/call/generate_vajra_reply)
-    try:
-        call_url = f"{clean_base}/call/generate_vajra_reply"
-        call_payload = json.dumps({"data": [full_prompt]}).encode("utf-8")
-        call_req = urllib.request.Request(call_url, data=call_payload, headers=headers)
-        with urllib.request.urlopen(call_req, timeout=10) as call_resp:
-            if call_resp.status == 200:
-                call_data = json.loads(call_resp.read().decode("utf-8"))
-                event_id = call_data.get("event_id")
-                if event_id:
-                    stream_url = f"{clean_base}/call/generate_vajra_reply/{event_id}"
-                    stream_req = urllib.request.Request(stream_url, headers=headers)
-                    with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
-                        is_complete = False
-                        for raw_line in stream:
-                            line = raw_line.decode("utf-8", errors="replace").strip()
-                            if line.startswith("event: complete"):
-                                is_complete = True
-                            elif is_complete and line.startswith("data:"):
-                                res_arr = json.loads(line[5:].strip())
-                                if res_arr and len(res_arr) > 0 and res_arr[0]:
-                                    ans = str(res_arr[0]).strip()
-                                    return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
-    except urllib.error.HTTPError as http_err:
-        if http_err.code == 429:
-            return {"reply": None, "rate_limited": True, "retry_after": 60, "error": "HTTP 429 Too Many Requests"}
-    except Exception:
-        pass
+    # 2. Try Gradio 4 Client API (supports both /call/generate_vajra_reply and /call/gradio_generate)
+    for ep in ["/call/generate_vajra_reply", "/call/gradio_generate"]:
+        try:
+            call_url = f"{clean_base}{ep}"
+            call_payload = json.dumps({"data": [full_prompt]}).encode("utf-8")
+            call_req = urllib.request.Request(call_url, data=call_payload, headers=headers)
+            with urllib.request.urlopen(call_req, timeout=10) as call_resp:
+                if call_resp.status == 200:
+                    call_data = json.loads(call_resp.read().decode("utf-8"))
+                    event_id = call_data.get("event_id")
+                    if event_id:
+                        stream_url = f"{clean_base}{ep}/{event_id}"
+                        stream_req = urllib.request.Request(stream_url, headers=headers)
+                        with urllib.request.urlopen(stream_req, timeout=timeout) as stream:
+                            is_complete = False
+                            for raw_line in stream:
+                                line = raw_line.decode("utf-8", errors="replace").strip()
+                                if line.startswith("event: complete"):
+                                    is_complete = True
+                                elif is_complete and line.startswith("data:"):
+                                    res_arr = json.loads(line[5:].strip())
+                                    if res_arr and len(res_arr) > 0 and res_arr[0]:
+                                        ans = str(res_arr[0]).strip()
+                                        return {"reply": ans, "rate_limited": False, "retry_after": 0, "error": None}
+        except urllib.error.HTTPError as http_err:
+            if http_err.code == 429:
+                return {"reply": None, "rate_limited": True, "retry_after": 60, "error": "HTTP 429 Too Many Requests"}
+        except Exception:
+            pass
 
     # 3. Gradio Queue Fallback (/queue/join on fn_index 0)
     try:
@@ -828,7 +829,7 @@ def query_vajra_fine_tuned_model(
         headers["X-Vajra-Signature"] = secret_key
 
     # 1. Primary: 2 vCPU Space (VAJRA_v2) - Unlimited queries, 0 GPU quota
-    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=22)
+    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=40)
     if res_vcpu and res_vcpu.get("reply"):
         if not res_vcpu.get("tier"):
             res_vcpu["tier"] = "standard"
