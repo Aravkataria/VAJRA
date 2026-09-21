@@ -1,15 +1,15 @@
 import os
 import gc
 import time
-import torch
 import spaces
+import torch
 import gradio as gr
 from fastapi import Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
 VAJRA_SECRET_KEY = os.getenv("VAJRA_SECRET_KEY")
@@ -45,61 +45,43 @@ def sanitize_and_check_injection(raw_text: str) -> str:
     return cleaned
 
 # =====================================================================
-# 2. LAZY MODEL LOADING ON ZEROGPU (A100)
+# 2. MODULE-SCOPE ZERO-GPU MODEL LOADING (bfloat16 on A10G / A100)
 # =====================================================================
-tokenizer = None
-model = None
+print(f"🔒 [VAJRA ZeroGPU] Loading tokenizer from {LORA_MODEL_ID}...")
+try:
+    tokenizer = AutoTokenizer.from_pretrained(LORA_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
+except Exception:
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
 
-def load_model():
-    global tokenizer, model
-    if model is not None:
-        return
+print(f"🔒 [VAJRA ZeroGPU] Loading foundation model {BASE_MODEL_ID} in bfloat16...")
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL_ID,
+    token=HF_TOKEN,
+    torch_dtype=torch.bfloat16,
+    low_cpu_mem_usage=True,
+    trust_remote_code=True,
+    device_map="auto"
+)
 
-    print(f"🔒 [VAJRA ZeroGPU] Loading tokenizer from {LORA_MODEL_ID}...")
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(LORA_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
-    except Exception:
-        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
+print(f"🔒 [VAJRA ZeroGPU] Attaching LoRA adapter from {LORA_MODEL_ID}...")
+try:
+    model = PeftModel.from_pretrained(model, LORA_MODEL_ID, token=HF_TOKEN)
+    print("✅ [VAJRA ZeroGPU] Fine-tuned LoRA adapter attached successfully!")
+except Exception as e:
+    print(f"⚠️ [VAJRA ZeroGPU] LoRA note: {e}")
 
-    print(f"🔒 [VAJRA ZeroGPU] Loading {BASE_MODEL_ID} in 4-bit...")
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4"
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL_ID,
-        token=HF_TOKEN,
-        quantization_config=bnb_config,
-        low_cpu_mem_usage=True,
-        trust_remote_code=True,
-        device_map="auto"
-    )
-
-    print(f"🔒 [VAJRA ZeroGPU] Loading LoRA adapter from {LORA_MODEL_ID}...")
-    try:
-        model = PeftModel.from_pretrained(model, LORA_MODEL_ID, token=HF_TOKEN)
-        print("✅ [VAJRA ZeroGPU] LoRA adapter loaded successfully on GPU!")
-    except Exception as e:
-        print(f"⚠️ [VAJRA ZeroGPU] LoRA note: {e}")
-
-    model.eval()
-    print("🚀 [VAJRA ZeroGPU] A100 Burst Engine ONLINE!")
+model.eval()
+print("🚀 [VAJRA ZeroGPU] A10G / A100 Burst Engine ONLINE!")
 
 VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
 Answer software security, code auditing, AST verification, threat modeling, and general technical questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 250 to 320 words that naturally conclude without trailing off mid-sentence."""
 
 # =====================================================================
-# 3. ZEROGPU INFERENCE (60s Duration for Deep Reasoning)
+# 3. ZEROGPU INFERENCE FUNCTION
 # =====================================================================
+@spaces.GPU(duration=60)
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
     clean_prompt = sanitize_and_check_injection(prompt)
-    return _gpu_generate(clean_prompt, context_files)
-
-@spaces.GPU(duration=60)
-def _gpu_generate(clean_prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
-    load_model()
     messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
 
     if context_files and isinstance(context_files, dict):
@@ -123,7 +105,7 @@ def _gpu_generate(clean_prompt: str, context_files: Optional[Dict[str, str]] = N
     with torch.no_grad():
         generated_ids = model.generate(
             **model_inputs,
-            max_new_tokens=896,
+            max_new_tokens=512,
             temperature=0.2,
             top_p=0.9,
             repetition_penalty=1.1,
@@ -142,12 +124,15 @@ def _gpu_generate(clean_prompt: str, context_files: Optional[Dict[str, str]] = N
 
     return res_text
 
+def gradio_generate(prompt: str) -> str:
+    return generate_vajra_reply(prompt, None)
+
 # =====================================================================
 # 4. GRADIO INTERFACE
 # =====================================================================
 with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
     gr.Markdown("# 🛡️ VAJRA Cyber-Reasoning Intelligence System (ZeroGPU Burst)")
-    gr.Markdown("**Fine-Tuned by Arav Kataria** | 7B LoRA | Nvidia A100 ZeroGPU")
+    gr.Markdown("**Fine-Tuned by Arav Kataria** | 7B LoRA | Nvidia A100 / A10G ZeroGPU")
     gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat` (Zero-Trust Verified)")
 
     with gr.Row():
@@ -160,7 +145,7 @@ with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
     output_display = gr.Markdown(label="VAJRA Analysis Output")
 
     send_button.click(
-        fn=generate_vajra_reply,
+        fn=gradio_generate,
         inputs=user_input,
         outputs=output_display,
         api_name="generate_vajra_reply"
@@ -188,9 +173,9 @@ def health():
     return {
         "status": "online",
         "space": "VAJRA (ZeroGPU)",
-        "hardware": "Nvidia A100 ZeroGPU",
-        "model_loaded": model is not None,
-        "model": "AravKataria/vajra-lora (7B 4-bit ZeroGPU)",
+        "hardware": "Nvidia A10G / A100 ZeroGPU",
+        "model_loaded": True,
+        "model": "AravKataria/vajra-lora (7B ZeroGPU)",
         "author": "Arav Kataria",
         "service": "VAJRA-ZeroGPU-Burst-Gateway"
     }
@@ -212,10 +197,10 @@ async def chat_api(req: ChatRequest, request: Request):
     return JSONResponse({
         "success": True,
         "reply": reply,
-        "model": "AravKataria/vajra-lora (ZeroGPU A100 Burst)",
+        "model": "AravKataria/vajra-lora (ZeroGPU A10G Burst)",
         "tier": "max",
         "security": "Zero-Retention Verified"
     })
 
-print("✅ [VAJRA ZeroGPU] Server starting with A100 support.")
+print("✅ [VAJRA ZeroGPU] Server starting with A10G / A100 support.")
 demo.launch(server_name="0.0.0.0", server_port=7860)
