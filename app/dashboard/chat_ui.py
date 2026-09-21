@@ -544,8 +544,10 @@ CHAT_HTML = r"""<!DOCTYPE html>
 
     .pane {
       display: none;
-      flex: 1;
-      overflow-y: auto;
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
       position: relative;
     }
 
@@ -555,17 +557,20 @@ CHAT_HTML = r"""<!DOCTYPE html>
     }
 
     .chat-stream {
-      flex: 1;
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
-      padding: 2rem 22% 8rem 22%;
+      overflow-x: hidden;
+      padding: 1.5rem 22% 1.25rem 22%;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1.25rem;
       scroll-behavior: smooth;
+      box-sizing: border-box;
     }
 
-    @media (max-width: 1300px) { .chat-stream { padding: 2rem 14% 8rem 14%; } }
-    @media (max-width: 900px) { .chat-stream { padding: 1.5rem 5% 8rem 5%; } }
+    @media (max-width: 1300px) { .chat-stream { padding: 1.25rem 14% 1rem 14%; } }
+    @media (max-width: 900px) { .chat-stream { padding: 1rem 5% 0.85rem 5%; } }
 
     /* Modern Centered Hero */
     .hero-container {
@@ -854,15 +859,18 @@ CHAT_HTML = r"""<!DOCTYPE html>
        4. COMPOSER BAR (Pinned Modern Floating Shell)
        ========================================================================== */
     .composer-shell {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      padding: 1rem 22% 1.25rem 22%;
-      background: linear-gradient(180deg, transparent 0%, var(--bg-base) 40%);
+      position: relative;
+      flex-shrink: 0;
+      width: 100%;
+      padding: 0.75rem 22%;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
       z-index: 20;
+      box-sizing: border-box;
     }
 
-    @media (max-width: 1300px) { .composer-shell { padding: 1rem 14% 1.25rem 14%; } }
-    @media (max-width: 900px) { .composer-shell { padding: 1rem 5% 1.25rem 5%; } }
+    @media (max-width: 1300px) { .composer-shell { padding: 0.75rem 14%; } }
+    @media (max-width: 900px) { .composer-shell { padding: 0.5rem 5%; } }
 
     .composer-panel {
       background: var(--bg-surface);
@@ -1629,7 +1637,11 @@ CHAT_HTML = r"""<!DOCTYPE html>
             '<div class="msg-card">' + m.html + '</div>';
           stream.appendChild(group);
         });
-        stream.scrollTop = stream.scrollHeight;
+        if (stream.scrollHeight > stream.clientHeight) {
+          stream.scrollTop = stream.scrollHeight;
+        } else {
+          stream.scrollTop = 0;
+        }
       }
 
       updateTabPanesWithScanData(sess.scanData, sess.workspaceId);
@@ -1811,13 +1823,35 @@ CHAT_HTML = r"""<!DOCTYPE html>
         '</div>';
 
       stream.appendChild(typingDiv);
-      stream.scrollTop = stream.scrollHeight;
+      smartScrollToBottom(stream, typingDiv);
       return typingDiv;
     }
 
     function removeTypingIndicator() {
       var el = document.getElementById("activeTypingIndicator");
       if (el) el.remove();
+    }
+
+    function smartScrollToBottom(stream, targetEl) {
+      if (!stream) return;
+      requestAnimationFrame(function() {
+        if (stream.scrollHeight <= stream.clientHeight) {
+          stream.scrollTop = 0;
+          return;
+        }
+        if (targetEl && targetEl.offsetTop !== undefined) {
+          var elTop = targetEl.offsetTop;
+          var elHeight = targetEl.offsetHeight;
+          var streamHeight = stream.clientHeight;
+          if (elHeight > streamHeight * 0.65) {
+            stream.scrollTop = Math.max(0, elTop - 12);
+          } else {
+            stream.scrollTop = stream.scrollHeight;
+          }
+        } else {
+          stream.scrollTop = stream.scrollHeight;
+        }
+      });
     }
 
     function renderMath(targetEl) {
@@ -1843,6 +1877,22 @@ CHAT_HTML = r"""<!DOCTYPE html>
     function formatBotMarkdown(rawText) {
       if (!rawText) return "";
       var text = rawText;
+
+      // Auto-close unbalanced inline math \( ... \) or $$ ... $$ or \[ ... \]
+      var openParenMath = (text.match(/\\\(/g) || []).length;
+      var closeParenMath = (text.match(/\\\)/g) || []).length;
+      if (openParenMath > closeParenMath) {
+        text += " \\)".repeat(openParenMath - closeParenMath);
+      }
+      var openBracketMath = (text.match(/\\\[/g) || []).length;
+      var closeBracketMath = (text.match(/\\\]/g) || []).length;
+      if (openBracketMath > closeBracketMath) {
+        text += " \\]".repeat(openBracketMath - closeBracketMath);
+      }
+      var doubleDollarCount = (text.match(/\$\$/g) || []).length;
+      if (doubleDollarCount % 2 !== 0) {
+        text += " $$";
+      }
 
       // 1. Normalize multiline block math so newlines don't get broken by <br>
       text = text.replace(/\\\[([\s\S]*?)\\\]/g, function(match, formula) {
@@ -1927,7 +1977,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
 
       stream.appendChild(group);
       renderMath(group);
-      stream.scrollTop = stream.scrollHeight;
+      smartScrollToBottom(stream, group);
       return group;
     }
 
