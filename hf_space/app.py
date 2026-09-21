@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 from peft import PeftModel
 
 VAJRA_SECRET_KEY = os.getenv("VAJRA_SECRET_KEY")
@@ -136,20 +136,17 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None):
     clean_prompt = sanitize_and_check_injection(prompt)
 
-    # 1. Concurrency check: If another user is using the 2 vCPU, shed load to Ultra-Lite immediately
+    # 1. Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
     acquired = inference_lock.acquire(blocking=False)
     if not acquired:
-        print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Shedding load to Ultra-Lite!")
-        reply = generate_ultra_lite_reply(clean_prompt, context_files)
-        return reply, "VAJRA-Ultra-Lite (0.5B - Traffic Overflow Mode)", "ultra_lite"
+        print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
+        return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
     try:
         load_cpu_model()
 
-        if model is None:
-            # Fallback to Ultra-Lite if CPU model could not be loaded
-            reply = generate_ultra_lite_reply(clean_prompt, context_files)
-            return reply, "VAJRA-Ultra-Lite (0.5B - Model Standby)", "ultra_lite"
+        if model is None or tokenizer is None:
+            return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
         messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
         if context_files and isinstance(context_files, dict):
@@ -189,16 +186,73 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
     except Exception as e:
         print(f"⚠️ 7B CPU generation exception: {e}")
-        fallback = generate_ultra_lite_reply(clean_prompt, context_files)
-        return fallback, "VAJRA-Ultra-Lite (0.5B - Recovery Mode)", "ultra_lite"
+        return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
     finally:
         inference_lock.release()
 
-# Wrapper for Gradio interface
-def gradio_generate(prompt: str) -> str:
-    reply, model_name, _ = generate_vajra_reply(prompt, None)
-    return f"**[{model_name}]**\n\n{reply}"
+# Progressive token streaming generator for Gradio interface
+def gradio_generate(prompt: str):
+    clean_prompt = sanitize_and_check_injection(prompt)
+
+    # Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
+    acquired = inference_lock.acquire(blocking=False)
+    if not acquired:
+        print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
+        yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
+        return
+
+    try:
+        load_cpu_model()
+
+        if model is None or tokenizer is None:
+            yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
+            return
+
+        messages = [
+            {"role": "system", "content": VAJRA_SYSTEM_PROMPT},
+            {"role": "user", "content": clean_prompt}
+        ]
+
+        text_input = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        model_inputs = tokenizer([text_input], return_tensors="pt")
+
+        streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+        gen_kwargs = dict(
+            **model_inputs,
+            streamer=streamer,
+            max_new_tokens=280,
+            temperature=0.2,
+            top_p=0.9,
+            repetition_penalty=1.1,
+            do_sample=True,
+            eos_token_id=tokenizer.eos_token_id,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+        gen_thread = threading.Thread(target=model.generate, kwargs=gen_kwargs)
+        gen_thread.start()
+
+        accumulated = ""
+        for new_text in streamer:
+            accumulated += new_text
+            yield accumulated
+
+        gen_thread.join()
+
+        if accumulated.count("```") % 2 != 0:
+            accumulated += "\n```"
+            yield accumulated
+
+        del model_inputs
+        gc.collect()
+
+    except Exception as e:
+        print(f"⚠️ 7B CPU streaming generation exception: {e}")
+        yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
+
+    finally:
+        inference_lock.release()
 
 # =====================================================================
 # 5. GRADIO INTERFACE
@@ -268,8 +322,11 @@ async def chat_api(req: ChatRequest, request: Request):
             raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
 
     reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
+    is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
     return JSONResponse({
-        "success": True,
+        "success": not is_overflow,
+        "overflow": is_overflow,
+        "busy": is_overflow,
         "reply": reply,
         "model": model_name,
         "tier": tier_name,
