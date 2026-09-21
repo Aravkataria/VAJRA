@@ -55,9 +55,61 @@ def sanitize_and_check_injection(raw_text: str) -> str:
     return cleaned
 
 # =====================================================================
-# 2. ULTRA-LITE LOAD SHEDDING ENGINE (Serverless Router)
+# 2. ULTRA-LITE LOAD SHEDDING ENGINE (0.5B Neural Model On CPU)
 # =====================================================================
+draft_tokenizer = None
+draft_model = None
+
+def get_draft_model():
+    global draft_tokenizer, draft_model
+    if draft_model is None:
+        try:
+            print(f"🔒 [VAJRA v2] Initializing Fast 0.5B Speculative Engine ({ULTRA_LITE_MODEL_ID})...")
+            draft_tokenizer = AutoTokenizer.from_pretrained(ULTRA_LITE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
+            draft_model = AutoModelForCausalLM.from_pretrained(
+                ULTRA_LITE_MODEL_ID,
+                token=HF_TOKEN,
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=True,
+                trust_remote_code=True,
+                device_map="cpu"
+            )
+            print("✅ [VAJRA v2] 0.5B Speculative Engine loaded on CPU successfully!")
+        except Exception as e:
+            print(f"⚠️ Error loading local 0.5B model: {e}")
+    return draft_tokenizer, draft_model
+
 def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
+    # 1. Direct Local 0.5B CPU Generation (Fastest, zero network overhead, ~40 tokens/sec)
+    try:
+        tok, m = get_draft_model()
+        if tok is not None and m is not None:
+            messages = [
+                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning intelligence assistant. Provide a direct, authoritative, and concise technical answer."},
+                {"role": "user", "content": prompt}
+            ]
+            text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            inputs = tok([text_in], return_tensors="pt")
+            with torch.no_grad():
+                ids = m.generate(
+                    **inputs,
+                    max_new_tokens=180,
+                    temperature=0.25,
+                    top_p=0.9,
+                    repetition_penalty=1.08,
+                    do_sample=True,
+                    eos_token_id=tok.eos_token_id,
+                    pad_token_id=tok.eos_token_id
+                )
+            in_len = inputs.input_ids.shape[1]
+            res = tok.decode(ids[0, in_len:], skip_special_tokens=True).strip()
+            del inputs, ids
+            if res:
+                return res
+    except Exception as e:
+        print(f"⚠️ Local 0.5B CPU generation note: {e}")
+
+    # 2. Serverless Router Fallback (if HF_TOKEN is configured)
     token = HF_TOKEN or os.getenv("HF_TOKEN")
     if token:
         try:
@@ -69,7 +121,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             }
             payload = json.dumps({
                 "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
-                "parameters": {"max_new_tokens": 768, "temperature": 0.2, "return_full_text": False}
+                "parameters": {"max_new_tokens": 512, "temperature": 0.2, "return_full_text": False}
             }).encode("utf-8")
             req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=12) as response:
