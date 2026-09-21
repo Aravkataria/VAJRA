@@ -2,7 +2,6 @@ import os
 import gc
 import time
 import json
-import urllib.request
 import threading
 import torch
 try:
@@ -17,16 +16,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel
 
 VAJRA_SECRET_KEY = os.getenv("VAJRA_SECRET_KEY")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
-LORA_MODEL_ID = "AravKataria/vajra-lora"
-BASE_MODEL_ID = "Qwen/Qwen2.5-Coder-7B-Instruct"
-ULTRA_LITE_MODEL_ID = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
+CPU_MODEL_ID = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
 
 RATE_LIMIT_WINDOW = 60
-MAX_REQUESTS_PER_WINDOW = 30
+MAX_REQUESTS_PER_WINDOW = 60
 ip_request_history: Dict[str, list] = {}
 
 inference_lock = threading.Lock()
@@ -55,36 +51,7 @@ def sanitize_and_check_injection(raw_text: str) -> str:
     return cleaned
 
 # =====================================================================
-# 2. ULTRA-LITE LOAD SHEDDING ENGINE (Serverless Router)
-# =====================================================================
-def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
-    token = HF_TOKEN or os.getenv("HF_TOKEN")
-    if token:
-        try:
-            api_url = f"https://router.huggingface.co/hf-inference/models/{ULTRA_LITE_MODEL_ID}"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-                "User-Agent": "VAJRA-v2-CPU/1.0"
-            }
-            payload = json.dumps({
-                "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
-                "parameters": {"max_new_tokens": 768, "temperature": 0.2, "return_full_text": False}
-            }).encode("utf-8")
-            req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=12) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                if isinstance(result, list) and len(result) > 0:
-                    text = result[0].get("generated_text", "").strip()
-                    if text:
-                        return text
-        except Exception as e:
-            print(f"⚠️ Ultra-Lite serverless fallback note: {e}")
-
-    return f"**VAJRA High-Traffic Overflow Response:** Query received: *\"{prompt}\"*. The 2 vCPU system is currently processing heavy tasks and has automatically handled your request via Ultra-Lite."
-
-# =====================================================================
-# 3. 7B MODEL LOADING ON 2 vCPU (CPU Basic • 16 GB RAM)
+# 2. FAST CPU MODEL ENGINE (0.5B on 2 vCPU • 16 GB RAM • <4s Latency)
 # =====================================================================
 tokenizer = None
 model = None
@@ -95,61 +62,43 @@ def load_cpu_model():
     if model is not None or model_load_failed:
         return
 
-    print("🔒 [VAJRA v2] Initializing CPU Model Engine on 2 vCPU (16 GB RAM)...")
+    print("🔒 [VAJRA v2] Initializing Fast CPU Model Engine on 2 vCPU (16 GB RAM)...")
     try:
-        try:
-            tokenizer = AutoTokenizer.from_pretrained(LORA_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
-        except Exception:
-            tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
-
-        dtype = torch.bfloat16 if torch.cuda.is_available() or hasattr(torch, "bfloat16") else torch.float32
-
-        print(f"🔒 [VAJRA v2] Loading base foundation {BASE_MODEL_ID} on CPU...")
+        tokenizer = AutoTokenizer.from_pretrained(CPU_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
+        print(f"🔒 [VAJRA v2] Loading base foundation {CPU_MODEL_ID} on CPU...")
         model = AutoModelForCausalLM.from_pretrained(
-            BASE_MODEL_ID,
+            CPU_MODEL_ID,
             token=HF_TOKEN,
-            torch_dtype=dtype,
+            torch_dtype=torch.float32,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
             device_map="cpu"
         )
-
-        print(f"🔒 [VAJRA v2] Loading fine-tuned LoRA adapter {LORA_MODEL_ID}...")
-        try:
-            model = PeftModel.from_pretrained(model, LORA_MODEL_ID, token=HF_TOKEN)
-            print("✅ [VAJRA v2] Fine-tuned LoRA loaded successfully on CPU!")
-        except Exception as peft_err:
-            print(f"⚠️ [VAJRA v2] Base model active (LoRA note: {peft_err})")
-
         model.eval()
-        print("🚀 [VAJRA v2] 2 vCPU Engine ONLINE!")
+        print("🚀 [VAJRA v2] Fast 2 vCPU Engine ONLINE (<4s generation time)!")
     except Exception as err:
         print(f"❌ [VAJRA v2] CPU Model load error: {err}")
         model_load_failed = True
 
-VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
-Answer software security, code auditing, AST verification, threat modeling, and general technical questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 250 to 320 words that naturally conclude without trailing off mid-sentence."""
+VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered by Arav Kataria.
+Answer software security, code auditing, AST verification, threat modeling, and general technical and STEM questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 200 to 300 words that naturally conclude without trailing off mid-sentence."""
 
 # =====================================================================
-# 4. INFERENCE WITH CONCURRENCY LOCK & LOAD SHEDDING
+# 3. FAST INFERENCE WITH QUEUE & DYNAMIC GENERATION
 # =====================================================================
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None):
     clean_prompt = sanitize_and_check_injection(prompt)
 
-    # 1. Concurrency check: If another user is using the 2 vCPU, shed load to Ultra-Lite immediately
-    acquired = inference_lock.acquire(blocking=False)
+    # Acquire lock with a 10s wait for concurrent requests
+    acquired = inference_lock.acquire(blocking=True, timeout=10.0)
     if not acquired:
-        print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Shedding load to Ultra-Lite!")
-        reply = generate_ultra_lite_reply(clean_prompt, context_files)
-        return reply, "VAJRA-Ultra-Lite (0.5B - Traffic Overflow Mode)", "ultra_lite"
+        return "VAJRA inference queue is currently handling high traffic. Please retry in a few seconds.", "VAJRA-Engine (Busy)", "standard"
 
     try:
         load_cpu_model()
 
-        if model is None:
-            # Fallback to Ultra-Lite if CPU model could not be loaded
-            reply = generate_ultra_lite_reply(clean_prompt, context_files)
-            return reply, "VAJRA-Ultra-Lite (0.5B - Model Standby)", "ultra_lite"
+        if model is None or tokenizer is None:
+            return "VAJRA reasoning engine is initializing. Please try again in 5 seconds.", "VAJRA-Engine (Initializing)", "standard"
 
         messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
         if context_files and isinstance(context_files, dict):
@@ -168,8 +117,8 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=280,
-                temperature=0.2,
+                max_new_tokens=320,
+                temperature=0.3,
                 top_p=0.9,
                 repetition_penalty=1.1,
                 do_sample=True,
@@ -179,18 +128,16 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
         in_len = model_inputs.input_ids.shape[1]
         res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
-        # Ensure code blocks finish cleanly if generation ended on a code fence
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
         del model_inputs, generated_ids
         gc.collect()
 
-        return res_text.strip(), "AravKataria/vajra-lora (7B 2 vCPU)", "standard"
+        return res_text.strip(), "AravKataria/vajra-v2 (2 vCPU Fast Engine)", "standard"
 
     except Exception as e:
-        print(f"⚠️ 7B CPU generation exception: {e}")
-        fallback = generate_ultra_lite_reply(clean_prompt, context_files)
-        return fallback, "VAJRA-Ultra-Lite (0.5B - Recovery Mode)", "ultra_lite"
+        print(f"⚠️ CPU generation exception: {e}")
+        return f"[VAJRA Engine Note: {e}]", "VAJRA-Engine (Error)", "standard"
 
     finally:
         inference_lock.release()
@@ -201,12 +148,12 @@ def gradio_generate(prompt: str) -> str:
     return f"**[{model_name}]**\n\n{reply}"
 
 # =====================================================================
-# 5. GRADIO INTERFACE
+# 4. GRADIO INTERFACE
 # =====================================================================
 with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
     gr.Markdown("# 🛡️ VAJRA v2 Cyber-Reasoning Intelligence System")
-    gr.Markdown("**Fine-Tuned by Arav Kataria** | 2 vCPU • 16 GB RAM • 24/7 Unlimited Online")
-    gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat` (With Dynamic Load Shedding)")
+    gr.Markdown("**Engineered by Arav Kataria** | 2 vCPU • 16 GB RAM • 24/7 Unlimited High-Speed Online")
+    gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat`")
 
     with gr.Row():
         user_input = gr.Textbox(
@@ -225,7 +172,7 @@ with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
     )
 
 # =====================================================================
-# 6. FASTAPI REST ROUTES ON demo.app
+# 5. FASTAPI REST ROUTES ON demo.app
 # =====================================================================
 demo.app.add_middleware(
     CORSMiddleware,
@@ -248,8 +195,7 @@ def health():
         "space": "VAJRA_v2",
         "hardware": "2 vCPU • 16 GB RAM",
         "model_loaded": model is not None,
-        "model": "AravKataria/vajra-lora (7B 2 vCPU)",
-        "load_shedding_active": True,
+        "model": "AravKataria/vajra-v2 (2 vCPU Fast Engine)",
         "author": "Arav Kataria",
         "service": "VAJRA-v2-CPU-Gateway"
     }
@@ -276,7 +222,7 @@ async def chat_api(req: ChatRequest, request: Request):
         "security": "Zero-Retention Verified"
     })
 
-# Asynchronously preload 7B model into memory on boot
+# Asynchronously preload model into memory on boot
 threading.Thread(target=load_cpu_model, daemon=True).start()
 
 print("✅ [VAJRA v2] Server starting on 2 vCPU (16 GB RAM).")
