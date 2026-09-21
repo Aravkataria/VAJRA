@@ -433,6 +433,7 @@ class DraftRequest(BaseModel):
     data: Optional[List[Any]] = None
 
 @demo.app.post("/api/draft")
+@demo.app.post("/v1/draft")
 async def draft_api(req: DraftRequest):
     try:
         p = req.prompt or ""
@@ -451,6 +452,10 @@ async def draft_api(req: DraftRequest):
             "reply": "",
             "tier": "ultra_lite"
         })
+
+@demo.app.post("/v1/chat")
+async def chat_v1(req: ChatRequest, request: Request):
+    return await chat_api(req, request)
 
 # Asynchronously preload 0.5B draft model into memory on boot (~1.2 GB RAM footprint)
 threading.Thread(target=get_draft_model, daemon=True).start()
