@@ -147,6 +147,11 @@ def load_cpu_model():
     if model is not None or model_load_failed:
         return
 
+    # Guard: Never allocate 15.2 GB into a 16 GB container unless explicitly enabled by admin
+    if os.getenv("LOAD_7B_ON_CPU", "0") != "1":
+        print("🛡️ [VAJRA v2] Preserving 16 GB CPU RAM ceiling: 7B queries delegated to ZeroGPU / HF Router.")
+        return
+
     print("🔒 [VAJRA v2] Initializing CPU Model Engine on 2 vCPU (16 GB RAM)...")
     try:
         try:
@@ -198,6 +203,30 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         load_cpu_model()
 
         if model is None or tokenizer is None:
+            # 1. Serverless Router / HF Inference API if HF_TOKEN is configured
+            token = HF_TOKEN or os.getenv("HF_TOKEN")
+            if token:
+                try:
+                    api_url = f"https://router.huggingface.co/hf-inference/models/{BASE_MODEL_ID}"
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}",
+                        "User-Agent": "VAJRA-v2-CPU/1.0"
+                    }
+                    payload = json.dumps({
+                        "inputs": f"<|im_start|>system\n{VAJRA_SYSTEM_PROMPT}<|im_end|>\n<|im_start|>user\n{clean_prompt}<|im_end|>\n<|im_start|>assistant\n",
+                        "parameters": {"max_new_tokens": 280, "temperature": 0.2, "return_full_text": False}
+                    }).encode("utf-8")
+                    req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
+                    with urllib.request.urlopen(req, timeout=20) as response:
+                        result = json.loads(response.read().decode("utf-8"))
+                        if isinstance(result, list) and len(result) > 0:
+                            text = result[0].get("generated_text", "").strip()
+                            if text:
+                                return text, "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "burst"
+                except Exception as route_err:
+                    print(f"⚠️ 7B Serverless router fallback note: {route_err}")
+
             return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
         messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
@@ -423,9 +452,8 @@ async def draft_api(req: DraftRequest):
             "tier": "ultra_lite"
         })
 
-# Asynchronously preload 0.5B draft and 7B model into memory on boot
+# Asynchronously preload 0.5B draft model into memory on boot (~1.2 GB RAM footprint)
 threading.Thread(target=get_draft_model, daemon=True).start()
-threading.Thread(target=load_cpu_model, daemon=True).start()
 
 print("✅ [VAJRA v2] Server starting on 2 vCPU (16 GB RAM).")
 demo.launch(server_name="0.0.0.0", server_port=7860)
