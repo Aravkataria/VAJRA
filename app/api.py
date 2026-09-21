@@ -828,8 +828,20 @@ def query_vajra_fine_tuned_model(
     if secret_key:
         headers["X-Vajra-Signature"] = secret_key
 
-    # 1. Primary: 2 vCPU Space (VAJRA_v2) - Unlimited queries, 0 GPU quota
-    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=40)
+    # 1. Primary Turbo Burst: ZeroGPU Space (vajra) - High-speed A10G / A100 GPU (<3s latency)
+    res_gpu = _query_single_space_endpoint(VAJRA_HF_ZEROGPU_URL, full_prompt, headers, timeout=25)
+    if res_gpu and res_gpu.get("reply"):
+        if not res_gpu.get("tier"):
+            res_gpu["tier"] = "max"
+        if not res_gpu.get("model"):
+            res_gpu["model"] = "AravKataria/vajra-lora (ZeroGPU A10G Burst)"
+        if not context_files:
+            _backend_query_cache[cache_key] = (now, res_gpu["reply"])
+        return res_gpu
+
+    # 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 24/7 unlimited queries, 0 GPU quota
+    logger.info("ZeroGPU in standby or warming up; routing to 2 vCPU Space...")
+    res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=85)
     if res_vcpu and res_vcpu.get("reply"):
         if not res_vcpu.get("tier"):
             res_vcpu["tier"] = "standard"
@@ -838,18 +850,6 @@ def query_vajra_fine_tuned_model(
         if not context_files:
             _backend_query_cache[cache_key] = (now, res_vcpu["reply"])
         return res_vcpu
-
-    # 2. Emergency Turbo Burst: ZeroGPU Space (vajra) - High-speed A100 GPU for overflow queries
-    logger.info("2 vCPU Space busy or in standby; engaging ZeroGPU A100 Turbo Burst...")
-    res_gpu = _query_single_space_endpoint(VAJRA_HF_ZEROGPU_URL, full_prompt, headers, timeout=25)
-    if res_gpu and res_gpu.get("reply"):
-        if not res_gpu.get("tier"):
-            res_gpu["tier"] = "max"
-        if not res_gpu.get("model"):
-            res_gpu["model"] = "AravKataria/vajra-lora (ZeroGPU A100 Burst)"
-        if not context_files:
-            _backend_query_cache[cache_key] = (now, res_gpu["reply"])
-        return res_gpu
 
     if res_gpu and res_gpu.get("rate_limited"):
         return res_gpu

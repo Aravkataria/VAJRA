@@ -3660,7 +3660,8 @@
       }, 1000);
     }
 
-    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders) {
+    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs) {
+      var sTimeout = streamTimeoutMs || 85000;
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
       for (var k = 0; k < candidateEndpoints.length; k++) {
@@ -3685,7 +3686,7 @@
               }
               var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
                 headers: streamHeaders,
-                signal: AbortSignal.timeout(85000)
+                signal: AbortSignal.timeout(sTimeout)
               });
               if (streamResp.ok && streamResp.body) {
                 var reader = streamResp.body.getReader();
@@ -3702,6 +3703,9 @@
                     var line = lines[i].trim();
                     if (line.startsWith("event: complete")) {
                       isComplete = true;
+                    } else if (line.startsWith("event: error")) {
+                      reader.cancel();
+                      break;
                     } else if (isComplete && line.startsWith("data:")) {
                       var payload = JSON.parse(line.substring(5).trim());
                       if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
@@ -3735,7 +3739,7 @@
         if (joinResp.ok) {
           var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
             headers: directHeaders,
-            signal: AbortSignal.timeout(85000)
+            signal: AbortSignal.timeout(sTimeout)
           });
           if (dataStreamResp.ok && dataStreamResp.body) {
             var qReader = dataStreamResp.body.getReader();
@@ -3755,8 +3759,6 @@
                     qReader.cancel();
                     var out = msgObj.output || {};
                     if (out.error) {
-                      // Space returned an error (e.g. ZeroGPU quota exceeded)
-                      // Return null so the system cascades cleanly to next tier without falsely locking out the user!
                       return null;
                     }
                     var d = out.data || [];
@@ -3797,13 +3799,13 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try Primary: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
-        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders);
-        if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
-
-        // 2. Emergency Turbo Burst: ZeroGPU Space (vajra) - A100 GPU
-        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders);
+        // 1. Try High-Speed Turbo Burst: ZeroGPU Space (vajra) - A10G GPU (<3s latency)
+        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 30000);
         if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
+
+        // 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
+        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 120000);
+        if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
 
       } catch (e) {}
       return null;
