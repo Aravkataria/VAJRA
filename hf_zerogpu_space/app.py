@@ -121,21 +121,24 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
     with torch.no_grad():
         generated_ids = model.generate(
             **model_inputs,
-            max_new_tokens=512,
+            max_new_tokens=896,
             temperature=0.2,
             top_p=0.9,
             repetition_penalty=1.1,
             do_sample=True,
+            eos_token_id=tokenizer.eos_token_id,
             pad_token_id=tokenizer.eos_token_id
         )
 
     in_len = model_inputs.input_ids.shape[1]
-    res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True)
+    res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
+    if res_text.count("```") % 2 != 0:
+        res_text += "\n```"
 
     del model_inputs, generated_ids
     gc.collect()
 
-    return res_text.strip()
+    return res_text
 
 # =====================================================================
 # 4. GRADIO INTERFACE
