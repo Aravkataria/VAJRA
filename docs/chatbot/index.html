@@ -4181,36 +4181,6 @@
       return null;
     }
 
-    function generateClientSpeculativeDraft(userPrompt) {
-      var p = (userPrompt || "").trim();
-      var pLow = p.toLowerCase();
-      
-      if (pLow.includes("xss") || pLow.includes("cross-site script")) {
-        return "Cross-Site Scripting (XSS) occurs when untrusted input is reflected or rendered into web contexts without adequate context-aware sanitization or CSP containment. Common vectors include Reflected, Stored, and DOM-based taint paths. Examining taint sinks, DOM execution contexts, and sanitization invariants...";
-      }
-      if (pLow.includes("sql") || (pLow.includes("inject") && !pLow.includes("command"))) {
-        return "SQL Injection involves malicious payloads altering database query structure via dynamic concatenation of untrusted input. The primary defense is deterministic parameterized queries (prepared statements) and ORM bound parameters. Evaluating query construction sinks and parameter binding...";
-      }
-      if (pLow.includes("buffer") || pLow.includes("overflow") || pLow.includes("memory leak") || pLow.includes("use after free")) {
-        return "Memory safety defects emerge when read or write operations exceed allocated buffer boundaries in unmanaged languages, risking stack corruption, pointer poisoning, or arbitrary control flow hijacking. Defenses rely on bounds enforcement, stack canaries, and ASLR. Analyzing memory boundaries and invariant verification...";
-      }
-      if (pLow.includes("race") || pLow.includes("concurrency") || pLow.includes("thread") || pLow.includes("deadlock")) {
-        return "Race conditions occur when concurrent execution sequences depend on non-deterministic interleaving without synchronization locks or atomic memory barriers. Mitigations include mutex locks, semaphores, and transactional invariants. Analyzing concurrency primitives and critical execution sections...";
-      }
-      if (pLow.includes("csrf") || pLow.includes("cross-site request")) {
-        return "Cross-Site Request Forgery (CSRF) exploits ambient browser authentication credentials to execute unauthorized state-changing requests. Defenses include anti-CSRF synchronizer tokens, SameSite cookie attributes, and re-authentication barriers. Evaluating state-changing sinks and session validation...";
-      }
-      if (pLow.includes("ssrf")) {
-        return "Server-Side Request Forgery (SSRF) abuses backend server networking privileges to query internal metadata services or restricted network enclaves. Remediation enforces strict IP/domain allowlists, DNS resolution pinning, and network isolation. Analyzing outbound network calls and target validation...";
-      }
-      if (pLow.includes("format string")) {
-        return "Format string vulnerabilities occur when untrusted input is passed directly as the format argument to functions like printf() in C/C++, allowing attackers to leak memory via %x/%s or overwrite memory via %n. Remediation mandates static format specifiers (e.g. printf(\"%s\", input)). Examining format arguments and stack pointers...";
-      }
-      
-      var topicName = p.length > 60 ? p.substring(0, 58) + "..." : p;
-      return "Speculative technical overview on \"" + topicName + "\": Analyzing fundamental execution mechanics, vulnerability surfaces, architectural invariants, and formal verification proofs. Compiling complete multi-stage audit with Deep Reasoner...";
-    }
-
     async function tryFastDraftQuery(userPrompt, directHeaders) {
       try {
         var callResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply", {
@@ -4255,25 +4225,19 @@
         }
       } catch (e) {}
 
-      // Fallback 1: try FastAPI /api/draft on 2 vCPU space
+      // Fallback: try FastAPI /api/draft on 2 vCPU space
       try {
         var dResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/api/draft", {
           method: "POST",
           headers: directHeaders,
           body: JSON.stringify({ prompt: userPrompt }),
-          signal: AbortSignal.timeout(3500)
+          signal: AbortSignal.timeout(6000)
         });
         if (dResp.ok) {
           var dData = await dResp.json();
           if (dData && dData.reply) return dData.reply;
         }
       } catch (e) {}
-
-      // Fallback 2: Instant speculative synthesis (<100ms) so user immediately gets glass shimmer preview
-      var pTrim = (userPrompt || "").trim();
-      if (pTrim.length > 0) {
-        return generateClientSpeculativeDraft(pTrim);
-      }
 
       return null;
     }
@@ -5033,14 +4997,54 @@
         // Channel A: Fast 0.5B Speculative Draft (<1.5s) with Frosted Glass Shimmer
         // Channel B: Deep 7B Reasoning Pipeline (2 vCPU / ZeroGPU Burst)
         var typewriter = null;
-        var isDeepResolved = false;
-        var draftReplyText = null;
+        // 4. Smart Classifier: Basic Technical Question vs Deep Forensic Audit
+        var hasAttachedFiles = Boolean(
+          (chunkedExtraFiles && Object.keys(chunkedExtraFiles).length > 0) ||
+          (sess && sess.files && Object.keys(sess.files).length > 0)
+        );
+        var isDeepAudit = hasAttachedFiles || q.length > 350 ||
+          /\b(audit|scan|ast|taint|exploit|cwe-\d+|patch|sink|disassembl|decompile|decompil|invariant|formal proof|vulnerability report)\b/i.test(q);
 
         var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
         var directHeaders = { "Content-Type": "application/json" };
         if (storedHfToken) {
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
+
+        // PATH A: Basic Technical Questions (e.g. "what is XSS", "explain Heisenberg uncertainty principle", "write a quicksort")
+        // Resolves directly with authentic Qwen2.5-Coder-0.5B neural model in ~1.5s - 2.5s, skipping the 2 vCPU wait!
+        if (!isDeepAudit) {
+          var draftFastResp = await tryFastDraftQuery(q, directHeaders);
+          if (draftFastResp) {
+            removeTypingIndicator();
+            var fastTypewriter = createStreamTypewriter("VAJRA NEURAL [0.5B]");
+            if (fastTypewriter) {
+              fastTypewriter.onToken(draftFastResp);
+              fastTypewriter.finish(draftFastResp, {
+                tier: "ultra_lite",
+                model: "VAJRA NEURAL [0.5B]"
+              });
+              return;
+            }
+          }
+        }
+
+        // PATH B: Deep Forensic Audits (Multi-file codebases, AST taint sinks, security patches, complex exploits)
+        var typewriter = null;
+        var isDeepResolved = false;
+        var draftReplyText = null;
+
+        // Hard Ceiling Timer: Dissolves glass at second 75 so user NEVER waits until second 91
+        var glassCeilingTimer = setTimeout(function() {
+          if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+            console.warn("⏱️ [VAJRA Guard] 75s Ceiling reached: dissolving glass overlay and presenting draft response.");
+            typewriter.removeGlassOverlay();
+            typewriter.updateBadge("VAJRA SPECULATIVE [0.5B]");
+            if (draftReplyText) {
+              typewriter.finish(draftReplyText, { tier: "ultra_lite", model: "VAJRA SPECULATIVE [0.5B]" });
+            }
+          }
+        }, 75000);
 
         // Launch Channel A in background
         var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
@@ -5081,6 +5085,7 @@
         });
 
         isDeepResolved = true;
+        clearTimeout(glassCeilingTimer);
 
         if (inferenceRes) {
           if (inferenceRes.isRateLimited) {

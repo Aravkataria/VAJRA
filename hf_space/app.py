@@ -217,7 +217,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=280,
+                max_new_tokens=160,
                 temperature=0.2,
                 top_p=0.9,
                 repetition_penalty=1.1,
@@ -273,7 +273,7 @@ def gradio_generate(prompt: str):
         gen_kwargs = dict(
             **model_inputs,
             streamer=streamer,
-            max_new_tokens=280,
+            max_new_tokens=160,
             temperature=0.2,
             top_p=0.9,
             repetition_penalty=1.1,
@@ -408,7 +408,8 @@ async def draft_api(req: ChatRequest):
         "tier": "ultra_lite"
     })
 
-# Asynchronously preload 7B model into memory on boot
+# Asynchronously preload 0.5B draft and 7B model into memory on boot
+threading.Thread(target=get_draft_model, daemon=True).start()
 threading.Thread(target=load_cpu_model, daemon=True).start()
 
 print("✅ [VAJRA v2] Server starting on 2 vCPU (16 GB RAM).")
