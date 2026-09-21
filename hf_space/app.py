@@ -114,7 +114,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             }
             payload = json.dumps({
                 "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
-                "parameters": {"max_new_tokens": 512, "temperature": 0.2, "return_full_text": False}
+                "parameters": {"max_new_tokens": 768, "temperature": 0.2, "return_full_text": False}
             }).encode("utf-8")
             req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=12) as response:
@@ -213,16 +213,20 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=384,
+                max_new_tokens=768,
                 temperature=0.2,
                 top_p=0.9,
                 repetition_penalty=1.1,
                 do_sample=True,
+                eos_token_id=tokenizer.eos_token_id,
                 pad_token_id=tokenizer.eos_token_id
             )
 
         in_len = model_inputs.input_ids.shape[1]
-        res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True)
+        res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
+        # Ensure code blocks finish cleanly if generation ended on a code fence
+        if res_text.count("```") % 2 != 0:
+            res_text += "\n```"
         del model_inputs, generated_ids
         gc.collect()
 
