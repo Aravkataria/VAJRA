@@ -85,7 +85,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
-                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning intelligence assistant. Provide a direct, authoritative, and concise technical answer."},
+                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."},
                 {"role": "user", "content": prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -93,7 +93,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             with torch.no_grad():
                 ids = m.generate(
                     **inputs,
-                    max_new_tokens=180,
+                    max_new_tokens=320,
                     temperature=0.25,
                     top_p=0.9,
                     repetition_penalty=1.08,
@@ -120,7 +120,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
                 "User-Agent": "VAJRA-v2-CPU/1.0"
             }
             payload = json.dumps({
-                "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
+                "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant. Provide a complete, structured explanation concluding with a summary.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
                 "parameters": {"max_new_tokens": 512, "temperature": 0.2, "return_full_text": False}
             }).encode("utf-8")
             req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
