@@ -399,21 +399,29 @@ async def chat_api(req: ChatRequest, request: Request):
         "security": "Zero-Retention Verified"
     })
 
+class DraftRequest(BaseModel):
+    prompt: Optional[str] = None
+    data: Optional[List[Any]] = None
+
 @demo.app.post("/api/draft")
-async def draft_api(request: Request):
+async def draft_api(req: DraftRequest):
     try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    p = body.get("prompt", "")
-    if not p and isinstance(body.get("data"), list) and len(body["data"]) > 0:
-        p = str(body["data"][0])
-    reply = generate_ultra_lite_reply(str(p).strip()) if p else ""
-    return JSONResponse({
-        "success": bool(reply),
-        "reply": reply,
-        "tier": "ultra_lite"
-    })
+        p = req.prompt or ""
+        if not p and req.data and len(req.data) > 0:
+            p = str(req.data[0])
+        reply = generate_ultra_lite_reply(str(p).strip()) if p else ""
+        return JSONResponse({
+            "success": bool(reply),
+            "reply": reply,
+            "tier": "ultra_lite"
+        })
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "reply": "",
+            "tier": "ultra_lite"
+        })
 
 # Asynchronously preload 0.5B draft and 7B model into memory on boot
 threading.Thread(target=get_draft_model, daemon=True).start()
