@@ -4181,6 +4181,36 @@
       return null;
     }
 
+    function generateClientSpeculativeDraft(userPrompt) {
+      var p = (userPrompt || "").trim();
+      var pLow = p.toLowerCase();
+      
+      if (pLow.includes("xss") || pLow.includes("cross-site script")) {
+        return "Cross-Site Scripting (XSS) occurs when untrusted input is reflected or rendered into web contexts without adequate context-aware sanitization or CSP containment. Common vectors include Reflected, Stored, and DOM-based taint paths. Examining taint sinks, DOM execution contexts, and sanitization invariants...";
+      }
+      if (pLow.includes("sql") || (pLow.includes("inject") && !pLow.includes("command"))) {
+        return "SQL Injection involves malicious payloads altering database query structure via dynamic concatenation of untrusted input. The primary defense is deterministic parameterized queries (prepared statements) and ORM bound parameters. Evaluating query construction sinks and parameter binding...";
+      }
+      if (pLow.includes("buffer") || pLow.includes("overflow") || pLow.includes("memory leak") || pLow.includes("use after free")) {
+        return "Memory safety defects emerge when read or write operations exceed allocated buffer boundaries in unmanaged languages, risking stack corruption, pointer poisoning, or arbitrary control flow hijacking. Defenses rely on bounds enforcement, stack canaries, and ASLR. Analyzing memory boundaries and invariant verification...";
+      }
+      if (pLow.includes("race") || pLow.includes("concurrency") || pLow.includes("thread") || pLow.includes("deadlock")) {
+        return "Race conditions occur when concurrent execution sequences depend on non-deterministic interleaving without synchronization locks or atomic memory barriers. Mitigations include mutex locks, semaphores, and transactional invariants. Analyzing concurrency primitives and critical execution sections...";
+      }
+      if (pLow.includes("csrf") || pLow.includes("cross-site request")) {
+        return "Cross-Site Request Forgery (CSRF) exploits ambient browser authentication credentials to execute unauthorized state-changing requests. Defenses include anti-CSRF synchronizer tokens, SameSite cookie attributes, and re-authentication barriers. Evaluating state-changing sinks and session validation...";
+      }
+      if (pLow.includes("ssrf")) {
+        return "Server-Side Request Forgery (SSRF) abuses backend server networking privileges to query internal metadata services or restricted network enclaves. Remediation enforces strict IP/domain allowlists, DNS resolution pinning, and network isolation. Analyzing outbound network calls and target validation...";
+      }
+      if (pLow.includes("format string")) {
+        return "Format string vulnerabilities occur when untrusted input is passed directly as the format argument to functions like printf() in C/C++, allowing attackers to leak memory via %x/%s or overwrite memory via %n. Remediation mandates static format specifiers (e.g. printf(\"%s\", input)). Examining format arguments and stack pointers...";
+      }
+      
+      var topicName = p.length > 60 ? p.substring(0, 58) + "..." : p;
+      return "Speculative technical overview on \"" + topicName + "\": Analyzing fundamental execution mechanics, vulnerability surfaces, architectural invariants, and formal verification proofs. Compiling complete multi-stage audit with Deep Reasoner...";
+    }
+
     async function tryFastDraftQuery(userPrompt, directHeaders) {
       try {
         var callResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/call/generate_draft_reply", {
@@ -4225,7 +4255,7 @@
         }
       } catch (e) {}
 
-      // Fallback: try FastAPI /api/draft on 2 vCPU space
+      // Fallback 1: try FastAPI /api/draft on 2 vCPU space
       try {
         var dResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/api/draft", {
           method: "POST",
@@ -4238,6 +4268,12 @@
           if (dData && dData.reply) return dData.reply;
         }
       } catch (e) {}
+
+      // Fallback 2: Instant speculative synthesis (<100ms) so user immediately gets glass shimmer preview
+      var pTrim = (userPrompt || "").trim();
+      if (pTrim.length > 0) {
+        return generateClientSpeculativeDraft(pTrim);
+      }
 
       return null;
     }
