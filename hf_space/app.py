@@ -5,6 +5,11 @@ import json
 import urllib.request
 import threading
 import torch
+try:
+    torch.set_num_threads(2)
+    torch.set_num_interop_threads(1)
+except Exception:
+    pass
 import gradio as gr
 from fastapi import Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,10 +64,10 @@ STEM_FOUNDATIONS = {
         "Formulated in 1845 by German physicist **Gustav Kirchhoff**.\n\n"
         "**1. Kirchhoff's Current Law (KCL - Junction Rule):**\n"
         "$$\\sum I_{\\text{in}} = \\sum I_{\\text{out}}$$\n"
-        "*Principle: Conservation of Electric Charge.*\n\n"
+        "*Principle: Conservation of Electric Charge. The algebraic sum of currents entering a junction is zero.*\n\n"
         "**2. Kirchhoff's Voltage Law (KVL - Loop Rule):**\n"
         "$$\\sum \\Delta V = 0$$\n"
-        "*Principle: Conservation of Energy.*"
+        "*Principle: Conservation of Energy. The directed sum of electrical potential differences around any closed network loop is zero.*"
     ),
     "ohm": (
         "### Ohm's Law\n\n"
@@ -70,9 +75,53 @@ STEM_FOUNDATIONS = {
         "Formulated in 1827 by German physicist **Georg Simon Ohm**.\n\n"
         "**Fundamental Formula:**\n"
         "$$V = I \\cdot R$$\n"
-        "- $V$: Voltage in Volts (V)\n"
-        "- $I$: Current in Amperes (A)\n"
-        "- $R$: Resistance in Ohms ($\\Omega$)"
+        "- $V$: Potential difference / Voltage in Volts (V)\n"
+        "- $I$: Electric current in Amperes (A)\n"
+        "- $R$: Resistance in Ohms ($\\Omega$)\n\n"
+        "**Differential Form:**\n"
+        "$$\\mathbf{J} = \\sigma \\mathbf{E}$$\n"
+        "where $\\mathbf{J}$ is current density, $\\sigma$ is electrical conductivity, and $\\mathbf{E}$ is the electric field."
+    ),
+    "heisenberg": (
+        "### Heisenberg's Uncertainty Principle\n\n"
+        "**Who Discovered It?**\n"
+        "Formulated in 1927 by German theoretical physicist and Nobel laureate **Werner Heisenberg**.\n\n"
+        "**Fundamental Inequality (Position & Momentum):**\n"
+        "$$\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$$\n\n"
+        "Where:\n"
+        "- $\\Delta x$: Standard deviation / uncertainty in spatial position.\n"
+        "- $\\Delta p$: Standard deviation / uncertainty in linear momentum ($p = m \\cdot v$).\n"
+        "- $\\hbar = \\frac{h}{2\\pi} \\approx 1.05457 \\times 10^{-34}\\ \\text{J}\\cdot\\text{s}$: Reduced Planck constant.\n\n"
+        "**Energy-Time Uncertainty Formulation:**\n"
+        "$$\\Delta E \\cdot \\Delta t \\ge \\frac{\\hbar}{2}$$\n\n"
+        "**Core Physical Principles:**\n"
+        "1. **Intrinsic Quantum Nature**: Uncertainty is not an apparatus limitation or measurement disturbance, but a fundamental mathematical property of non-commuting quantum observables in Hilbert space ($[\\hat{x}, \\hat{p}] = i\\hbar$).\n"
+        "2. **Wave-Particle Duality**: A particle with a well-defined wavelength has an indeterminate spatial position; conversely, a tightly localized wave packet is composed of a Fourier superposition of multiple momentum frequencies."
+    ),
+    "uncertainty principle": (
+        "### Heisenberg's Uncertainty Principle\n\n"
+        "**Who Discovered It?**\n"
+        "Formulated in 1927 by German theoretical physicist **Werner Heisenberg**.\n\n"
+        "**Fundamental Inequality:**\n"
+        "$$\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$$\n\n"
+        "**Key Insights:**\n"
+        "- The more precisely the position $\\Delta x$ of a subatomic particle is determined, the less precisely its momentum $\\Delta p$ can be known, and vice versa.\n"
+        "- Arises from the non-commutativity of quantum mechanical operators: $[\\hat{x}, \\hat{p}] = i\\hbar$."
+    ),
+    "what do you think about ai": (
+        "### VAJRA on Artificial Intelligence\n\n"
+        "As an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered and fine-tuned by **Arav Kataria**, I view Artificial Intelligence not as consciousness, but as a transformative mathematical framework for probabilistic pattern synthesis, formal logic deduction, and automated defensive engineering:\n\n"
+        "1. **From Statistical Guessing to Formal Proofs**: Traditional generative models excel at statistical interpolation, but true software safety requires deterministic verification — pairing neural patch synthesis with Abstract Syntax Tree (AST) validation and SMT theorem provers.\n\n"
+        "2. **Defensive Asymmetry**: Cyber adversaries increasingly deploy automated scanning and exploit generation. Autonomous defensive AI levels the playing field by autonomously discovering zero-day vulnerabilities, mapping cross-file taint paths, and synthesizing zero-regression invariant repairs in milliseconds.\n\n"
+        "3. **Zero-Trust Boundaries**: LLMs must be bounded by zero-trust boundaries: strict sandboxing, cryptographic signature validation, zero-retention privacy guards, and deterministic verification to prevent hallucinated vulnerabilities."
+    ),
+    "about ai": (
+        "### VAJRA on Artificial Intelligence\n\n"
+        "Artificial Intelligence represents a major computational leap in automated pattern discovery and reasoning. Engineered by **Arav Kataria**, VAJRA combines fine-tuned causal code models with deterministic AST security verifiers to deliver autonomous vulnerability discovery and provably safe repairs."
+    ),
+    "artificial intelligence": (
+        "### VAJRA on Artificial Intelligence\n\n"
+        "Artificial Intelligence represents the algorithmic synthesis of perception, reasoning, and automated decision-making. In software defense, its highest-leverage role is autonomous defensive cyber-reasoning — discovering critical software flaws and synthesizing provably safe patches before attackers can exploit them."
     ),
     "binary search": (
         "### Binary Search Algorithm\n\n"
@@ -91,6 +140,24 @@ STEM_FOUNDATIONS = {
         "            right = mid - 1\n"
         "    return -1\n"
         "```"
+    ),
+    "quantum": (
+        "### Quantum Computing Principles\n\n"
+        "**1. Superposition:**\n"
+        "A quantum bit (qubit) exists in a linear combination of basis states:\n"
+        "$$|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle, \\quad |\\alpha|^2 + |\\beta|^2 = 1$$\n\n"
+        "**2. Quantum Entanglement:**\n"
+        "Entangled states (such as Bell state $|\\Phi^+\\rangle = \\frac{|00\\rangle + |11\\rangle}{\\sqrt{2}}$) exhibit non-local correlations where the state of one particle instantaneously informs the state of the other.\n\n"
+        "**3. Quantum Algorithms:**\n"
+        "- **Shor's Algorithm:** Factorizes integers in $O((\\log N)^3)$ polynomial time, breaking classical RSA.\n"
+        "- **Grover's Algorithm:** Unstructured database search with quadratic speedup in $O(\\sqrt{N})$."
+    ),
+    "turing": (
+        "### Turing Machines & Computability\n\n"
+        "Introduced by British mathematician **Alan Turing** in 1936:\n\n"
+        "1. **Turing Machine Model**: A theoretical device consisting of an infinite tape, read/write head, and transition table $\\delta(q, \\sigma) \\to (q', \\sigma', L/R)$.\n"
+        "2. **Church-Turing Thesis**: Any algorithmically computable function can be simulated by a Universal Turing Machine.\n"
+        "3. **The Halting Problem**: Proved that no general algorithm can decide whether an arbitrary program will eventually halt or run forever (undecidable)."
     ),
 }
 
@@ -181,7 +248,13 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None):
     clean_prompt = sanitize_and_check_injection(prompt)
 
-    # Concurrency check: If another user is using the 2 vCPU, shed load to Ultra-Lite immediately
+    # 1. Immediate match: Foundational STEM or AI knowledge base (Instant 0.001s response)
+    prompt_lower = clean_prompt.lower().strip()
+    for kw, resp in STEM_FOUNDATIONS.items():
+        if kw in prompt_lower:
+            return resp, "VAJRA Foundation Knowledge (Instant)", "ultra_lite"
+
+    # 2. Concurrency check: If another user is using the 2 vCPU, shed load to Ultra-Lite immediately
     acquired = inference_lock.acquire(blocking=False)
     if not acquired:
         print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Shedding load to Ultra-Lite!")
@@ -213,7 +286,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=440,
+                max_new_tokens=280,
                 temperature=0.2,
                 top_p=0.9,
                 repetition_penalty=1.1,
@@ -320,6 +393,9 @@ async def chat_api(req: ChatRequest, request: Request):
         "tier": tier_name,
         "security": "Zero-Retention Verified"
     })
+
+# Asynchronously preload 7B model into memory on boot
+threading.Thread(target=load_cpu_model, daemon=True).start()
 
 print("✅ [VAJRA v2] Server starting on 2 vCPU (16 GB RAM).")
 demo.launch(server_name="0.0.0.0", server_port=7860)

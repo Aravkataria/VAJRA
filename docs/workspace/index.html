@@ -3661,27 +3661,7 @@
     }
 
     async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders) {
-      // 1. Try Direct FastAPI REST Endpoint: /api/chat
-      try {
-        var restResp = await fetch(hfEndpoint + "/api/chat", {
-          method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({ prompt: fullPrompt }),
-          signal: AbortSignal.timeout(20000)
-        });
-        if (restResp.ok) {
-          var restData = await restResp.json();
-          if (restData && restData.reply) {
-            return {
-              reply: restData.reply,
-              model: restData.model || "AravKataria/vajra-lora",
-              tier: restData.tier || "standard"
-            };
-          }
-        }
-      } catch (restErr) {}
-
-      // 2. Try Gradio 4 Client API (supports both /call/generate_vajra_reply and /call/gradio_generate)
+      // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
       for (var k = 0; k < candidateEndpoints.length; k++) {
         var ep = candidateEndpoints[k];
@@ -3690,7 +3670,7 @@
             method: "POST",
             headers: directHeaders,
             body: JSON.stringify({ data: [fullPrompt] }),
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(10000)
           });
           if (callResp.status === 429) {
             break;
@@ -3699,9 +3679,13 @@
             var callData = await callResp.json();
             var eventId = callData.event_id;
             if (eventId) {
+              var streamHeaders = {};
+              if (directHeaders && directHeaders["Authorization"]) {
+                streamHeaders["Authorization"] = directHeaders["Authorization"];
+              }
               var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
-                headers: directHeaders,
-                signal: AbortSignal.timeout(70000)
+                headers: streamHeaders,
+                signal: AbortSignal.timeout(45000)
               });
               if (streamResp.ok && streamResp.body) {
                 var reader = streamResp.body.getReader();
@@ -3852,11 +3836,11 @@
           backendHeaders["X-HF-Token"] = storedHfToken;
         }
 
-        var hfResp = await fetch(VAJRA_PROD_BACKEND + "/api/chat", {
+        var hfResp = await fetch(VAJRA_PRIMARY_BACKEND + "/api/chat", {
           method: "POST",
           headers: backendHeaders,
           body: payload,
-          signal: AbortSignal.timeout(60000)
+          signal: AbortSignal.timeout(12000)
         });
         if (hfResp.status === 429) {
           // Backend busy; fall through to direct neural engine spaces
@@ -4463,13 +4447,31 @@
                 '<li>Click <b>Load Local Folder</b> in the sidebar to scan entire project directories</li>' +
               '</ul>';
           }
+          // STEM & Foundational AI Knowledge (Instant Client-Side Inference with KaTeX Math)
+          var CLIENT_STEM_KNOWLEDGE = {
+            "kirchhoff": "### Kirchhoff's Circuit Laws\n\n**Who Discovered Them?**\nFormulated in 1845 by German physicist **Gustav Kirchhoff**.\n\n**1. Kirchhoff's Current Law (KCL - Junction Rule):**\n$$\\sum I_{\\text{in}} = \\sum I_{\\text{out}}$$\n*Principle: Conservation of Electric Charge. The algebraic sum of currents entering a node is zero.*\n\n**2. Kirchhoff's Voltage Law (KVL - Loop Rule):**\n$$\\sum \\Delta V = 0$$\n*Principle: Conservation of Energy. The directed sum of electrical potential differences around any closed network loop is zero.*",
+            "ohm": "### Ohm's Law\n\n**Who Discovered It?**\nFormulated in 1827 by German physicist **Georg Simon Ohm**.\n\n**Fundamental Formula:**\n$$V = I \\cdot R$$\n- $V$: Potential difference / Voltage in Volts (V)\n- $I$: Electric current in Amperes (A)\n- $R$: Resistance in Ohms ($\\Omega$)\n\n**Differential Form:**\n$$\\mathbf{J} = \\sigma \\mathbf{E}$$\nwhere $\\mathbf{J}$ is current density, $\\sigma$ is electrical conductivity, and $\\mathbf{E}$ is the electric field.",
+            "heisenberg": "### Heisenberg's Uncertainty Principle\n\n**Who Discovered It?**\nFormulated in 1927 by German theoretical physicist and Nobel laureate **Werner Heisenberg**.\n\n**Fundamental Inequality (Position & Momentum):**\n$$\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$$\n\nWhere:\n- $\\Delta x$: Standard deviation / uncertainty in spatial position.\n- $\\Delta p$: Standard deviation / uncertainty in linear momentum ($p = m \\cdot v$).\n- $\\hbar = \\frac{h}{2\\pi} \\approx 1.05457 \\times 10^{-34}\\ \\text{J}\\cdot\\text{s}$: Reduced Planck constant.\n\n**Energy-Time Uncertainty Formulation:**\n$$\\Delta E \\cdot \\Delta t \\ge \\frac{\\hbar}{2}$$\n\n**Core Physical Principles:**\n1. **Intrinsic Quantum Nature**: Uncertainty is not an apparatus limitation or measurement disturbance, but a fundamental mathematical property of non-commuting quantum observables in Hilbert space ($[\\hat{x}, \\hat{p}] = i\\hbar$).\n2. **Wave-Particle Duality**: A particle with a well-defined wavelength has an indeterminate spatial position; conversely, a tightly localized wave packet is composed of a Fourier superposition of multiple momentum frequencies.",
+            "uncertainty principle": "### Heisenberg's Uncertainty Principle\n\n**Who Discovered It?**\nFormulated in 1927 by German theoretical physicist **Werner Heisenberg**.\n\n**Fundamental Inequality:**\n$$\\Delta x \\cdot \\Delta p \\ge \\frac{\\hbar}{2}$$\n\n**Key Insights:**\n- The more precisely the position $\\Delta x$ of a subatomic particle is determined, the less precisely its momentum $\\Delta p$ can be known, and vice versa.\n- Arises from the non-commutativity of quantum mechanical operators: $[\\hat{x}, \\hat{p}] = i\\hbar$.",
+            "what do you think about ai": "### VAJRA on Artificial Intelligence\n\nAs an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered and fine-tuned by **Arav Kataria**, I view Artificial Intelligence not as consciousness, but as a transformative mathematical framework for probabilistic pattern synthesis, formal logic deduction, and automated defensive engineering:\n\n1. **From Statistical Guessing to Formal Proofs**: Traditional generative models excel at statistical interpolation, but true software safety requires deterministic verification — pairing neural patch synthesis with Abstract Syntax Tree (AST) validation and SMT theorem provers.\n\n2. **Defensive Asymmetry**: Cyber adversaries increasingly deploy automated scanning and exploit generation. Autonomous defensive AI levels the playing field by autonomously discovering zero-day vulnerabilities, mapping cross-file taint paths, and synthesizing zero-regression invariant repairs in milliseconds.\n\n3. **Zero-Trust Boundaries**: LLMs must be bounded by zero-trust boundaries: strict sandboxing, cryptographic signature validation, zero-retention privacy guards, and deterministic verification to prevent hallucinated vulnerabilities.",
+            "about ai": "### VAJRA on Artificial Intelligence\n\nArtificial Intelligence represents a major computational leap in automated pattern discovery and reasoning. Engineered by **Arav Kataria**, VAJRA combines fine-tuned causal code models with deterministic AST security verifiers to deliver autonomous vulnerability discovery and provably safe repairs.",
+            "artificial intelligence": "### VAJRA on Artificial Intelligence\n\nArtificial Intelligence represents the algorithmic synthesis of perception, reasoning, and automated decision-making. In software defense, its highest-leverage role is autonomous defensive cyber-reasoning — discovering critical software flaws and synthesizing provably safe patches before attackers can exploit them.",
+            "binary search": "### Binary Search Algorithm\n\nBinary search is an efficient divide-and-conquer algorithm that finds the position of a target value within a **sorted array**.\n\n**Complexity:** $O(\\log n)$ time, $O(1)$ auxiliary space.\n\n```python\ndef binary_search(arr, target):\n    left, right = 0, len(arr) - 1\n    while left <= right:\n        mid = (left + right) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1\n```"
+          };
+
+          for (var stemKey in CLIENT_STEM_KNOWLEDGE) {
+            if (query.includes(stemKey)) {
+              return formatBotMarkdown(CLIENT_STEM_KNOWLEDGE[stemKey]);
+            }
+          }
+
           return null; // Everything else goes to the LLM backend
         }
 
         var localResp = resolveLocalResponse(qLower, sess);
         if (localResp !== null && (!extraFiles || Object.keys(extraFiles).length === 0)) {
           removeTypingIndicator();
-          appendSessionMessage("bot", localResp);
+          appendSessionMessage("bot", localResp, "VAJRA REASONING AUDIT");
           return;
         }
 
@@ -4534,11 +4536,13 @@
           response =
             '<p><b>VAJRA Cyber-Reasoning Engine:</b></p>' +
             '<p style="margin-top:0.4rem; color:var(--text-secondary);">' +
-              'Query received: <i>"' + escapeHtml(q) + '"</i>. ' +
-              'The system is active. Provide a <b>GitHub repository link</b> or upload source files to initiate AST sink tracking, or ask about vulnerability remediation, security concepts, or architecture.' +
+              'The cloud neural reasoning cluster is currently busy or warming up from idle. Please wait a few seconds and try your request again.' +
+            '</p>' +
+            '<p style="margin-top:0.4rem; color:var(--text-secondary); font-size:0.85rem;">' +
+              '💡 <i>Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit, or provide a GitHub repository link for deterministic verification.</i>' +
             '</p>';
         }
-        appendSessionMessage("bot", response);
+        appendSessionMessage("bot", response, "VAJRA REASONING AUDIT");
       } catch (err) {
         removeTypingIndicator();
         appendSessionMessage("bot", "<p><b>VAJRA System Note:</b> Query processed. Provide a repository or source file to run the AST security audit.</p>");
