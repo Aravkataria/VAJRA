@@ -4356,7 +4356,21 @@
     }
 
     async function tryFastDraftQuery(userPrompt, directHeaders) {
-      // 1. Direct FastAPI /api/draft (Fastest, ~1.5s, zero Gradio SSE overhead)
+      // 1. Direct FastAPI /v1/draft (Clean REST route, bypasses Gradio router conflict, ~1.5s)
+      try {
+        var v1Resp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/v1/draft", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ prompt: userPrompt, data: [userPrompt] }),
+          signal: getActiveSignal(8000)
+        });
+        if (v1Resp.ok) {
+          var v1Data = await v1Resp.json();
+          if (v1Data && v1Data.reply) return String(v1Data.reply).trim();
+        }
+      } catch (e) {}
+
+      // 2. Direct FastAPI /api/draft
       try {
         var dResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/api/draft", {
           method: "POST",
