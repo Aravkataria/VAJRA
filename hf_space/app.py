@@ -223,7 +223,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                         if isinstance(result, list) and len(result) > 0:
                             text = result[0].get("generated_text", "").strip()
                             if text:
-                                return text, "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "burst"
+                                return text, "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "cloud_router"
                 except Exception as route_err:
                     print(f"⚠️ 7B Serverless router fallback note: {route_err}")
 
