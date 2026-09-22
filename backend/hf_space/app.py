@@ -161,14 +161,26 @@ def get_gguf_model():
             filename=GGUF_FILENAME,
             token=token
         )
-        print(f"✅ [VAJRA v2] Downloaded GGUF to {model_path}. Initializing Llama CPU engine (2 threads, 4K ctx)...")
-        gguf_llm = Llama(
-            model_path=model_path,
-            n_threads=2,
-            n_ctx=4096,
-            verbose=False
-        )
-        print("🚀 [VAJRA v2] 4-bit 7B GGUF Model ONLINE on 2 vCPU! (~4.2 GB RAM footprint)")
+        print(f"✅ [VAJRA v2] Downloaded GGUF to {model_path}. Initializing Llama CPU engine (2 threads, 1.5K ctx, 256 batch)...")
+        try:
+            gguf_llm = Llama(
+                model_path=model_path,
+                n_threads=2,
+                n_ctx=1536,
+                n_batch=256,
+                type_k=2,
+                type_v=2,
+                verbose=False
+            )
+        except Exception:
+            gguf_llm = Llama(
+                model_path=model_path,
+                n_threads=2,
+                n_ctx=1536,
+                n_batch=256,
+                verbose=False
+            )
+        print("🚀 [VAJRA v2] 4-bit 7B GGUF Model ONLINE on 2 vCPU! (~3.8 GB RAM footprint)")
     except Exception as e:
         print(f"ℹ️ [VAJRA v2] GGUF model note: {e}. Using 0.5B CPU engine.")
         gguf_llm = None
@@ -251,7 +263,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
             output = llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=350,
+                max_tokens=180,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.08
@@ -360,7 +372,7 @@ def gradio_generate(prompt: str):
             accumulated = ""
             for chunk in llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=350,
+                max_tokens=180,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.08,
@@ -502,9 +514,11 @@ with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
     )
 
 # =====================================================================
-# 6. FASTAPI REST ROUTES ON demo.app
+# 6. FASTAPI REST API & GRADIO MOUNTING
 # =====================================================================
-demo.app.add_middleware(
+fastapi_app = FastAPI(title="VAJRA v2 Cyber-Reasoning Gateway", version="2.0.0")
+
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -518,21 +532,22 @@ class ChatRequest(BaseModel):
     files: Optional[Dict[str, str]] = None
     auth_key: Optional[str] = None
 
-@demo.app.get("/health")
+@fastapi_app.get("/health")
 def health():
     return {
         "status": "online",
         "space": "VAJRA_v2",
         "hardware": "2 vCPU • 16 GB RAM",
-        "model_loaded": model is not None,
-        "model": "AravKataria/vajra-lora (7B 2 vCPU)",
+        "gguf_loaded": gguf_llm is not None,
+        "draft_loaded": draft_model is not None,
+        "model": "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)",
         "load_shedding_active": True,
         "author": "Arav Kataria",
         "service": "VAJRA-v2-CPU-Gateway"
     }
 
-@demo.app.post("/api/chat")
-async def chat_api(req: ChatRequest, request: Request):
+@fastapi_app.post("/v1/chat")
+async def chat_v1(req: ChatRequest, request: Request):
     sig_header = request.headers.get("X-Vajra-Signature") or req.auth_key
     client_ip = request.client.host if request.client else "127.0.0.1"
 
@@ -560,9 +575,8 @@ class DraftRequest(BaseModel):
     prompt: Optional[str] = None
     data: Optional[List[Any]] = None
 
-@demo.app.post("/api/draft")
-@demo.app.post("/v1/draft")
-async def draft_api(req: DraftRequest):
+@fastapi_app.post("/v1/draft")
+async def draft_v1(req: DraftRequest):
     try:
         p = req.prompt or ""
         if not p and req.data and len(req.data) > 0:
@@ -581,12 +595,17 @@ async def draft_api(req: DraftRequest):
             "tier": "ultra_lite"
         })
 
-@demo.app.post("/v1/chat")
-async def chat_v1(req: ChatRequest, request: Request):
-    return await chat_api(req, request)
+# Enable Gradio queue for event streaming
+demo.queue(default_concurrency_limit=2)
 
-# Asynchronously preload 0.5B draft model into memory on boot (~1.2 GB RAM footprint)
+# Mount Gradio Blocks at root of FastAPI application
+app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+
+# Asynchronously preload both models into memory on boot
 threading.Thread(target=get_draft_model, daemon=True).start()
+threading.Thread(target=get_gguf_model, daemon=True).start()
 
-print("✅ [VAJRA v2] Server starting on 2 vCPU (16 GB RAM).")
-demo.launch(server_name="0.0.0.0", server_port=7860)
+if __name__ == "__main__":
+    import uvicorn
+    print("✅ [VAJRA v2] Server starting on 2 vCPU (16 GB RAM) via Uvicorn.")
+    uvicorn.run(app, host="0.0.0.0", port=7860)

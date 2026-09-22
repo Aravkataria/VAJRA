@@ -4144,8 +4144,38 @@
       return triggers.some(function(t) { return q.includes(t); });
     }
 
+    /* ─── ZeroGPU Quota Circuit Breaker (15 Minutes) ─── */
+    function isZeroGpuCircuitOpen() {
+      try {
+        var cooldownUntil = parseInt(sessionStorage.getItem("vajra_zerogpu_cooldown") || "0", 10);
+        if (cooldownUntil && cooldownUntil > Date.now()) {
+          return true;
+        }
+        if (cooldownUntil) {
+          sessionStorage.removeItem("vajra_zerogpu_cooldown");
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    function tripZeroGpuCircuit() {
+      try {
+        var expiry = Date.now() + 15 * 60 * 1000;
+        sessionStorage.setItem("vajra_zerogpu_cooldown", expiry.toString());
+        console.warn("🛡️ [VAJRA Circuit Breaker] ZeroGPU Quota Exhausted (429). Tripped 15-minute cooldown. CPU Workhorse Active.");
+      } catch (e) {}
+    }
+
+    /* ─── Multi-Factor Query Complexity Classifier ─── */
+    function classifyQueryComplexity(fullPrompt) {
+      if (!fullPrompt) return false;
+      if (fullPrompt.length > 350) return true;
+      var complexTriggers = /\b(audit|scan|ast|taint|sink|exploit|cwe-\d+|patch|disassembl|decompile|decompil|decompilation|invariant|symbolic|formal proof|vulnerability|schrodinger|taylor\s+series|calculus|derivative|integral|eigen|laplace|fourier|matrix|differential\s+equation)\b/i;
+      return complexTriggers.test(fullPrompt);
+    }
+
     var rateLimitInterval = null;
-    var isOnCooldown = false; // Global flag — blocks new submissions during active cooldown
+    var isOnCooldown = false;
 
     function startRateLimitCooldown(totalSeconds) {
       var remaining = Math.min(parseInt(totalSeconds) || 30, 30);
@@ -4156,7 +4186,6 @@
       if (rateLimitInterval) clearInterval(rateLimitInterval);
       isOnCooldown = true;
 
-      // Disable the send button visually and functionally
       if (sendBtn) {
         sendBtn.disabled = true;
         sendBtn.style.opacity = "0.4";
@@ -4180,7 +4209,6 @@
           rateLimitInterval = null;
           isOnCooldown = false;
 
-          // Re-enable send button
           if (sendBtn) {
             sendBtn.disabled = false;
             sendBtn.style.opacity = "";
@@ -4198,8 +4226,10 @@
       }, 1000);
     }
 
-    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken) {
+    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken, firstTokenTimeoutMs) {
       var sTimeout = streamTimeoutMs || 85000;
+      var isZeroGpu = (hfEndpoint.indexOf("vajra.hf.space") !== -1 && hfEndpoint.indexOf("vajra-v2") === -1);
+
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
       for (var k = 0; k < candidateEndpoints.length; k++) {
@@ -4212,7 +4242,8 @@
             signal: getActiveSignal(10000)
           });
           if (callResp.status === 429) {
-            break;
+            if (isZeroGpu) tripZeroGpuCircuit();
+            return { reply: null, isRateLimited: true };
           }
           if (callResp.ok) {
             var callData = await callResp.json();
@@ -4226,6 +4257,10 @@
                 headers: streamHeaders,
                 signal: getActiveSignal(sTimeout)
               });
+              if (streamResp.status === 429) {
+                if (isZeroGpu) tripZeroGpuCircuit();
+                return { reply: null, isRateLimited: true };
+              }
               if (streamResp.ok && streamResp.body) {
                 var reader = streamResp.body.getReader();
                 var decoder = new TextDecoder("utf-8");
@@ -4233,51 +4268,89 @@
                 var isComplete = false;
                 var currentEvent = "";
                 var latestText = "";
-                while (true) {
-                  var chunk = await reader.read();
-                  if (chunk.done) break;
-                  buffer += decoder.decode(chunk.value, { stream: true });
-                  var lines = buffer.split("\n");
-                  buffer = lines.pop() || "";
-                  for (var i = 0; i < lines.length; i++) {
-                    var line = lines[i].trim();
-                    if (line.startsWith("event:")) {
-                      currentEvent = line.substring(6).trim();
-                      if (currentEvent === "heartbeat") {
-                        var typingLabel = document.querySelector("#activeTypingIndicator .typing-label");
-                        if (typingLabel) {
-                          typingLabel.textContent = "VAJRA IS REASONING (Deep Audit Active)";
+                var receivedFirstToken = false;
+                var bailoutTimer = null;
+
+                if (firstTokenTimeoutMs && firstTokenTimeoutMs > 0) {
+                  bailoutTimer = setTimeout(function() {
+                    if (!receivedFirstToken) {
+                      console.warn("⏱️ [VAJRA Watchdog] First token watchdog fired (" + firstTokenTimeoutMs + "ms). Initiating Fast Bailout.");
+                      try { reader.cancel(); } catch (cancelErr) {}
+                    }
+                  }, firstTokenTimeoutMs);
+                }
+
+                try {
+                  while (true) {
+                    var chunk = await reader.read();
+                    if (chunk.done) break;
+                    buffer += decoder.decode(chunk.value, { stream: true });
+                    var lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+                    for (var i = 0; i < lines.length; i++) {
+                      var line = lines[i].trim();
+                      if (line.startsWith("event:")) {
+                        currentEvent = line.substring(6).trim();
+                        if (currentEvent === "heartbeat") {
+                          var typingLabel = document.querySelector("#activeTypingIndicator .typing-label");
+                          if (typingLabel) {
+                            typingLabel.textContent = "VAJRA IS REASONING (" + (isZeroGpu ? "ZeroGPU Burst Active" : "2 vCPU Workhorse") + ")";
+                          }
+                        } else if (currentEvent === "complete") {
+                          isComplete = true;
+                        } else if (currentEvent === "error") {
+                          reader.cancel();
+                          break;
                         }
-                      } else if (currentEvent === "complete") {
-                        isComplete = true;
-                      } else if (currentEvent === "error") {
-                        reader.cancel();
-                        break;
+                      } else if (line.startsWith("data:")) {
+                        try {
+                          var payload = JSON.parse(line.substring(5).trim());
+                          if (Array.isArray(payload) && payload.length > 0 && payload[0] !== undefined) {
+                            latestText = String(payload[0]);
+                            if (!receivedFirstToken && latestText.trim().length > 0) {
+                              receivedFirstToken = true;
+                              if (bailoutTimer) clearTimeout(bailoutTimer);
+                            }
+                            if (onToken && typeof onToken === "function") {
+                              onToken(latestText);
+                            }
+                            if (isComplete || currentEvent === "complete") {
+                              if (bailoutTimer) clearTimeout(bailoutTimer);
+                              reader.cancel();
+                              return {
+                                reply: latestText.trim(),
+                                tier: isZeroGpu ? "burst" : "standard",
+                                model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                              };
+                            }
+                          }
+                        } catch (jsonErr) {}
                       }
-                    } else if (line.startsWith("data:")) {
-                      try {
-                        var payload = JSON.parse(line.substring(5).trim());
-                        if (Array.isArray(payload) && payload.length > 0 && payload[0] !== undefined) {
-                          latestText = String(payload[0]);
-                          if (onToken && typeof onToken === "function") {
-                            onToken(latestText);
-                          }
-                          if (isComplete || currentEvent === "complete") {
-                            reader.cancel();
-                            return { reply: latestText.trim(), tier: "max", model: "AravKataria/vajra-lora" };
-                          }
-                        }
-                      } catch (jsonErr) {}
                     }
                   }
+                } finally {
+                  if (bailoutTimer) clearTimeout(bailoutTimer);
                 }
+
+                if (firstTokenTimeoutMs && !receivedFirstToken) {
+                  return { reply: null, timedOutFirstToken: true };
+                }
+
                 if (latestText) {
-                  return { reply: latestText.trim(), tier: "max", model: "AravKataria/vajra-lora" };
+                  return {
+                    reply: latestText.trim(),
+                    tier: isZeroGpu ? "burst" : "standard",
+                    model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                  };
                 }
               }
             }
           }
-        } catch (callErr) {}
+        } catch (callErr) {
+          if (firstTokenTimeoutMs && !receivedFirstToken) {
+            return { reply: null, timedOutFirstToken: true };
+          }
+        }
       }
 
       // 2. Gradio Queue Fallback (/queue/join on fn_index 0)
@@ -4331,8 +4404,8 @@
                           qReader.cancel();
                           return {
                             reply: qLatestText.trim(),
-                            tier: "max",
-                            model: "AravKataria/vajra-lora"
+                            tier: isZeroGpu ? "burst" : "standard",
+                            model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
                           };
                         }
                       }
@@ -4344,8 +4417,8 @@
             if (qLatestText) {
               return {
                 reply: qLatestText.trim(),
-                tier: "max",
-                model: "AravKataria/vajra-lora"
+                tier: isZeroGpu ? "burst" : "standard",
+                model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
               };
             }
           }
@@ -4361,8 +4434,8 @@
         var v1Resp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/v1/draft", {
           method: "POST",
           headers: directHeaders,
-          body: JSON.stringify({ prompt: userPrompt, data: [userPrompt] }),
-          signal: getActiveSignal(8000)
+          body: JSON.stringify({ prompt: userPrompt }),
+          signal: getActiveSignal(6000)
         });
         if (v1Resp.ok) {
           var v1Data = await v1Resp.json();
@@ -4379,7 +4452,7 @@
             method: "POST",
             headers: directHeaders,
             body: JSON.stringify({ data: [userPrompt] }),
-            signal: getActiveSignal(10000)
+            signal: getActiveSignal(8000)
           });
           if (callResp.ok) {
             var callData = await callResp.json();
@@ -4387,7 +4460,7 @@
             if (eventId) {
               var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + draftEp + "/" + eventId, {
                 headers: directHeaders,
-                signal: getActiveSignal(25000)
+                signal: getActiveSignal(15000)
               });
               if (streamResp.ok && streamResp.body) {
                 var reader = streamResp.body.getReader();
@@ -4440,11 +4513,11 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // Complex technical reasoning, mathematics, security audits, or long contexts (>500 chars)
-        var isComplex = fullPrompt.length > 500 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|integrate|eigen|laplace|fourier|matrix|differential\s+equation|cwe-\d+|vulnerability|disassembl|decompile|exploit\s+payload/i.test(fullPrompt);
+        var isComplex = classifyQueryComplexity(fullPrompt);
+        var zeroGpuAvailable = !isZeroGpuCircuitOpen();
 
-        if (isComplex) {
-          // Complex queries -> Route to ZeroGPU A10G burst first (<9s latency)
+        if (isComplex && zeroGpuAvailable) {
+          // Complex queries -> Route to ZeroGPU A10G burst first (~6s latency)
           try {
             var gpuRes = await _executeSingleHfSpaceQuery(
               VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
@@ -4464,18 +4537,18 @@
             }
           } catch (gpuErr) {}
 
-          // Fallback to 2 vCPU if ZeroGPU unavailable (Max 38s ceiling)
+          // Fallback to 2 vCPU if ZeroGPU unavailable or exhausted
           try {
             var vcpuRes = await _executeSingleHfSpaceQuery(
               VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              38000,
+              35000,
               function(chunk) {
                 if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
               }
             );
-            if (vcpuRes && vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes.isRateLimited) {
+            if (vcpuRes && vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
               return {
                 reply: vcpuRes.reply,
                 tier: "standard",
@@ -4485,48 +4558,60 @@
           } catch (vcpuErr) {}
 
         } else {
-          // Standard queries -> Route to 2 vCPU Space first (saving ZeroGPU quota)
+          // Routine queries or ZeroGPU cooling down -> Route to 2 vCPU Space first with 8.0s Fast Bailout
+          var vcpuTimedOut = false;
+          var vcpuBusy = false;
           try {
             var vcpuRes2 = await _executeSingleHfSpaceQuery(
               VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              38000,
+              35000,
               function(chunk) {
                 if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
-              }
+              },
+              zeroGpuAvailable ? 8000 : 0 // 8s watchdog only if ZeroGPU is ready to receive bailout
             );
-            if (vcpuRes2 && vcpuRes2.reply) {
-              if (vcpuRes2.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes2.isRateLimited) {
+            if (vcpuRes2) {
+              if (vcpuRes2.timedOutFirstToken) {
+                vcpuTimedOut = true;
+              } else if (vcpuRes2.reply) {
+                if (vcpuRes2.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+                  return {
+                    reply: vcpuRes2.reply,
+                    tier: "standard",
+                    model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                  };
+                }
+                vcpuBusy = true;
+              }
+            }
+          } catch (vcpuErr) {
+            vcpuTimedOut = true;
+          }
+
+          // Fast Bailout to ZeroGPU if 2 vCPU timed out (>8s without first token) or was busy
+          if ((vcpuTimedOut || vcpuBusy) && zeroGpuAvailable) {
+            console.log("⚡ [VAJRA Fast Bailout] 2 vCPU " + (vcpuBusy ? "busy" : "exceeded 8s TTFT") + " -> Fast Bailout to ZeroGPU A10G...");
+            try {
+              var gpuRes2 = await _executeSingleHfSpaceQuery(
+                VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
+                fullPrompt,
+                directHeaders,
+                25000,
+                function(chunk) {
+                  if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+                }
+              );
+              if (gpuRes2 && gpuRes2.reply && !gpuRes2.isRateLimited) {
                 return {
-                  reply: vcpuRes2.reply,
-                  tier: "standard",
-                  model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                  reply: gpuRes2.reply,
+                  tier: "burst",
+                  model: "AravKataria/vajra-lora (ZeroGPU Burst)"
                 };
               }
-              console.log("⚡ [VAJRA Architecture] 2 vCPU Space busy -> Diverting to ZeroGPU Burst Engine...");
-            }
-          } catch (vcpuErr) {}
-
-          // Overflow to ZeroGPU if 2 vCPU is busy or timed out
-          try {
-            var gpuRes2 = await _executeSingleHfSpaceQuery(
-              VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
-              fullPrompt,
-              directHeaders,
-              25000,
-              function(chunk) {
-                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
-              }
-            );
-            if (gpuRes2 && gpuRes2.reply && !gpuRes2.isRateLimited) {
-              return {
-                reply: gpuRes2.reply,
-                tier: "burst",
-                model: "AravKataria/vajra-lora (ZeroGPU Burst)"
-              };
-            }
-          } catch (gpuErr) {}
+            } catch (gpuErr) {}
+          }
         }
 
       } catch (e) {}
