@@ -85,7 +85,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
-                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."},
+                {"role": "system", "content": "You are VAJRA-Draft, an instant preliminary technical assistant. Provide a direct, concise 1-2 sentence definition or explanation (under 35 words). Conclude definitively."},
                 {"role": "user", "content": prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -93,10 +93,10 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             with torch.no_grad():
                 ids = m.generate(
                     **inputs,
-                    max_new_tokens=320,
-                    temperature=0.25,
+                    max_new_tokens=65,
+                    temperature=0.2,
                     top_p=0.9,
-                    repetition_penalty=1.08,
+                    repetition_penalty=1.05,
                     do_sample=True,
                     eos_token_id=tok.eos_token_id,
                     pad_token_id=tok.eos_token_id
