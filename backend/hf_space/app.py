@@ -138,6 +138,42 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
 # =====================================================================
 # 3. 7B MODEL LOADING ON 2 vCPU (CPU Basic • 16 GB RAM)
 # =====================================================================
+GGUF_REPO_ID = os.getenv("GGUF_REPO_ID", "AravKataria/vajra-7b-gguf")
+GGUF_FILENAME = os.getenv("GGUF_FILENAME", "vajra-7b-q4_k_m.gguf")
+
+gguf_llm = None
+gguf_load_attempted = False
+
+def get_gguf_model():
+    global gguf_llm, gguf_load_attempted
+    if gguf_llm is not None or gguf_load_attempted:
+        return gguf_llm
+
+    gguf_load_attempted = True
+    try:
+        from llama_cpp import Llama
+        from huggingface_hub import hf_hub_download
+
+        token = HF_TOKEN or os.getenv("HF_TOKEN")
+        print(f"🔒 [VAJRA v2] Checking for 4-bit GGUF model ({GGUF_REPO_ID}/{GGUF_FILENAME})...")
+        model_path = hf_hub_download(
+            repo_id=GGUF_REPO_ID,
+            filename=GGUF_FILENAME,
+            token=token
+        )
+        print(f"✅ [VAJRA v2] Downloaded GGUF to {model_path}. Initializing Llama CPU engine (2 threads, 4K ctx)...")
+        gguf_llm = Llama(
+            model_path=model_path,
+            n_threads=2,
+            n_ctx=4096,
+            verbose=False
+        )
+        print("🚀 [VAJRA v2] 4-bit 7B GGUF Model ONLINE on 2 vCPU! (~4.2 GB RAM footprint)")
+    except Exception as e:
+        print(f"ℹ️ [VAJRA v2] GGUF model note: {e}. Using 0.5B CPU engine.")
+        gguf_llm = None
+    return gguf_llm
+
 tokenizer = None
 model = None
 model_load_failed = False
@@ -200,13 +236,37 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
     try:
+        # 1. First priority on 2 vCPU: Try 4-bit 7B GGUF model (~10-12 tok/s, ~4.2 GB RAM)
+        llm = get_gguf_model()
+        if llm is not None:
+            prompt_msgs = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
+            if context_files and isinstance(context_files, dict):
+                summary_text = ""
+                for fname, fcontent in list(context_files.items())[:3]:
+                    safe_c = str(fcontent)[:1000].replace("\x00", "")
+                    summary_text += f"\n--- File: {fname} ---\n{safe_c}"
+                if summary_text:
+                    prompt_msgs.append({"role": "system", "content": f"Workspace Files:\n{summary_text}"})
+            prompt_msgs.append({"role": "user", "content": clean_prompt})
+
+            output = llm.create_chat_completion(
+                messages=prompt_msgs,
+                max_tokens=350,
+                temperature=0.25,
+                top_p=0.9,
+                repeat_penalty=1.08
+            )
+            reply = output["choices"][0]["message"]["content"].strip()
+            print("✅ [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
+            return reply, "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
+
         load_cpu_model()
 
         if model is None or tokenizer is None:
             # 1. Answer immediately on 2 vCPU using fast local engine (~42 tokens/sec, 1.2 GB RAM)
             lite_reply = generate_ultra_lite_reply(clean_prompt, context_files)
             if lite_reply:
-                print("✅ [VAJRA v2] Query processed locally on 2 vCPU.")
+                print("✅ [VAJRA v2] Query processed locally on 2 vCPU (0.5B engine).")
                 return lite_reply, "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
 
             # 2. Serverless Router / HF Inference API if HF_TOKEN is configured
@@ -290,6 +350,28 @@ def gradio_generate(prompt: str):
         return
 
     try:
+        # 1. First priority on 2 vCPU: Stream from 4-bit 7B GGUF model if available
+        llm = get_gguf_model()
+        if llm is not None:
+            prompt_msgs = [
+                {"role": "system", "content": VAJRA_SYSTEM_PROMPT},
+                {"role": "user", "content": clean_prompt}
+            ]
+            accumulated = ""
+            for chunk in llm.create_chat_completion(
+                messages=prompt_msgs,
+                max_tokens=350,
+                temperature=0.25,
+                top_p=0.9,
+                repeat_penalty=1.08,
+                stream=True
+            ):
+                delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                if delta:
+                    accumulated += delta
+                    yield accumulated
+            return
+
         load_cpu_model()
 
         if model is None or tokenizer is None:

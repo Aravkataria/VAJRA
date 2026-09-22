@@ -4440,8 +4440,8 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // Complex technical reasoning, mathematics, security audits, or long contexts (>450 chars)
-        var isComplex = fullPrompt.length > 450 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|integrate|matrix|equation|exploit|cwe-\d+|vulnerability|disassembl|audit\s+this|decompile/i.test(fullPrompt);
+        // Complex technical reasoning, mathematics, security audits, or long contexts (>500 chars)
+        var isComplex = fullPrompt.length > 500 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|integrate|eigen|laplace|fourier|matrix|differential\s+equation|cwe-\d+|vulnerability|disassembl|decompile|exploit\s+payload/i.test(fullPrompt);
 
         if (isComplex) {
           // Complex queries -> Route to ZeroGPU A10G burst first (<9s latency)
@@ -4464,36 +4464,36 @@
             }
           } catch (gpuErr) {}
 
-          // Fallback to 2 vCPU if ZeroGPU unavailable (Max 42s ceiling)
+          // Fallback to 2 vCPU if ZeroGPU unavailable (Max 38s ceiling)
           try {
             var vcpuRes = await _executeSingleHfSpaceQuery(
               VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              42000,
+              38000,
               function(chunk) {
-                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
               }
             );
             if (vcpuRes && vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1 && !vcpuRes.isRateLimited) {
               return {
                 reply: vcpuRes.reply,
                 tier: "standard",
-                model: "AravKataria/vajra-lora (7B 2 vCPU)"
+                model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
               };
             }
           } catch (vcpuErr) {}
 
         } else {
-          // Standard queries -> Route to 2 vCPU Space with max 42s ceiling (saving ZeroGPU quota)
+          // Standard queries -> Route to 2 vCPU Space first (saving ZeroGPU quota)
           try {
             var vcpuRes2 = await _executeSingleHfSpaceQuery(
               VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              42000,
+              38000,
               function(chunk) {
-                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT VERIFIED [7B LoRA]");
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
               }
             );
             if (vcpuRes2 && vcpuRes2.reply) {
@@ -4501,7 +4501,7 @@
                 return {
                   reply: vcpuRes2.reply,
                   tier: "standard",
-                  model: "AravKataria/vajra-lora (7B 2 vCPU)"
+                  model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
                 };
               }
               console.log("⚡ [VAJRA Architecture] 2 vCPU Space busy -> Diverting to ZeroGPU Burst Engine...");
