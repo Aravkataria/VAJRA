@@ -370,19 +370,47 @@ def gradio_generate(prompt: str):
                 {"role": "user", "content": clean_prompt}
             ]
             accumulated = ""
-            for chunk in llm.create_chat_completion(
-                messages=prompt_msgs,
-                max_tokens=180,
-                temperature=0.25,
-                top_p=0.9,
-                repeat_penalty=1.08,
-                stream=True
-            ):
-                delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                if delta:
-                    accumulated += delta
-                    yield accumulated
-            return
+            try:
+                for chunk in llm.create_chat_completion(
+                    messages=prompt_msgs,
+                    max_tokens=180,
+                    temperature=0.25,
+                    top_p=0.9,
+                    repeat_penalty=1.08,
+                    stream=True
+                ):
+                    try:
+                        choices = chunk.get("choices") if isinstance(chunk, dict) else None
+                        if choices and len(choices) > 0:
+                            delta = choices[0].get("delta") if isinstance(choices[0], dict) else None
+                            if delta and isinstance(delta, dict):
+                                content = delta.get("content")
+                                if content:
+                                    accumulated += content
+                                    yield accumulated
+                    except Exception as chunk_parse_err:
+                        pass
+            except Exception as stream_err:
+                print(f"⚠️ GGUF stream=True note: {stream_err}")
+
+            if accumulated:
+                return
+
+            # Non-streaming fallback if stream=True produced no tokens
+            try:
+                direct_out = llm.create_chat_completion(
+                    messages=prompt_msgs,
+                    max_tokens=180,
+                    temperature=0.25,
+                    top_p=0.9,
+                    repeat_penalty=1.08
+                )
+                direct_reply = direct_out["choices"][0]["message"]["content"].strip()
+                if direct_reply:
+                    yield direct_reply
+                    return
+            except Exception as direct_err:
+                print(f"⚠️ GGUF direct completion note: {direct_err}")
 
         load_cpu_model()
 
