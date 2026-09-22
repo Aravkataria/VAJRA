@@ -3881,6 +3881,7 @@
       var glassOverlay = null;
       var statusTag = null;
       var isSpeculativeDraft = false;
+      var hasSwitchedTo7B = false;
 
       function enableSpeculativeDraft() {
         if (isSpeculativeDraft) return;
@@ -3896,6 +3897,23 @@
         glassOverlay.className = "speculative-glass-overlay";
         card.appendChild(glassOverlay);
         updateBadge("SPECULATIVE DRAFT [0.5B]");
+      }
+
+      function replaceWithStream(newText, newBadge) {
+        if (!hasSwitchedTo7B) {
+          hasSwitchedTo7B = true;
+          renderedTokenCount = 0;
+        }
+        if (statusTag) {
+          statusTag.innerHTML = '<span>⚡ 7B VERIFIED REASONER</span><span style="opacity:0.5;">·</span><span>Refining word-by-word with neural engine...</span>';
+        }
+        if (newBadge) {
+          updateBadge(newBadge);
+        }
+        fullIncomingText = newText;
+        if (!intervalId) {
+          intervalId = setInterval(tick, 20);
+        }
       }
 
       function removeGlassOverlay() {
@@ -3915,6 +3933,7 @@
         }
         card.classList.remove("speculative-draft");
         isSpeculativeDraft = false;
+        hasSwitchedTo7B = false;
       }
 
       function refineWithVerified(finalText, meta) {
@@ -3947,6 +3966,7 @@
         group: group,
         enableSpeculativeDraft: enableSpeculativeDraft,
         removeGlassOverlay: removeGlassOverlay,
+        replaceWithStream: replaceWithStream,
         refineWithVerified: refineWithVerified,
         isDraftActive: function() { return isSpeculativeDraft; },
         onToken: function(text) {
@@ -5316,7 +5336,7 @@
           return draftText;
         }).catch(function() { return null; });
 
-        // Handle streaming chunks from Channel B (if available)
+        // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
         function handleStreamChunk(chunkText, badge) {
           if (!chunkText || chunkText.trim().length === 0 || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
             return;
@@ -5324,12 +5344,15 @@
           if (!typewriter) {
             removeTypingIndicator();
             typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
-          } else if (typewriter.isDraftActive && typewriter.isDraftActive()) {
-            typewriter.removeGlassOverlay();
+            typewriter.enableSpeculativeDraft();
           }
-          typewriter.onToken(chunkText);
-          if (badge) {
-            typewriter.updateBadge(badge);
+          if (typewriter.isDraftActive && typewriter.isDraftActive()) {
+            typewriter.replaceWithStream(chunkText, badge);
+          } else {
+            typewriter.onToken(chunkText);
+            if (badge) {
+              typewriter.updateBadge(badge);
+            }
           }
         }
 
