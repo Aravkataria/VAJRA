@@ -12,7 +12,7 @@ COLAB_CELL_CODE = '''# =========================================================
 # 2. Run this cell. Enter your Hugging Face Token (with WRITE permissions) when prompted.
 # ==============================================================================
 
-!pip install -q transformers peft torch accelerate huggingface_hub gguf sentencepiece protobuf
+!pip install -q -U torchao transformers peft torch accelerate huggingface_hub gguf sentencepiece protobuf
 
 import os, gc, torch
 from huggingface_hub import HfApi, login
@@ -28,6 +28,10 @@ login(token=HF_TOKEN)
 BASE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 LORA_MODEL = "AravKataria/vajra-lora"
 MERGED_DIR = "./vajra_merged_7b"
+OFFLOAD_DIR = "./offload"
+
+os.makedirs(MERGED_DIR, exist_ok=True)
+os.makedirs(OFFLOAD_DIR, exist_ok=True)
 
 print("🔒 Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, token=HF_TOKEN, trust_remote_code=True)
@@ -39,13 +43,19 @@ base_model = AutoModelForCausalLM.from_pretrained(
     token=HF_TOKEN,
     torch_dtype=torch.float16,
     device_map="auto",
+    offload_folder=OFFLOAD_DIR,
     low_cpu_mem_usage=True,
     trust_remote_code=True
 )
 
 print("🔒 Merging fine-tuned LoRA weights...")
-model = PeftModel.from_pretrained(base_model, LORA_MODEL, token=HF_TOKEN)
-merged = model.merge_and_unload()
+model = PeftModel.from_pretrained(
+    base_model,
+    LORA_MODEL,
+    token=HF_TOKEN,
+    offload_folder=OFFLOAD_DIR
+)
+merged = model.merge_and_unload(safe_merge=True)
 merged.save_pretrained(MERGED_DIR)
 print("✅ LoRA weights successfully merged into standalone checkpoint!")
 
@@ -64,6 +74,7 @@ print("📦 Converting merged checkpoint to intermediate FP16 GGUF...")
 print("⚡ Quantizing to 4-bit Q4_K_M (~4.2 GB)...")
 !./llama.cpp/build/bin/llama-quantize vajra-7b-f16.gguf vajra-7b-q4_k_m.gguf Q4_K_M
 !rm -f vajra-7b-f16.gguf
+!rm -rf ./offload
 
 DEST_REPO = "AravKataria/vajra-7b-gguf"
 print(f"🚀 Uploading vajra-7b-q4_k_m.gguf to Hugging Face ({DEST_REPO})...")
