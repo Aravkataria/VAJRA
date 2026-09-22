@@ -149,6 +149,13 @@ with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
         outputs=output_display,
         api_name="generate_vajra_reply"
     )
+    alias_btn = gr.Button("Alias", visible=False)
+    alias_btn.click(
+        fn=generate_vajra_reply,
+        inputs=user_input,
+        outputs=output_display,
+        api_name="gradio_generate"
+    )
 
 # =====================================================================
 # 5. FASTAPI REST ROUTES ON demo.app

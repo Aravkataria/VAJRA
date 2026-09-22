@@ -203,7 +203,13 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         load_cpu_model()
 
         if model is None or tokenizer is None:
-            # 1. Serverless Router / HF Inference API if HF_TOKEN is configured
+            # 1. Answer immediately on 2 vCPU using fast local engine (~42 tokens/sec, 1.2 GB RAM)
+            lite_reply = generate_ultra_lite_reply(clean_prompt, context_files)
+            if lite_reply:
+                print("✅ [VAJRA v2] Query processed locally on 2 vCPU.")
+                return lite_reply, "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
+
+            # 2. Serverless Router / HF Inference API if HF_TOKEN is configured
             token = HF_TOKEN or os.getenv("HF_TOKEN")
             if token:
                 try:
@@ -287,6 +293,39 @@ def gradio_generate(prompt: str):
         load_cpu_model()
 
         if model is None or tokenizer is None:
+            d_tok, d_m = get_draft_model()
+            if d_tok is not None and d_m is not None:
+                messages = [
+                    {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."},
+                    {"role": "user", "content": clean_prompt}
+                ]
+                text_input = d_tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                model_inputs = d_tok([text_input], return_tensors="pt")
+                streamer = TextIteratorStreamer(d_tok, skip_prompt=True, skip_special_tokens=True)
+                gen_kwargs = dict(
+                    **model_inputs,
+                    streamer=streamer,
+                    max_new_tokens=320,
+                    temperature=0.25,
+                    top_p=0.9,
+                    repetition_penalty=1.08,
+                    do_sample=True,
+                    eos_token_id=d_tok.eos_token_id,
+                    pad_token_id=d_tok.eos_token_id
+                )
+                gen_thread = threading.Thread(target=d_m.generate, kwargs=gen_kwargs)
+                gen_thread.start()
+
+                accumulated = ""
+                for new_text in streamer:
+                    accumulated += new_text
+                    yield accumulated
+
+                gen_thread.join()
+                del model_inputs
+                gc.collect()
+                return
+
             yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
             return
 
@@ -371,6 +410,13 @@ with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
         inputs=user_input,
         outputs=draft_output,
         api_name="generate_draft_reply"
+    )
+    draft_alias_btn = gr.Button("DraftAlias", visible=False)
+    draft_alias_btn.click(
+        fn=gradio_generate_draft,
+        inputs=user_input,
+        outputs=draft_output,
+        api_name="draft"
     )
 
 # =====================================================================
