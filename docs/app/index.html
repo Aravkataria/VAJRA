@@ -3927,7 +3927,7 @@
         finalMetadata = meta || {};
         isFinished = true;
         if (meta && (meta.model || meta.tier)) {
-          var b = meta.model || (meta.tier === "burst" ? "VAJRA BURST [7B ZeroGPU]" : "VAJRA AUDIT VERIFIED [7B LoRA]");
+          var b = meta.model || (meta.tier === "burst" ? "VAJRA BURST [7B ZeroGPU]" : (meta.tier === "cloud_router" ? "VAJRA CLOUD ROUTER [7B]" : "VAJRA AUDIT VERIFIED [7B LoRA]"));
           updateBadge(b);
         }
 
@@ -4450,8 +4450,8 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // Check if user provided an HF Token (for instant ZeroGPU acceleration) or query is high complexity
-        var isComplex = Boolean(storedHfToken) || fullPrompt.length > 500 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|integrate|matrix|equation|exploit|cwe-\d+|vulnerability|disassembl|audit\s+this/i.test(fullPrompt);
+        // Complex technical reasoning, mathematics, security audits, or long contexts (>450 chars)
+        var isComplex = fullPrompt.length > 450 || /taylor\s+series|schrodinger|heisenberg|quantum|calculus|derivative|integral|integrate|matrix|equation|exploit|cwe-\d+|vulnerability|disassembl|audit\s+this|decompile/i.test(fullPrompt);
 
         if (isComplex) {
           // Complex queries -> Route to ZeroGPU A10G burst first (<9s latency)
@@ -5315,10 +5315,14 @@
           if (inferenceRes.reply) {
             removeTypingIndicator();
             var badge = "";
-            if (inferenceRes.tier === "ultra_lite" || inferenceRes.tier === "ultra_lite_fallback") {
+            if (inferenceRes.model && !inferenceRes.model.includes("VAJRA Cloud Gateway")) {
+              badge = inferenceRes.model;
+            } else if (inferenceRes.tier === "ultra_lite" || inferenceRes.tier === "ultra_lite_fallback") {
               badge = "VAJRA ULTRA-LITE [0.5B]";
             } else if (inferenceRes.tier === "standard") {
               badge = "VAJRA STANDARD [7B 2 vCPU]";
+            } else if (inferenceRes.tier === "cloud_router") {
+              badge = "VAJRA CLOUD ROUTER [7B]";
             } else if (inferenceRes.tier === "burst") {
               badge = "VAJRA BURST [7B ZeroGPU]";
             } else if (inferenceRes.tier === "max") {

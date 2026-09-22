@@ -81,6 +81,8 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 # =====================================================================
 @spaces.GPU(duration=25)
 def generate_vajra_reply(prompt: str) -> str:
+    print(f"⚡ [VAJRA ZeroGPU] Incoming inference request on A10G: {prompt[:80]}...")
+    t0 = time.time()
     try:
         clean_prompt = sanitize_and_check_injection(prompt)
         messages = [
@@ -112,6 +114,9 @@ def generate_vajra_reply(prompt: str) -> str:
         res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
+
+        print(f"✅ [VAJRA ZeroGPU] A10G GPU inference completed in {time.time() - t0:.2f}s!")
+        return res_text.strip()
 
         del model_inputs, generated_ids
         gc.collect()
