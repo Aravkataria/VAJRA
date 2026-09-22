@@ -5280,40 +5280,24 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // PATH A: Basic Technical Questions (e.g. "what is XSS", "explain Heisenberg uncertainty principle", "write a quicksort")
-        // Resolves directly with authentic Qwen2.5-Coder-0.5B neural model in ~1.5s - 2.5s, skipping the 2 vCPU wait!
-        if (!isDeepAudit) {
-          var draftFastResp = await tryFastDraftQuery(q, directHeaders);
-          if (draftFastResp) {
-            removeTypingIndicator();
-            var fastTypewriter = createStreamTypewriter("VAJRA NEURAL [0.5B]");
-            if (fastTypewriter) {
-              fastTypewriter.onToken(draftFastResp);
-              fastTypewriter.finish(draftFastResp, {
-                tier: "ultra_lite",
-                model: "VAJRA NEURAL [0.5B]"
-              });
-              return;
-            }
-          }
-        }
-
-        // PATH B: Deep Forensic Audits (Multi-file codebases, AST taint sinks, security patches, complex exploits)
+        // Speculative Dual-Channel Neural Reasoning Pipeline:
+        // Channel A: Fast 0.5B Speculative Draft (<1.5s) rendered with Frosted Glassmorphism Shimmer
+        // Channel B: Deep 7B Reasoning Pipeline (Optimized 2 vCPU -> ZeroGPU Bailout -> 0.5B fallback)
         var typewriter = null;
         var isDeepResolved = false;
         var draftReplyText = null;
 
-        // Hard Ceiling Timer: Dissolves glass at second 45 so user NEVER waits until second 91
+        // Hard Ceiling Timer: Dissolves glass at second 25 so user NEVER gets stuck waiting
         var glassCeilingTimer = setTimeout(function() {
           if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
-            console.warn("⏱️ [VAJRA Guard] 45s Ceiling reached: dissolving glass overlay and presenting draft response.");
+            console.warn("⏱️ [VAJRA Guard] Ceiling reached: dissolving glass overlay and presenting draft response.");
             typewriter.removeGlassOverlay();
-            typewriter.updateBadge("VAJRA SPECULATIVE [0.5B]");
+            typewriter.updateBadge("VAJRA ULTRA-LITE [0.5B]");
             if (draftReplyText) {
-              typewriter.finish(draftReplyText, { tier: "ultra_lite", model: "VAJRA SPECULATIVE [0.5B]" });
+              typewriter.finish(draftReplyText, { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
             }
           }
-        }, 45000);
+        }, 25000);
 
         // Launch Channel A in background
         var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
