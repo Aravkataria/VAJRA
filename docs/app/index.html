@@ -4425,6 +4425,28 @@
         }
       } catch (queueErr) {}
 
+      // 3. Direct FastAPI /v1/chat route (for 2 vCPU Space if Gradio stream fails)
+      if (!isZeroGpu) {
+        try {
+          var v1ChatResp = await fetch(hfEndpoint + "/v1/chat", {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({ prompt: fullPrompt }),
+            signal: getActiveSignal(25000)
+          });
+          if (v1ChatResp.ok) {
+            var v1ChatData = await v1ChatResp.json();
+            if (v1ChatData && v1ChatData.reply && !v1ChatData.busy && !v1ChatData.overflow) {
+              return {
+                reply: String(v1ChatData.reply).trim(),
+                tier: "standard",
+                model: v1ChatData.model || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+              };
+            }
+          }
+        } catch (v1Err) {}
+      }
+
       return null;
     }
 
