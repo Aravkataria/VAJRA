@@ -842,6 +842,130 @@
       40% { opacity: 1; transform: scale(1.2); }
     }
 
+    /* Stream Typewriter Progressive Display */
+    .typewriter-cursor {
+      display: inline-block;
+      color: var(--spark, #f5b400);
+      font-weight: 700;
+      margin-left: 2px;
+      animation: typewriterBlink 0.8s infinite;
+    }
+    @keyframes typewriterBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .stream-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      transition: filter 0.35s ease, opacity 0.35s ease;
+    }
+
+    /* Active Streaming State: Text is subtly blurred behind frosted glass sheen until final */
+    .msg-card.streaming-active {
+      position: relative;
+      border-color: rgba(245, 180, 0, 0.4) !important;
+      box-shadow: 0 0 16px rgba(245, 180, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.06);
+    }
+    .msg-card.streaming-active .stream-text {
+      filter: blur(1.35px);
+      opacity: 0.92;
+      text-shadow: 0 0 4px rgba(245, 180, 0, 0.18);
+    }
+
+    /* YouTube / LinkedIn Style Frosted Glass Shimmer Overlay */
+    /* YouTube / LinkedIn Style Frosted Glass Shimmer Overlay */
+    .msg-card.speculative-draft {
+      position: relative;
+      overflow: hidden;
+      border-color: rgba(245, 180, 0, 0.5) !important;
+      background: var(--bg-surface) !important;
+      transition: all 0.35s ease;
+    }
+
+    .speculative-glass-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      background: linear-gradient(
+        115deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.12) 30%,
+        rgba(245, 180, 0, 0.16) 50%,
+        rgba(255, 255, 255, 0.12) 70%,
+        rgba(255, 255, 255, 0.04) 100%
+      );
+      background-size: 250% 100%;
+      animation: glassShimmerSweep 2.2s infinite ease-in-out;
+      border-radius: 7px;
+      border: 1px solid rgba(245, 180, 0, 0.25);
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+      transition: opacity 0.45s ease;
+      z-index: 2;
+    }
+
+    [data-theme="light"] .speculative-glass-overlay {
+      background: linear-gradient(
+        115deg,
+        rgba(245, 180, 0, 0.05) 0%,
+        rgba(255, 255, 255, 0.6) 30%,
+        rgba(245, 180, 0, 0.2) 50%,
+        rgba(255, 255, 255, 0.6) 70%,
+        rgba(245, 180, 0, 0.05) 100%
+      );
+      border: 1px solid rgba(245, 180, 0, 0.35);
+      box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    @keyframes glassShimmerSweep {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .speculative-status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-family: "JetBrains Mono", monospace;
+      color: var(--spark, #f5b400);
+      background: rgba(245, 180, 0, 0.1);
+      border: 1px dashed rgba(245, 180, 0, 0.35);
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+      animation: pulseGlow 1.8s infinite ease-in-out;
+      transition: all 0.4s ease;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; border-color: rgba(245, 180, 0, 0.8); }
+    }
+
+    /* Stop Generation Button & Input Lock */
+    .btn-run-scan.btn-stop-generating {
+      background: rgba(239, 68, 68, 0.14) !important;
+      border-color: rgba(239, 68, 68, 0.45) !important;
+      color: #ef4444 !important;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+      cursor: pointer;
+    }
+    .btn-run-scan.btn-stop-generating:hover {
+      background: rgba(239, 68, 68, 0.28) !important;
+      border-color: #ef4444 !important;
+      color: #ffffff !important;
+    }
+    [data-theme="light"] .btn-run-scan.btn-stop-generating {
+      background: rgba(220, 38, 38, 0.1) !important;
+      border-color: rgba(220, 38, 38, 0.4) !important;
+      color: #dc2626 !important;
+    }
+
     /* Process Step Tracker */
     .process-tracker {
       border: 1px solid var(--border-subtle);
@@ -1748,6 +1872,237 @@
       gap: 0.5rem;
     }
 
+    /* ─── TWO-COLUMN SETTINGS DIALOG (PREFERENCES PANEL) ─── */
+    .settings-dialog-frame {
+      width: 94vw !important;
+      max-width: 860px !important;
+      height: 80vh !important;
+      max-height: 620px !important;
+      min-height: 480px !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: row !important;
+      overflow: hidden !important;
+      border-radius: 12px !important;
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-medium) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    .settings-modal-sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: var(--bg-base);
+      border-right: 1px solid var(--border-subtle);
+      padding: 1rem 0.65rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-y: auto;
+    }
+
+    .settings-sidebar-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.35rem 0.65rem 0.5rem;
+    }
+
+    .settings-nav-item {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 0.45rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+      font-family: inherit;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .settings-nav-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+
+    .settings-nav-item.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    [data-theme="light"] .settings-nav-item:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="light"] .settings-nav-item.active {
+      background: rgba(0, 0, 0, 0.09);
+      color: var(--text-primary);
+    }
+
+    .settings-modal-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-surface);
+    }
+
+    .settings-main-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 1.25rem 1.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem 1.6rem 2rem;
+    }
+
+    .settings-main-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.6rem;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-base);
+    }
+
+    .settings-section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin: 1.2rem 0 0.45rem;
+    }
+
+    .settings-section-title:first-child {
+      margin-top: 0;
+    }
+
+    .settings-group-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .settings-row {
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-row-label {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .settings-row-desc {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
+      line-height: 1.35;
+    }
+
+    .segmented-pill {
+      display: inline-flex;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .segmented-pill-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .segmented-pill-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .segmented-pill-btn.active {
+      background: var(--bg-hover, rgba(255, 255, 255, 0.12));
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    [data-theme="light"] .segmented-pill-btn.active {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .kbd-chip {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.7rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-medium);
+      border-bottom: 2px solid var(--border-strong);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--text-primary);
+      display: inline-block;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] .kbd-chip {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.15);
+      border-bottom-color: rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 680px) {
+      .settings-dialog-frame {
+        flex-direction: column !important;
+        height: 92vh !important;
+        max-height: 92vh !important;
+      }
+      .settings-modal-sidebar {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-height: 110px;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-subtle);
+        overflow-x: auto;
+        flex-direction: row;
+        gap: 0.5rem;
+      }
+    }
+
     /* Drag and drop full window overlay */
     .drag-drop-overlay {
       display: none;
@@ -2056,10 +2411,10 @@
 
     <div class="sidebar-footer">
       <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:0.25rem;">
-        <div class="status-pill">
-          <div class="status-dot"></div>
-          <span>6/6 Verifiers Ready</span>
-        </div>
+        <button type="button" class="btn-report-bug" onclick="openHfTokenModal()" title="Engine Settings &amp; GPU Acceleration" aria-label="Engine Settings">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </button>
         <button type="button" class="btn-report-bug" onclick="openBugReportModal()" title="Report an issue or bug to Arav Kataria" aria-label="Report Bug">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span>Report Bug</span>
@@ -2186,9 +2541,11 @@
                   GitHub
                 </button>
               </div>
-              <button type="submit" class="btn-run-scan" title="Send message, request project plan, or scan repository">
-                Send
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <button type="submit" class="btn-run-scan" id="btnSubmitChat" title="Send message, request project plan, or scan repository">
+                <span id="btnSubmitChatText">Send</span>
+                <span id="btnSubmitChatIcon" style="display:inline-flex; align-items:center;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </span>
               </button>
             </div>
           </form>
@@ -2325,7 +2682,472 @@
     </div>
   </div>
 
-  <!-- Drag and drop global overlay -->
+  <!-- Preferences & Engine Settings Modal (Modern Two-Column Layout) -->
+  <div class="modal-backdrop" id="hfTokenModal">
+    <div class="modal-frame settings-dialog-frame">
+      <!-- LEFT SIDEBAR -->
+      <div class="settings-modal-sidebar">
+        <div>
+          <div class="settings-sidebar-header">Settings</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button type="button" class="settings-nav-item active" data-tab="settings-general" onclick="switchSettingsTab('settings-general')">
+              <span>General</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-application" onclick="switchSettingsTab('settings-application')">
+              <span>Application</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-appearance" onclick="switchSettingsTab('settings-appearance')">
+              <span>Appearance</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-models" onclick="switchSettingsTab('settings-models')">
+              <span>Models</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-customizations" onclick="switchSettingsTab('settings-customizations')">
+              <span>Customizations</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-browser" onclick="switchSettingsTab('settings-browser')">
+              <span>Browser</span>
+            </button>
+          </div>
+          <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; padding:14px 10px 4px;">Not in Project</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button type="button" class="settings-nav-item" data-tab="settings-conversations" onclick="switchSettingsTab('settings-conversations')">
+              <span>Conversations</span>
+            </button>
+          </div>
+        </div>
+        <div style="padding-top:8px; border-top:1px solid var(--border-subtle); display:flex; flex-direction:column; gap:2px;">
+          <button type="button" class="settings-nav-item" data-tab="settings-shortcuts" onclick="switchSettingsTab('settings-shortcuts')">
+            <span>Shortcuts</span>
+          </button>
+          <button type="button" class="settings-nav-item" onclick="closeModal('hfTokenModal'); openBugReportModal();">
+            <span>Provide Feedback</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT MAIN CONTENT PANEL -->
+      <div class="settings-modal-main">
+        <!-- Main Header -->
+        <div class="settings-main-header">
+          <div>
+            <h2 id="settingsTabTitle" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin:0 0 3px 0;">General</h2>
+            <div id="settingsTabSubtitle" style="font-size:0.78rem; color:var(--text-muted);">Configure agent execution, queued message delivery, and permissions.</div>
+          </div>
+          <button class="btn-icon" onclick="closeModal('hfTokenModal')" style="padding:4px;" title="Close Settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Main Body Tabs -->
+        <div class="settings-main-content">
+          <!-- 1. GENERAL TAB -->
+          <div class="settings-tab-pane" id="settings-general">
+            <div class="settings-section-title">Execution</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Queued Messages</div>
+                  <div class="settings-row-desc">Configure when follow-up messages are sent. Keyboard shortcuts ℹ️</div>
+                </div>
+                <div class="segmented-pill" id="prefQueuePill">
+                  <button type="button" class="segmented-pill-btn active" data-val="queue" onclick="selectSegmented('prefQueuePill', 'queue')">Queue</button>
+                  <button type="button" class="segmented-pill-btn" data-val="immediate" onclick="selectSegmented('prefQueuePill', 'immediate')">Send Immediately</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Reasoning Depth</div>
+                  <div class="settings-row-desc">Controls multi-step verification depth and AST tree analysis passes.</div>
+                </div>
+                <select id="prefReasoningDepth" class="modal-input" style="width:auto; min-width:180px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="balanced">Balanced (Standard)</option>
+                  <option value="deep">Thorough (Deep Chain)</option>
+                  <option value="speed">Speed (Direct AST)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Global Permissions</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Security Preset</div>
+                  <div class="settings-row-desc">Controls the actions the agent can take. Learn more about Default ℹ️</div>
+                </div>
+                <select id="prefSecurityPreset" class="modal-input" style="width:auto; min-width:150px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="default">Default</option>
+                  <option value="strict">Strict (Zero-Write)</option>
+                  <option value="permissive">Permissive</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Tool Permissions <span style="font-size:0.68rem; padding:1px 6px; border-radius:10px; background:rgba(255,255,255,0.08); color:var(--text-secondary); margin-left:4px;">9</span></div>
+                  <div class="settings-row-desc">Modify permissions for file, terminal, and MCP tools.</div>
+                </div>
+                <button type="button" class="btn-tool-chip" onclick="switchSettingsTab('settings-customizations')" style="font-size:0.75rem; padding:4px 12px;">Open</button>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Agent Behavior</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Artifact Review Policy</div>
+                  <div class="settings-row-desc">Whether the agent asks you to review its documents.</div>
+                </div>
+                <select id="prefArtifactPolicy" class="modal-input" style="width:auto; min-width:150px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="ask">Always Ask</option>
+                  <option value="auto">Auto-Accept</option>
+                  <option value="manual">Manual Review</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Network Permissions</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Data Privacy Boundary</div>
+                  <div class="settings-row-desc">Zero-retention in-browser reasoning. Inputs never stored on external tracking servers.</div>
+                </div>
+                <div class="segmented-pill" id="prefLocalBoundary">
+                  <button type="button" class="segmented-pill-btn active" data-val="enforced" onclick="selectSegmented('prefLocalBoundary', 'enforced')">Enforced</button>
+                  <button type="button" class="segmented-pill-btn" data-val="hybrid" onclick="selectSegmented('prefLocalBoundary', 'hybrid')">Hybrid</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. APPLICATION TAB -->
+          <div class="settings-tab-pane" id="settings-application" style="display:none;">
+            <div class="settings-section-title">System &amp; Diagnostics</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Execution Environment</div>
+                  <div class="settings-row-desc">WebAssembly v2 + WebGPU ZeroGPU Client Engine.</div>
+                </div>
+                <span class="badge" style="background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); font-size:0.72rem; padding:2px 8px; border-radius:4px; font-weight:600;">WASM-v2 Active</span>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Client Version</div>
+                  <div class="settings-row-desc">VAJRA Autonomous Cyber-Reasoning Engine.</div>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:0.74rem; color:var(--text-muted);">v2.4.0 (x86_64)</span>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Storage &amp; Telemetry</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Casefile Local Storage</div>
+                  <div class="settings-row-desc">Disk space allocated in browser for saved audits and casefiles.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                  <span id="prefStorageSize" style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">Calculating...</span>
+                  <button type="button" class="btn-tool-chip" onclick="clearCasefileStorage()" style="color:#ef4444; font-size:0.72rem; padding:3px 8px;">Clear Storage</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Anonymous Crash Telemetry</div>
+                  <div class="settings-row-desc">Send client-side crash errors to help improve AST verification rules.</div>
+                </div>
+                <div class="segmented-pill" id="prefTelemetryPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefTelemetryPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefTelemetryPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. APPEARANCE TAB -->
+          <div class="settings-tab-pane" id="settings-appearance" style="display:none;">
+            <div class="settings-section-title">Theme &amp; Visuals</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Theme Mode</div>
+                  <div class="settings-row-desc">Choose between high-contrast dark or clean light appearance.</div>
+                </div>
+                <div class="segmented-pill" id="prefThemePill">
+                  <button type="button" class="segmented-pill-btn active" data-val="dark" onclick="selectSegmented('prefThemePill', 'dark')">Dark Theme</button>
+                  <button type="button" class="segmented-pill-btn" data-val="light" onclick="selectSegmented('prefThemePill', 'light')">Light Theme</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Stream Typewriter Speed</div>
+                  <div class="settings-row-desc">Select character animation speed for streaming reasoning output.</div>
+                </div>
+                <select id="prefStreamSpeed" class="modal-input" style="width:auto; min-width:180px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="smooth">Smooth Animation (Default)</option>
+                  <option value="fast">Fast Real-time</option>
+                  <option value="instant">Instant Render</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Frosted Glass Overlay</div>
+                  <div class="settings-row-desc">Display glassmorphic blur over 0.5B speculative draft while 7B reasoner streams.</div>
+                </div>
+                <div class="segmented-pill" id="prefGlassPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefGlassPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefGlassPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Auto-scroll Output Stream</div>
+                  <div class="settings-row-desc">Automatically scroll viewport to keep newly generated tokens in view.</div>
+                </div>
+                <div class="segmented-pill" id="prefAutoScrollPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefAutoScrollPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefAutoScrollPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. MODELS TAB -->
+          <div class="settings-tab-pane" id="settings-models" style="display:none;">
+            <div class="settings-section-title">Neural Reasoning Engine</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Inference Architecture</div>
+                  <div class="settings-row-desc">Dual-channel speculation pairs 0.5B instant drafting with 7B deep reasoning.</div>
+                </div>
+                <select id="prefPipelineSelect" class="modal-input" style="width:auto; min-width:260px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="hybrid">⚡ Dual-Channel (0.5B Speculative + 7B Engine)</option>
+                  <option value="deep">🔒 Dedicated 7B Model Only</option>
+                  <option value="lite">🚀 Ultra-Fast 0.5B Speculative Only</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Response Detail Level</div>
+                  <div class="settings-row-desc">Target concise summary or exhaustive forensic architecture analysis.</div>
+                </div>
+                <select id="prefDetailSelect" class="modal-input" style="width:auto; min-width:260px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="balanced">Balanced (1–2 Focused Technical Paragraphs)</option>
+                  <option value="deep">Deep Forensic (Full Architecture &amp; AST Sinks)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Cloud Acceleration &amp; GPU (Optional)</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div style="flex:1;">
+                  <div class="settings-row-label">Hugging Face User Token</div>
+                  <div class="settings-row-desc">Connect free personal read token for dedicated ZeroGPU A10G burst acceleration (&lt;9s).</div>
+                  <div style="margin-top:0.4rem; display:flex; gap:0.4rem; max-width:380px;">
+                    <input type="password" id="hfTokenInput" class="modal-input" placeholder="Optional: hf_..." style="font-family:monospace; font-size:0.75rem; flex:1; padding:4px 8px;">
+                    <button type="button" class="btn-tool-chip" onclick="toggleTokenVisibility()" style="font-size:0.7rem; padding:4px 8px;">Show</button>
+                  </div>
+                </div>
+                <div id="hfTokenStatus" style="font-size:0.74rem; color:var(--text-muted); text-align:right;">Shared Public Quota</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. CUSTOMIZATIONS TAB -->
+          <div class="settings-tab-pane" id="settings-customizations" style="display:none;">
+            <div class="settings-section-title">AST &amp; Verification Rules</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Rule Verifiers Status</div>
+                  <div class="settings-row-desc">Active security analyzers: AST Sinks, Memory Bounds, Race Conditions, Cryptography.</div>
+                </div>
+                <span style="font-size:0.75rem; color:var(--ok, #4ade80); font-weight:600;">6/6 Verifiers Ready</span>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Strict Pointer Sanitization</div>
+                  <div class="settings-row-desc">Flag out-of-bounds pointer offsets and unvalidated buffer allocations.</div>
+                </div>
+                <div class="segmented-pill" id="prefAstStrictPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="strict" onclick="selectSegmented('prefAstStrictPill', 'strict')">Strict</button>
+                  <button type="button" class="segmented-pill-btn" data-val="standard" onclick="selectSegmented('prefAstStrictPill', 'standard')">Standard</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Custom System Directives</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div style="width:100%;">
+                  <div class="settings-row-label">Custom Instruction Prompt</div>
+                  <div class="settings-row-desc" style="margin-bottom:0.4rem;">Injected into the reasoner prompt context for every analysis.</div>
+                  <input type="text" id="prefCustomPrompt" class="modal-input" placeholder="e.g. Focus on memory safety and concurrency bugs..." style="font-size:0.75rem; padding:5px 8px;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. BROWSER TAB -->
+          <div class="settings-tab-pane" id="settings-browser" style="display:none;">
+            <div class="settings-section-title">Sandboxed Environment</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Live Preview Sandbox</div>
+                  <div class="settings-row-desc">Render generated code artifacts in an isolated browser iframe sandbox.</div>
+                </div>
+                <div class="segmented-pill" id="prefSandboxPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefSandboxPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefSandboxPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">External Documentation Fetching</div>
+                  <div class="settings-row-desc">Allow fetching public code libraries and security vulnerability advisories.</div>
+                </div>
+                <div class="segmented-pill" id="prefWebReaderPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="permitted" onclick="selectSegmented('prefWebReaderPill', 'permitted')">Permitted</button>
+                  <button type="button" class="segmented-pill-btn" data-val="ask" onclick="selectSegmented('prefWebReaderPill', 'ask')">Ask Always</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. CONVERSATIONS TAB -->
+          <div class="settings-tab-pane" id="settings-conversations" style="display:none;">
+            <div class="settings-section-title">Audit Casefiles &amp; History</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Export Forensic Casefiles</div>
+                  <div class="settings-row-desc">Download complete chat history, generated code artifacts, and reasoning logs.</div>
+                </div>
+                <button type="button" class="btn-tool-chip" onclick="exportAllCasefiles()" style="font-size:0.75rem; padding:4px 12px;">Export JSON</button>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Clear All History</div>
+                  <div class="settings-row-desc">Permanently erase all chat messages and reset active session.</div>
+                </div>
+                <button type="button" class="btn-tool-chip" onclick="closeModal('hfTokenModal'); openModal('clearConfirmModal');" style="color:#ef4444; font-size:0.75rem; padding:4px 12px;">Clear All History</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. SHORTCUTS TAB (KEYBOARD SHORTCUTS & CUSTOMIZATION) -->
+          <div class="settings-tab-pane" id="settings-shortcuts" style="display:none;">
+            <div class="settings-section-title">Chat &amp; Execution</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Send Message</div>
+                  <div class="settings-row-desc">Key combination to submit the prompt from the composer.</div>
+                </div>
+                <div class="segmented-pill" id="prefShortcutSendPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enter" onclick="selectSegmented('prefShortcutSendPill', 'enter')">Enter</button>
+                  <button type="button" class="segmented-pill-btn" data-val="ctrl_enter" onclick="selectSegmented('prefShortcutSendPill', 'ctrl_enter')">Ctrl + Enter</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">New Casefile / Analysis</div>
+                  <div class="settings-row-desc">Clear active conversation and start a new audit session.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutNewChat" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="ctrl_k">Ctrl + K (Default)</option>
+                    <option value="alt_n">Alt + N</option>
+                    <option value="ctrl_shift_n">Ctrl + Shift + N</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Focus Input Composer</div>
+                  <div class="settings-row-desc">Jump cursor focus directly into the chat prompt box.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutFocus" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="slash">/ (Slash) (Default)</option>
+                    <option value="ctrl_slash">Ctrl + /</option>
+                    <option value="alt_slash">Alt + /</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Stop Generation / Dismiss</div>
+                  <div class="settings-row-desc">Halt streaming reasoner output or close active modal window.</div>
+                </div>
+                <kbd class="kbd-chip">Esc</kbd>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Navigation &amp; Interface</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Toggle Left Sidebar</div>
+                  <div class="settings-row-desc">Expand or collapse the audit history sidebar.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutSidebar" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="ctrl_b">Ctrl + B (Default)</option>
+                    <option value="alt_b">Alt + B</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Toggle Dark / Light Theme</div>
+                  <div class="settings-row-desc">Instantly flip between dark and light workspace styling.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutTheme" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="alt_t">Alt + T (Default)</option>
+                    <option value="ctrl_shift_t">Ctrl + Shift + T</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Open Preferences Panel</div>
+                  <div class="settings-row-desc">Access settings, models, and shortcuts from anywhere.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutSettings" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="ctrl_comma">Ctrl + , (Default)</option>
+                    <option value="alt_comma">Alt + ,</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+              <button type="button" class="btn-tool-chip" onclick="resetShortcutDefaults()" style="font-size:0.75rem;">Reset Shortcuts to Default</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Footer -->
+        <div class="settings-main-footer">
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <button type="button" class="btn-tool-chip" onclick="resetAllPreferences()" style="font-size:0.75rem;">Reset Defaults</button>
+            <span id="settingsStatusNotice" style="font-size:0.75rem; color:var(--ok, #4ade80); display:none;"></span>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn-tool-chip" onclick="closeModal('hfTokenModal')">Cancel</button>
+            <button type="button" class="btn-run-scan" onclick="saveAllPreferences()">Save Preferences</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="drag-drop-overlay" id="dragDropOverlay">
     <div class="drag-drop-modal">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--spark);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -3344,6 +4166,393 @@
       }, 2500);
     };
 
+    // ─── COMPREHENSIVE SETTINGS & PREFERENCES CONTROLLER ───
+    var SETTINGS_TAB_DATA = {
+      "settings-general": {
+        title: "General",
+        subtitle: "Configure agent execution, queued message delivery, and permissions."
+      },
+      "settings-application": {
+        title: "Application",
+        subtitle: "System runtime diagnostics, local casefile storage, and telemetry."
+      },
+      "settings-appearance": {
+        title: "Appearance",
+        subtitle: "Personalize theme, visual effects, and typewriter animation."
+      },
+      "settings-models": {
+        title: "Models",
+        subtitle: "Configure dual-channel neural reasoners and GPU priority."
+      },
+      "settings-customizations": {
+        title: "Customizations",
+        subtitle: "Configure agent reasoning directives and AST verification rules."
+      },
+      "settings-browser": {
+        title: "Browser",
+        subtitle: "Autonomous browser interaction and web artifact sandbox."
+      },
+      "settings-conversations": {
+        title: "Conversations",
+        subtitle: "Manage local chat history, session state, and exports."
+      },
+      "settings-shortcuts": {
+        title: "Shortcuts",
+        subtitle: "View and customize keyboard shortcuts for navigation and execution."
+      }
+    };
+
+    window.switchSettingsTab = function (tabId) {
+      document.querySelectorAll(".settings-nav-item").forEach(function (item) {
+        if (item.getAttribute("data-tab") === tabId) {
+          item.classList.add("active");
+        } else {
+          item.classList.remove("active");
+        }
+      });
+      document.querySelectorAll(".settings-tab-pane").forEach(function (pane) {
+        pane.style.display = (pane.id === tabId) ? "block" : "none";
+      });
+      var info = SETTINGS_TAB_DATA[tabId];
+      if (info) {
+        var tEl = document.getElementById("settingsTabTitle");
+        var sEl = document.getElementById("settingsTabSubtitle");
+        if (tEl) tEl.textContent = info.title;
+        if (sEl) sEl.textContent = info.subtitle;
+      }
+    };
+
+    window.selectSegmented = function (containerId, val) {
+      var cont = document.getElementById(containerId);
+      if (!cont) return;
+      cont.querySelectorAll(".segmented-pill-btn").forEach(function (btn) {
+        if (btn.getAttribute("data-val") === val) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+      cont.setAttribute("data-selected", val);
+
+      if (containerId === "prefThemePill") {
+        onPrefThemeChange(val);
+      }
+    };
+
+    window.getSegmentedVal = function (containerId, defaultVal) {
+      var cont = document.getElementById(containerId);
+      if (!cont) return defaultVal;
+      var active = cont.querySelector(".segmented-pill-btn.active");
+      return active ? (active.getAttribute("data-val") || defaultVal) : defaultVal;
+    };
+
+    window.openHfTokenModal = function (defaultTab) {
+      // General
+      var queueVal = localStorage.getItem("vajra_queue_messages") || "queue";
+      selectSegmented("prefQueuePill", queueVal);
+
+      var depthEl = document.getElementById("prefReasoningDepth");
+      if (depthEl) depthEl.value = localStorage.getItem("vajra_reasoning_depth") || "balanced";
+
+      var secEl = document.getElementById("prefSecurityPreset");
+      if (secEl) secEl.value = localStorage.getItem("vajra_security_preset") || "default";
+
+      var artEl = document.getElementById("prefArtifactPolicy");
+      if (artEl) artEl.value = localStorage.getItem("vajra_artifact_policy") || "ask";
+
+      var boundaryVal = localStorage.getItem("vajra_local_boundary") || "enforced";
+      selectSegmented("prefLocalBoundary", boundaryVal);
+
+      // Application
+      var telemVal = localStorage.getItem("vajra_telemetry") || "enabled";
+      selectSegmented("prefTelemetryPill", telemVal);
+
+      try {
+        var rawData = localStorage.getItem("vajra_casefiles_v3") || "";
+        var byteCount = new Blob([rawData]).size;
+        var szText = byteCount > 1024 ? (byteCount / 1024).toFixed(1) + " KB" : byteCount + " B";
+        var szEl = document.getElementById("prefStorageSize");
+        if (szEl) szEl.textContent = szText + " used";
+      } catch (e) {}
+
+      // Appearance
+      var curTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      selectSegmented("prefThemePill", curTheme);
+
+      var streamSpeed = document.getElementById("prefStreamSpeed");
+      if (streamSpeed) streamSpeed.value = localStorage.getItem("vajra_stream_speed") || "smooth";
+
+      var glassVal = localStorage.getItem("vajra_glass_overlay") !== "false" ? "enabled" : "disabled";
+      selectSegmented("prefGlassPill", glassVal);
+
+      var autoScrollVal = localStorage.getItem("vajra_autoscroll") !== "false" ? "enabled" : "disabled";
+      selectSegmented("prefAutoScrollPill", autoScrollVal);
+
+      // Models
+      var pipeline = document.getElementById("prefPipelineSelect");
+      if (pipeline) pipeline.value = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
+
+      var detail = document.getElementById("prefDetailSelect");
+      if (detail) detail.value = localStorage.getItem("vajra_detail_level") || "balanced";
+
+      var inp = document.getElementById("hfTokenInput");
+      var tokenVal = localStorage.getItem("vajra_hf_token") || "";
+      if (inp) {
+        inp.value = tokenVal;
+        inp.type = "password";
+      }
+
+      var st = document.getElementById("hfTokenStatus");
+      if (st) {
+        if (tokenVal) {
+          st.textContent = "✅ ZeroGPU A10G Acceleration Active";
+          st.style.color = "var(--ok, #4ade80)";
+        } else {
+          st.textContent = "Operating on shared public quotas.";
+          st.style.color = "var(--text-muted)";
+        }
+      }
+
+      // Customizations
+      var astStrictVal = localStorage.getItem("vajra_ast_strict") || "strict";
+      selectSegmented("prefAstStrictPill", astStrictVal);
+
+      var customPrompt = document.getElementById("prefCustomPrompt");
+      if (customPrompt) customPrompt.value = localStorage.getItem("vajra_custom_directive") || "";
+
+      // Browser
+      var sandboxVal = localStorage.getItem("vajra_sandbox") || "enabled";
+      selectSegmented("prefSandboxPill", sandboxVal);
+
+      var webReaderVal = localStorage.getItem("vajra_web_reader") || "permitted";
+      selectSegmented("prefWebReaderPill", webReaderVal);
+
+      // Shortcuts
+      var sendMode = localStorage.getItem("vajra_shortcut_send") || "enter";
+      selectSegmented("prefShortcutSendPill", sendMode);
+
+      var selNew = document.getElementById("prefShortcutNewChat");
+      if (selNew) selNew.value = localStorage.getItem("vajra_shortcut_new_chat") || "ctrl_k";
+
+      var selFocus = document.getElementById("prefShortcutFocus");
+      if (selFocus) selFocus.value = localStorage.getItem("vajra_shortcut_focus") || "slash";
+
+      var selSb = document.getElementById("prefShortcutSidebar");
+      if (selSb) selSb.value = localStorage.getItem("vajra_shortcut_sidebar") || "ctrl_b";
+
+      var selThm = document.getElementById("prefShortcutTheme");
+      if (selThm) selThm.value = localStorage.getItem("vajra_shortcut_theme") || "alt_t";
+
+      var selSet = document.getElementById("prefShortcutSettings");
+      if (selSet) selSet.value = localStorage.getItem("vajra_shortcut_settings") || "ctrl_comma";
+
+      // Status text reset
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) notice.style.display = "none";
+
+      switchSettingsTab(defaultTab || "settings-general");
+      window.openModal("hfTokenModal");
+    };
+
+    window.onPrefThemeChange = function (val) {
+      if (!val) return;
+      document.documentElement.setAttribute("data-theme", val);
+      try {
+        localStorage.setItem("vajra-theme", val);
+      } catch (e) {}
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) textEl.textContent = val === "light" ? "Dark Mode" : "Light Mode";
+    };
+
+    window.toggleTokenVisibility = function () {
+      var inp = document.getElementById("hfTokenInput");
+      if (!inp) return;
+      var btn = event ? event.target : null;
+      if (inp.type === "password") {
+        inp.type = "text";
+        if (btn) btn.textContent = "Hide";
+      } else {
+        inp.type = "password";
+        if (btn) btn.textContent = "Show";
+      }
+    };
+
+    window.saveAllPreferences = function () {
+      // General
+      localStorage.setItem("vajra_queue_messages", getSegmentedVal("prefQueuePill", "queue"));
+      var depthEl = document.getElementById("prefReasoningDepth");
+      if (depthEl) localStorage.setItem("vajra_reasoning_depth", depthEl.value);
+      var secEl = document.getElementById("prefSecurityPreset");
+      if (secEl) localStorage.setItem("vajra_security_preset", secEl.value);
+      var artEl = document.getElementById("prefArtifactPolicy");
+      if (artEl) localStorage.setItem("vajra_artifact_policy", artEl.value);
+      localStorage.setItem("vajra_local_boundary", getSegmentedVal("prefLocalBoundary", "enforced"));
+
+      // Application
+      localStorage.setItem("vajra_telemetry", getSegmentedVal("prefTelemetryPill", "enabled"));
+
+      // Appearance
+      var thm = getSegmentedVal("prefThemePill", "dark");
+      document.documentElement.setAttribute("data-theme", thm);
+      try { localStorage.setItem("vajra-theme", thm); } catch (e) {}
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) textEl.textContent = thm === "light" ? "Dark Mode" : "Light Mode";
+
+      var streamSpeed = document.getElementById("prefStreamSpeed");
+      if (streamSpeed) localStorage.setItem("vajra_stream_speed", streamSpeed.value);
+
+      localStorage.setItem("vajra_glass_overlay", getSegmentedVal("prefGlassPill", "enabled") === "enabled" ? "true" : "false");
+      localStorage.setItem("vajra_autoscroll", getSegmentedVal("prefAutoScrollPill", "enabled") === "enabled" ? "true" : "false");
+
+      // Models
+      var pipeline = document.getElementById("prefPipelineSelect");
+      if (pipeline) localStorage.setItem("vajra_pipeline_mode", pipeline.value);
+
+      var detail = document.getElementById("prefDetailSelect");
+      if (detail) localStorage.setItem("vajra_detail_level", detail.value);
+
+      var inp = document.getElementById("hfTokenInput");
+      var tokenVal = inp ? inp.value.trim() : "";
+      if (tokenVal) {
+        localStorage.setItem("vajra_hf_token", tokenVal);
+      } else {
+        localStorage.removeItem("vajra_hf_token");
+      }
+
+      // Customizations
+      localStorage.setItem("vajra_ast_strict", getSegmentedVal("prefAstStrictPill", "strict"));
+      var customPrompt = document.getElementById("prefCustomPrompt");
+      if (customPrompt) localStorage.setItem("vajra_custom_directive", customPrompt.value.trim());
+
+      // Browser
+      localStorage.setItem("vajra_sandbox", getSegmentedVal("prefSandboxPill", "enabled"));
+      localStorage.setItem("vajra_web_reader", getSegmentedVal("prefWebReaderPill", "permitted"));
+
+      // Shortcuts
+      localStorage.setItem("vajra_shortcut_send", getSegmentedVal("prefShortcutSendPill", "enter"));
+      var selNew = document.getElementById("prefShortcutNewChat");
+      if (selNew) localStorage.setItem("vajra_shortcut_new_chat", selNew.value);
+      var selFocus = document.getElementById("prefShortcutFocus");
+      if (selFocus) localStorage.setItem("vajra_shortcut_focus", selFocus.value);
+      var selSb = document.getElementById("prefShortcutSidebar");
+      if (selSb) localStorage.setItem("vajra_shortcut_sidebar", selSb.value);
+      var selThm = document.getElementById("prefShortcutTheme");
+      if (selThm) localStorage.setItem("vajra_shortcut_theme", selThm.value);
+      var selSet = document.getElementById("prefShortcutSettings");
+      if (selSet) localStorage.setItem("vajra_shortcut_settings", selSet.value);
+
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) {
+        notice.style.display = "inline";
+        notice.style.color = "var(--ok, #4ade80)";
+        notice.textContent = "✅ Preferences saved!";
+      }
+
+      setTimeout(function () {
+        window.closeModal("hfTokenModal");
+      }, 750);
+    };
+
+    window.resetAllPreferences = function () {
+      try {
+        localStorage.removeItem("vajra_queue_messages");
+        localStorage.removeItem("vajra_reasoning_depth");
+        localStorage.removeItem("vajra_security_preset");
+        localStorage.removeItem("vajra_artifact_policy");
+        localStorage.removeItem("vajra_local_boundary");
+        localStorage.removeItem("vajra_telemetry");
+        localStorage.removeItem("vajra_stream_speed");
+        localStorage.removeItem("vajra_pipeline_mode");
+        localStorage.removeItem("vajra_detail_level");
+        localStorage.removeItem("vajra_autoscroll");
+        localStorage.removeItem("vajra_glass_overlay");
+        localStorage.removeItem("vajra_hf_token");
+        localStorage.removeItem("vajra_ast_strict");
+        localStorage.removeItem("vajra_custom_directive");
+        localStorage.removeItem("vajra_sandbox");
+        localStorage.removeItem("vajra_web_reader");
+        localStorage.removeItem("vajra_shortcut_send");
+        localStorage.removeItem("vajra_shortcut_new_chat");
+        localStorage.removeItem("vajra_shortcut_focus");
+        localStorage.removeItem("vajra_shortcut_sidebar");
+        localStorage.removeItem("vajra_shortcut_theme");
+        localStorage.removeItem("vajra_shortcut_settings");
+        localStorage.setItem("vajra-theme", "dark");
+      } catch (e) {}
+
+      document.documentElement.setAttribute("data-theme", "dark");
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) textEl.textContent = "Light Mode";
+
+      openHfTokenModal("settings-general");
+
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) {
+        notice.style.display = "inline";
+        notice.style.color = "var(--text-muted)";
+        notice.textContent = "Reset to default preferences.";
+      }
+    };
+
+    window.resetShortcutDefaults = function () {
+      localStorage.removeItem("vajra_shortcut_send");
+      localStorage.removeItem("vajra_shortcut_new_chat");
+      localStorage.removeItem("vajra_shortcut_focus");
+      localStorage.removeItem("vajra_shortcut_sidebar");
+      localStorage.removeItem("vajra_shortcut_theme");
+      localStorage.removeItem("vajra_shortcut_settings");
+
+      selectSegmented("prefShortcutSendPill", "enter");
+      var selNew = document.getElementById("prefShortcutNewChat");
+      if (selNew) selNew.value = "ctrl_k";
+      var selFocus = document.getElementById("prefShortcutFocus");
+      if (selFocus) selFocus.value = "slash";
+      var selSb = document.getElementById("prefShortcutSidebar");
+      if (selSb) selSb.value = "ctrl_b";
+      var selThm = document.getElementById("prefShortcutTheme");
+      if (selThm) selThm.value = "alt_t";
+      var selSet = document.getElementById("prefShortcutSettings");
+      if (selSet) selSet.value = "ctrl_comma";
+
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) {
+        notice.style.display = "inline";
+        notice.style.color = "var(--ok, #4ade80)";
+        notice.textContent = "Shortcuts reset to defaults.";
+      }
+    };
+
+    window.exportAllCasefiles = function () {
+      try {
+        var data = localStorage.getItem("vajra_casefiles_v3") || "[]";
+        var blob = new Blob([data], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "vajra_casefiles_" + (new Date().toISOString().slice(0, 10)) + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert("Unable to export casefiles: " + e.message);
+      }
+    };
+
+    window.clearCasefileStorage = function () {
+      if (confirm("Are you sure you want to clear all stored forensic casefiles? This cannot be undone.")) {
+        localStorage.removeItem("vajra_casefiles_v3");
+        state.sessions = [];
+        state.activeSessionId = null;
+        if (typeof renderSessionList === "function") renderSessionList();
+        if (typeof createNewSession === "function") createNewSession();
+        var sz = document.getElementById("prefStorageSize");
+        if (sz) sz.textContent = "0 B used";
+      }
+    };
+
+    window.saveHfToken = window.saveAllPreferences;
+    window.clearHfToken = window.resetAllPreferences;
 
     window.closeSidebarMobile = function () {
       var sb = document.getElementById("appSidebar");
@@ -3413,6 +4622,7 @@
 
     function smartScrollToBottom(stream, targetEl) {
       if (!stream) return;
+      if (localStorage.getItem("vajra_autoscroll") === "false") return;
       requestAnimationFrame(function() {
         if (stream.scrollHeight <= stream.clientHeight) {
           stream.scrollTop = 0;
@@ -3574,6 +4784,398 @@
       return group;
     }
 
+    function createStreamTypewriter(tierBadge) {
+      var hero = document.getElementById("ledgerHero");
+      if (hero) hero.style.display = "none";
+
+      var stream = document.getElementById("casefileStream");
+      if (!stream) return null;
+
+      var timeStr = new Date().toLocaleTimeString();
+      var label = tierBadge || "VAJRA REASONING AUDIT";
+
+      var group = document.createElement("div");
+      group.className = "msg-group bot";
+      group.innerHTML =
+        '<div class="msg-header">' +
+          '<div style="display:flex; align-items:center; gap:8px;">' +
+            '<span class="typewriter-badge">[' + label + ']</span>' +
+            '<span style="color:var(--text-muted);">' + timeStr + '</span>' +
+          '</div>' +
+          '<button type="button" class="btn-copy-msg" onclick="copyMessageText(this)" title="Copy message text" aria-label="Copy message">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '<span>Copy</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="msg-card"><span class="stream-text"></span><span class="typewriter-cursor">▌</span></div>';
+
+      stream.appendChild(group);
+      smartScrollToBottom(stream, group);
+
+      var card = group.querySelector(".msg-card");
+      if (card) card.classList.add("streaming-active");
+      var textSpan = group.querySelector(".stream-text");
+      var cursor = group.querySelector(".typewriter-cursor");
+      var badgeSpan = group.querySelector(".typewriter-badge");
+
+      var fullIncomingText = "";
+      var renderedTokenCount = 0;
+      var isFinished = false;
+      var finalMetadata = null;
+      var intervalId = null;
+
+      function updateBadge(newBadge) {
+        if (badgeSpan && newBadge) {
+          badgeSpan.textContent = "[" + newBadge + "]";
+        }
+      }
+
+      function tick() {
+        var tokens = fullIncomingText.match(/(\S+|\s+)/g) || [];
+        var totalTokens = tokens.length;
+
+        // Keep 2-3 words behind (approx 4-6 tokens with whitespace) while streaming
+        var maxToRender = isFinished ? totalTokens : Math.max(0, totalTokens - 5);
+
+        if (renderedTokenCount < maxToRender) {
+          var speedPref = localStorage.getItem("vajra_stream_speed") || "smooth";
+          var step = speedPref === "instant" ? totalTokens : ((isFinished && (totalTokens - renderedTokenCount > 15)) ? 3 : (speedPref === "fast" ? 2 : 1));
+          renderedTokenCount = Math.min(maxToRender, renderedTokenCount + step);
+          var partialStr = tokens.slice(0, renderedTokenCount).join("");
+          if (textSpan) {
+            textSpan.innerHTML = escapeHtml(partialStr).replace(/\n/g, "<br>");
+          }
+          smartScrollToBottom(stream, group);
+        } else if (isFinished && renderedTokenCount >= totalTokens) {
+          clearInterval(intervalId);
+          intervalId = null;
+          finalizeDisplay();
+        }
+      }
+
+      function finalizeDisplay() {
+        if (cursor && cursor.parentNode) {
+          cursor.parentNode.removeChild(cursor);
+        }
+        removeGlassOverlay();
+        if (card) {
+          card.classList.remove("streaming-active");
+          card.classList.remove("speculative-draft");
+        }
+
+        var rawText = fullIncomingText.trim();
+        var codeBlockMatch = rawText.match(/```(html|htm|python|py|javascript|js)?\s*([\s\S]+?)```/i);
+        var artifactCardHtml = "";
+        if (codeBlockMatch && codeBlockMatch[2] && codeBlockMatch[2].length > 60) {
+          var lang = (codeBlockMatch[1] || "html").toLowerCase();
+          var codeContent = codeBlockMatch[2].trim();
+          var genExt = lang.includes("py") ? "main.py" : (lang.includes("js") ? "script.js" : "index.html");
+          var genType = lang.includes("py") ? "PYTHON" : (lang.includes("js") ? "JS" : "HTML");
+          var fId = registerArtifactFile(genExt, codeContent, genType);
+          artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
+        }
+
+        var formattedHtml = formatBotMarkdown(rawText);
+        if (artifactCardHtml) {
+          formattedHtml += "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml;
+        }
+
+        if (card) {
+          card.innerHTML = formattedHtml;
+        }
+        renderMath(group);
+        smartScrollToBottom(stream, group);
+
+        var sess = getActiveSession();
+        if (!sess) sess = { messages: [] };
+        if (!sess.messages) sess.messages = [];
+        sess.messages.push({
+          role: "bot",
+          html: formattedHtml,
+          time: timeStr,
+          tier: (finalMetadata && (finalMetadata.tier || finalMetadata.model)) || label
+        });
+        if (typeof saveSessions === "function") saveSessions();
+        if (typeof setGenerating === "function") setGenerating(false);
+      }
+
+      var glassOverlay = null;
+      var isSpeculativeDraft = false;
+      var currentDraftText = "";
+
+      function enableSpeculativeDraft(initialText) {
+        if (isSpeculativeDraft) return;
+        isSpeculativeDraft = true;
+        card.classList.add("speculative-draft");
+
+        var useGlass = localStorage.getItem("vajra_glass_overlay") !== "false";
+        if (useGlass) {
+          glassOverlay = document.createElement("div");
+          glassOverlay.className = "speculative-glass-overlay";
+          card.appendChild(glassOverlay);
+        }
+
+        if (cursor) cursor.style.display = "none";
+
+        if (initialText) {
+          currentDraftText = initialText;
+          if (textSpan) {
+            textSpan.innerHTML = escapeHtml(initialText).replace(/\n/g, "<br>") + ' <span class="typewriter-cursor">▌</span>';
+          }
+          smartScrollToBottom(stream, group);
+        }
+      }
+
+      function replaceDraftWithStream(newText, newBadge) {
+        if (!newText || newText.trim().length === 0) return;
+        if (newBadge) {
+          updateBadge(newBadge);
+        }
+
+        if (currentDraftText && currentDraftText.trim().length > 0) {
+          var draftWords = currentDraftText.trim().split(/(\s+)/);
+          var verifiedWords = newText.trim().split(/(\s+)/);
+          var vCount = verifiedWords.length;
+
+          var verifiedPart = escapeHtml(newText).replace(/\n/g, "<br>");
+          var remainingDraft = "";
+          if (vCount < draftWords.length) {
+            remainingDraft = escapeHtml(draftWords.slice(vCount).join("")).replace(/\n/g, "<br>");
+          }
+
+          if (textSpan) {
+            if (remainingDraft) {
+              textSpan.innerHTML = verifiedPart + ' <span class="typewriter-cursor">▌</span> <span style="opacity:0.55;">' + remainingDraft + '</span>';
+            } else {
+              textSpan.innerHTML = verifiedPart + ' <span class="typewriter-cursor">▌</span>';
+            }
+          }
+        } else {
+          if (textSpan) {
+            textSpan.innerHTML = escapeHtml(newText).replace(/\n/g, "<br>") + ' <span class="typewriter-cursor">▌</span>';
+          }
+        }
+        smartScrollToBottom(stream, group);
+      }
+
+      function removeGlassOverlay() {
+        if (glassOverlay) {
+          glassOverlay.style.opacity = "0";
+          var toRemove = glassOverlay;
+          glassOverlay = null;
+          setTimeout(function() {
+            if (toRemove && toRemove.parentNode) {
+              toRemove.parentNode.removeChild(toRemove);
+            }
+          }, 450);
+        }
+        card.classList.remove("speculative-draft");
+        isSpeculativeDraft = false;
+        currentDraftText = "";
+        if (cursor) cursor.style.display = "";
+      }
+
+      function refineWithVerified(finalText, meta) {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        fullIncomingText = finalText;
+        finalMetadata = meta || {};
+        isFinished = true;
+        if (meta && (meta.model || meta.tier)) {
+          var b = meta.model || (meta.tier === "burst" ? "VAJRA BURST [7B ZeroGPU]" : (meta.tier === "cloud_router" ? "VAJRA CLOUD ROUTER [7B]" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"));
+          updateBadge(b);
+        }
+
+        // Render full text under glass first so output is 100% complete
+        if (textSpan) {
+          textSpan.innerHTML = escapeHtml(finalText).replace(/\n/g, "<br>");
+        }
+        smartScrollToBottom(stream, group);
+
+        // Keep the glassmorphic overlay on a little longer so the user sees the complete output settled under glass, then smoothly dissolve
+        setTimeout(function() {
+          finalizeDisplay();
+        }, 1400);
+      }
+
+      var selfInstance = {
+        group: group,
+        enableSpeculativeDraft: enableSpeculativeDraft,
+        replaceDraftWithStream: replaceDraftWithStream,
+        removeGlassOverlay: removeGlassOverlay,
+        refineWithVerified: refineWithVerified,
+        isDraftActive: function() { return isSpeculativeDraft; },
+        hasText: function() {
+          return (fullIncomingText && fullIncomingText.trim().length > 0) || (currentDraftText && currentDraftText.trim().length > 0);
+        },
+        getAccumulatedText: function() {
+          return fullIncomingText || currentDraftText || "";
+        },
+        onToken: function(text) {
+          fullIncomingText = text;
+          if (!intervalId) {
+            var speedPref = localStorage.getItem("vajra_stream_speed") || "smooth";
+            var intervalDelay = speedPref === "instant" ? 1 : (speedPref === "fast" ? 10 : 22);
+            intervalId = setInterval(tick, intervalDelay);
+          }
+        },
+        updateBadge: updateBadge,
+        finish: function(finalText, meta) {
+          if (finalText) fullIncomingText = finalText;
+          finalMetadata = meta || {};
+          isFinished = true;
+          if (meta && meta.model) {
+            updateBadge(meta.model);
+          }
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+          finalizeDisplay();
+        },
+        abort: function() {
+          if (intervalId) clearInterval(intervalId);
+          if (card) {
+            card.classList.remove("streaming-active");
+            card.classList.remove("speculative-draft");
+          }
+          if (group && group.parentNode) {
+            group.parentNode.removeChild(group);
+          }
+          if (typeof setGenerating === "function") setGenerating(false);
+        },
+        stop: function() {
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+          removeGlassOverlay();
+          if (card) {
+            card.classList.remove("streaming-active");
+            card.classList.remove("speculative-draft");
+          }
+          if (cursor && cursor.parentNode) {
+            cursor.parentNode.removeChild(cursor);
+          }
+          updateBadge("VAJRA AUDIT [STOPPED]");
+
+          var tokens = fullIncomingText.match(/(\S+|\s+)/g) || [];
+          var count = Math.max(1, renderedTokenCount);
+          var partial = tokens.slice(0, count).join("").trim();
+          if (!partial && fullIncomingText) {
+            partial = fullIncomingText.trim();
+          }
+
+          var formattedHtml = formatBotMarkdown(partial);
+          formattedHtml += '<div style="margin-top:8px; font-size:0.75rem; color:var(--text-muted); font-family:\'JetBrains Mono\',monospace;">⏹️ Generation stopped by user</div>';
+
+          if (card) {
+            card.innerHTML = formattedHtml;
+          }
+          renderMath(group);
+          smartScrollToBottom(stream, group);
+
+          var sess = getActiveSession();
+          if (!sess) sess = { messages: [] };
+          if (!sess.messages) sess.messages = [];
+          sess.messages.push({
+            role: "bot",
+            html: formattedHtml,
+            time: timeStr,
+            tier: "stopped"
+          });
+          if (typeof saveSessions === "function") saveSessions();
+        }
+      };
+      activeTypewriterInstance = selfInstance;
+      return selfInstance;
+    }
+
+    /* ==========================================================================
+       GENERATION STATE & STOP OUTPUT CONTROLLER
+       ========================================================================== */
+    var isGenerating = false;
+    var activeGenerationAbortController = null;
+    var activeTypewriterInstance = null;
+
+    function getActiveSignal(timeoutMs) {
+      var tSig = AbortSignal.timeout(timeoutMs);
+      if (!activeGenerationAbortController) return tSig;
+      if (typeof AbortSignal.any === "function") {
+        return AbortSignal.any([activeGenerationAbortController.signal, tSig]);
+      }
+      return activeGenerationAbortController.signal;
+    }
+
+    function setGenerating(generating) {
+      isGenerating = generating;
+      var btn = document.getElementById("btnSubmitChat");
+      var btnText = document.getElementById("btnSubmitChatText");
+      var btnIcon = document.getElementById("btnSubmitChatIcon");
+      var composer = document.getElementById("composerInput");
+
+      if (generating) {
+        if (btn) {
+          btn.type = "button";
+          btn.className = "btn-run-scan btn-stop-generating";
+          btn.title = "Stop output generation immediately";
+          btn.onclick = window.stopCurrentGeneration;
+        }
+        if (btnText) btnText.textContent = "Stop";
+        if (btnIcon) {
+          btnIcon.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>';
+        }
+        if (composer) {
+          composer.disabled = true;
+          composer.placeholder = "VAJRA is generating response... (Click Stop to halt)";
+        }
+      } else {
+        activeGenerationAbortController = null;
+        activeTypewriterInstance = null;
+        if (btn) {
+          btn.type = "submit";
+          btn.className = "btn-run-scan";
+          btn.title = "Send message, request project plan, or scan repository";
+          btn.onclick = null;
+        }
+        if (btnText) btnText.textContent = "Send";
+        if (btnIcon) {
+          btnIcon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+        }
+        if (composer) {
+          composer.disabled = false;
+          composer.placeholder = "Ask VAJRA to plan, reason, analyze code, or enter GitHub repo URL...";
+          composer.focus();
+        }
+      }
+    }
+
+    window.stopCurrentGeneration = function(e) {
+      if (e) {
+        try { e.preventDefault(); e.stopPropagation(); } catch(err) {}
+      }
+      if (!isGenerating) return;
+      console.log("🛑 [VAJRA User Action] Generation stopped by user.");
+
+      if (activeGenerationAbortController) {
+        try {
+          activeGenerationAbortController.abort();
+        } catch (err) {}
+        activeGenerationAbortController = null;
+      }
+
+      if (activeTypewriterInstance && typeof activeTypewriterInstance.stop === "function") {
+        try {
+          activeTypewriterInstance.stop();
+        } catch (err) {}
+      }
+
+      removeTypingIndicator();
+      setGenerating(false);
+    };
+
     function createPipelineTracker() {
       var html =
         '<div class="process-tracker" id="activeTracker">' +
@@ -3606,8 +5208,38 @@
       return triggers.some(function(t) { return q.includes(t); });
     }
 
+    /* ─── ZeroGPU Quota Circuit Breaker (15 Minutes) ─── */
+    function isZeroGpuCircuitOpen() {
+      try {
+        var cooldownUntil = parseInt(sessionStorage.getItem("vajra_zerogpu_cooldown") || "0", 10);
+        if (cooldownUntil && cooldownUntil > Date.now()) {
+          return true;
+        }
+        if (cooldownUntil) {
+          sessionStorage.removeItem("vajra_zerogpu_cooldown");
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    function tripZeroGpuCircuit() {
+      try {
+        var expiry = Date.now() + 15 * 60 * 1000;
+        sessionStorage.setItem("vajra_zerogpu_cooldown", expiry.toString());
+        console.warn("🛡️ [VAJRA Circuit Breaker] ZeroGPU Quota Exhausted (429). Tripped 15-minute cooldown. CPU Workhorse Active.");
+      } catch (e) {}
+    }
+
+    /* ─── Multi-Factor Query Complexity Classifier ─── */
+    function classifyQueryComplexity(fullPrompt) {
+      if (!fullPrompt) return false;
+      if (fullPrompt.length > 350) return true;
+      var complexTriggers = /\b(audit|scan|ast|taint|sink|exploit|cwe-\d+|patch|disassembl|decompile|decompil|decompilation|invariant|symbolic|formal proof|vulnerability|schrodinger|taylor\s+series|calculus|derivative|integral|eigen|laplace|fourier|matrix|differential\s+equation)\b/i;
+      return complexTriggers.test(fullPrompt);
+    }
+
     var rateLimitInterval = null;
-    var isOnCooldown = false; // Global flag — blocks new submissions during active cooldown
+    var isOnCooldown = false;
 
     function startRateLimitCooldown(totalSeconds) {
       var remaining = Math.min(parseInt(totalSeconds) || 30, 30);
@@ -3618,7 +5250,6 @@
       if (rateLimitInterval) clearInterval(rateLimitInterval);
       isOnCooldown = true;
 
-      // Disable the send button visually and functionally
       if (sendBtn) {
         sendBtn.disabled = true;
         sendBtn.style.opacity = "0.4";
@@ -3642,7 +5273,6 @@
           rateLimitInterval = null;
           isOnCooldown = false;
 
-          // Re-enable send button
           if (sendBtn) {
             sendBtn.disabled = false;
             sendBtn.style.opacity = "";
@@ -3660,21 +5290,51 @@
       }, 1000);
     }
 
-    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs) {
+    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken, firstTokenTimeoutMs) {
       var sTimeout = streamTimeoutMs || 85000;
+      var isZeroGpu = (hfEndpoint.indexOf("vajra.hf.space") !== -1 && hfEndpoint.indexOf("vajra-v2") === -1);
+
+      function extractGradioText(rawItem, prevAcc) {
+        if (rawItem === null || rawItem === undefined) return prevAcc || "";
+        if (Array.isArray(rawItem)) {
+          if (rawItem.length >= 3 && rawItem[0] === "append") {
+            var diffDelta = String(rawItem[2] || "");
+            return (prevAcc || "") + diffDelta;
+          }
+          if (rawItem.length > 0) {
+            return extractGradioText(rawItem[0], prevAcc);
+          }
+        }
+        if (typeof rawItem === "string") {
+          if (rawItem.startsWith("append,,") || rawItem.startsWith("append,")) {
+            var cleanDiff = rawItem.replace(/^append,*\s*/, "");
+            return (prevAcc || "") + (prevAcc && !prevAcc.endsWith(" ") && !cleanDiff.startsWith(" ") ? " " : "") + cleanDiff;
+          }
+          if (prevAcc && rawItem.length >= prevAcc.length && rawItem.startsWith(prevAcc.slice(0, Math.min(prevAcc.length, 12)))) {
+            return rawItem;
+          }
+          return (prevAcc || "") + rawItem;
+        }
+        return String(rawItem || "");
+      }
+
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
+      var streamProducedTokens = false;
+
       for (var k = 0; k < candidateEndpoints.length; k++) {
         var ep = candidateEndpoints[k];
+        var latestText = "";
         try {
           var callResp = await fetch(hfEndpoint + ep, {
             method: "POST",
             headers: directHeaders,
             body: JSON.stringify({ data: [fullPrompt] }),
-            signal: AbortSignal.timeout(10000)
+            signal: getActiveSignal(10000)
           });
           if (callResp.status === 429) {
-            break;
+            if (isZeroGpu) tripZeroGpuCircuit();
+            return { reply: null, isRateLimited: true };
           }
           if (callResp.ok) {
             var callData = await callResp.json();
@@ -3686,13 +5346,261 @@
               }
               var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
                 headers: streamHeaders,
-                signal: AbortSignal.timeout(sTimeout)
+                signal: getActiveSignal(sTimeout)
               });
+              if (streamResp.status === 429) {
+                if (isZeroGpu) tripZeroGpuCircuit();
+                return { reply: null, isRateLimited: true };
+              }
               if (streamResp.ok && streamResp.body) {
                 var reader = streamResp.body.getReader();
                 var decoder = new TextDecoder("utf-8");
                 var buffer = "";
                 var isComplete = false;
+                var currentEvent = "";
+                var receivedFirstToken = false;
+                var bailoutTimer = null;
+
+                if (firstTokenTimeoutMs && firstTokenTimeoutMs > 0) {
+                  bailoutTimer = setTimeout(function() {
+                    if (!receivedFirstToken) {
+                      console.warn("⏱️ [VAJRA Watchdog] First token watchdog fired (" + firstTokenTimeoutMs + "ms). Initiating Fast Bailout.");
+                      try { reader.cancel(); } catch (cancelErr) {}
+                    }
+                  }, firstTokenTimeoutMs);
+                }
+
+                try {
+                  while (true) {
+                    var chunk = await reader.read();
+                    if (chunk.done) break;
+                    buffer += decoder.decode(chunk.value, { stream: true });
+                    var lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+                    for (var i = 0; i < lines.length; i++) {
+                      var line = lines[i].trim();
+                      if (line.startsWith("event:")) {
+                        currentEvent = line.substring(6).trim();
+                        if (currentEvent === "heartbeat") {
+                          var typingLabel = document.querySelector("#activeTypingIndicator .typing-label");
+                          if (typingLabel) {
+                            typingLabel.textContent = "VAJRA IS REASONING (" + (isZeroGpu ? "ZeroGPU Burst Active" : "2 vCPU Workhorse") + ")";
+                          }
+                        } else if (currentEvent === "complete") {
+                          isComplete = true;
+                        } else if (currentEvent === "error") {
+                          try { reader.cancel(); } catch (e) {}
+                          break;
+                        }
+                      } else if (line.startsWith("data:")) {
+                        try {
+                          var payload = JSON.parse(line.substring(5).trim());
+                          if (Array.isArray(payload) && payload.length > 0 && payload[0] !== undefined) {
+                            latestText = extractGradioText(payload[0], latestText);
+                            if (!receivedFirstToken && latestText.trim().length > 0) {
+                              receivedFirstToken = true;
+                              streamProducedTokens = true;
+                              if (bailoutTimer) clearTimeout(bailoutTimer);
+                            }
+                            if (onToken && typeof onToken === "function") {
+                              onToken(latestText);
+                            }
+                            if (isComplete || currentEvent === "complete") {
+                              if (bailoutTimer) clearTimeout(bailoutTimer);
+                              try { reader.cancel(); } catch (e) {}
+                              return {
+                                reply: latestText.trim(),
+                                tier: isZeroGpu ? "burst" : "standard",
+                                model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                              };
+                            }
+                          }
+                        } catch (jsonErr) {}
+                      }
+                    }
+                  }
+                } finally {
+                  if (bailoutTimer) clearTimeout(bailoutTimer);
+                }
+
+                if (firstTokenTimeoutMs && !receivedFirstToken) {
+                  return { reply: null, timedOutFirstToken: true };
+                }
+
+                if (latestText && latestText.trim().length > 0) {
+                  return {
+                    reply: latestText.trim(),
+                    tier: isZeroGpu ? "burst" : "standard",
+                    model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                  };
+                }
+              }
+            }
+          }
+        } catch (callErr) {
+          if (latestText && latestText.trim().length > 0) {
+            return {
+              reply: latestText.trim(),
+              tier: isZeroGpu ? "burst" : "standard",
+              model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+            };
+          }
+          if (firstTokenTimeoutMs && !receivedFirstToken) {
+            return { reply: null, timedOutFirstToken: true };
+          }
+        }
+
+        if (streamProducedTokens) {
+          break;
+        }
+      }
+
+      if (streamProducedTokens && latestText && latestText.trim().length > 0) {
+        return {
+          reply: latestText.trim(),
+          tier: isZeroGpu ? "burst" : "standard",
+          model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+        };
+      }
+
+      // 2. Gradio Queue Fallback (/queue/join on fn_index 0) - only if candidate endpoints didn't stream
+      if (!streamProducedTokens) {
+        try {
+          var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
+          var joinResp = await fetch(hfEndpoint + "/queue/join", {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({
+              data: [fullPrompt],
+              event_data: null,
+              fn_index: 0,
+              session_hash: sessionHash,
+              trigger_id: 7
+            }),
+            signal: getActiveSignal(12000)
+          });
+          if (joinResp.ok) {
+            var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
+              headers: directHeaders,
+              signal: getActiveSignal(sTimeout)
+            });
+            if (dataStreamResp.ok && dataStreamResp.body) {
+              var qReader = dataStreamResp.body.getReader();
+              var qDecoder = new TextDecoder("utf-8");
+              var qBuffer = "";
+              var qLatestText = "";
+              while (true) {
+                var qChunk = await qReader.read();
+                if (qChunk.done) break;
+                qBuffer += qDecoder.decode(qChunk.value, { stream: true });
+                var qLines = qBuffer.split("\n");
+                qBuffer = qLines.pop() || "";
+                for (var j = 0; j < qLines.length; j++) {
+                  var qLine = qLines[j].trim();
+                  if (qLine.startsWith("data:")) {
+                    try {
+                      var msgObj = JSON.parse(qLine.substring(5).trim());
+                      if (msgObj.msg === "process_generating" || msgObj.msg === "process_completed") {
+                        var out = msgObj.output || {};
+                        if (out.error) {
+                          return null;
+                        }
+                        var d = out.data || [];
+                        if (d.length > 0 && d[0] !== undefined) {
+                          qLatestText = extractGradioText(d[0], qLatestText);
+                          streamProducedTokens = true;
+                          if (onToken && typeof onToken === "function") {
+                            onToken(qLatestText);
+                          }
+                          if (msgObj.msg === "process_completed") {
+                            try { qReader.cancel(); } catch (e) {}
+                            return {
+                              reply: qLatestText.trim(),
+                              tier: isZeroGpu ? "burst" : "standard",
+                              model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
+                            };
+                          }
+                        }
+                      }
+                    } catch (qErr) {}
+                  }
+                }
+              }
+              if (qLatestText && qLatestText.trim().length > 0) {
+                return {
+                  reply: qLatestText.trim(),
+                  tier: isZeroGpu ? "burst" : "standard",
+                  model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
+                };
+              }
+            }
+          }
+        } catch (queueErr) {}
+      }
+
+      // 3. Direct FastAPI /v1/chat route (for 2 vCPU Space ONLY if no stream tokens arrived)
+      if (!isZeroGpu && !streamProducedTokens) {
+        try {
+          var v1ChatResp = await fetch(hfEndpoint + "/v1/chat", {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({ prompt: fullPrompt }),
+            signal: getActiveSignal(25000)
+          });
+          if (v1ChatResp.ok) {
+            var v1ChatData = await v1ChatResp.json();
+            if (v1ChatData && v1ChatData.reply && !v1ChatData.busy && !v1ChatData.overflow) {
+              return {
+                reply: String(v1ChatData.reply).trim(),
+                tier: "standard",
+                model: v1ChatData.model || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+              };
+            }
+          }
+        } catch (v1Err) {}
+      }
+
+      return null;
+    }
+
+    async function tryFastDraftQuery(userPrompt, directHeaders) {
+      // 1. Direct FastAPI /v1/draft (Clean REST route, bypasses Gradio router conflict, ~1.5s)
+      try {
+        var v1Resp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/v1/draft", {
+          method: "POST",
+          headers: directHeaders,
+          body: JSON.stringify({ prompt: userPrompt }),
+          signal: getActiveSignal(12000)
+        });
+        if (v1Resp.ok) {
+          var v1Data = await v1Resp.json();
+          if (v1Data && v1Data.reply) return String(v1Data.reply).trim();
+        }
+      } catch (e) {}
+
+      // 2. Gradio 4 Native SSE Endpoints (/call/generate_draft_reply and /call/draft)
+      var draftCandidates = ["/call/generate_draft_reply", "/call/draft"];
+      for (var dIdx = 0; dIdx < draftCandidates.length; dIdx++) {
+        var draftEp = draftCandidates[dIdx];
+        try {
+          var callResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + draftEp, {
+            method: "POST",
+            headers: directHeaders,
+            body: JSON.stringify({ data: [userPrompt] }),
+            signal: getActiveSignal(8000)
+          });
+          if (callResp.ok) {
+            var callData = await callResp.json();
+            var eventId = callData.event_id;
+            if (eventId) {
+              var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + draftEp + "/" + eventId, {
+                headers: directHeaders,
+                signal: getActiveSignal(15000)
+              });
+              if (streamResp.ok && streamResp.body) {
+                var reader = streamResp.body.getReader();
+                var decoder = new TextDecoder("utf-8");
+                var buffer = "";
                 while (true) {
                   var chunk = await reader.read();
                   if (chunk.done) break;
@@ -3701,86 +5609,27 @@
                   buffer = lines.pop() || "";
                   for (var i = 0; i < lines.length; i++) {
                     var line = lines[i].trim();
-                    if (line.startsWith("event: complete")) {
-                      isComplete = true;
-                    } else if (line.startsWith("event: error")) {
-                      reader.cancel();
-                      break;
-                    } else if (isComplete && line.startsWith("data:")) {
-                      var payload = JSON.parse(line.substring(5).trim());
-                      if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
-                        reader.cancel();
-                        return { reply: String(payload[0]).trim(), tier: "max", model: "AravKataria/vajra-lora" };
-                      }
+                    if (line.startsWith("data:")) {
+                      try {
+                        var payload = JSON.parse(line.substring(5).trim());
+                        if (Array.isArray(payload) && payload.length > 0 && payload[0]) {
+                          reader.cancel();
+                          return String(payload[0]).trim();
+                        }
+                      } catch (e) {}
                     }
                   }
                 }
               }
             }
           }
-        } catch (callErr) {}
+        } catch (e) {}
       }
-
-      // 3. Gradio Queue Fallback (/queue/join on fn_index 0)
-      try {
-        var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
-        var joinResp = await fetch(hfEndpoint + "/queue/join", {
-          method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({
-            data: [fullPrompt],
-            event_data: null,
-            fn_index: 0,
-            session_hash: sessionHash,
-            trigger_id: 7
-          }),
-          signal: AbortSignal.timeout(12000)
-        });
-        if (joinResp.ok) {
-          var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
-            headers: directHeaders,
-            signal: AbortSignal.timeout(sTimeout)
-          });
-          if (dataStreamResp.ok && dataStreamResp.body) {
-            var qReader = dataStreamResp.body.getReader();
-            var qDecoder = new TextDecoder("utf-8");
-            var qBuffer = "";
-            while (true) {
-              var qChunk = await qReader.read();
-              if (qChunk.done) break;
-              qBuffer += qDecoder.decode(qChunk.value, { stream: true });
-              var qLines = qBuffer.split("\n");
-              qBuffer = qLines.pop() || "";
-              for (var j = 0; j < qLines.length; j++) {
-                var qLine = qLines[j].trim();
-                if (qLine.startsWith("data:")) {
-                  var msgObj = JSON.parse(qLine.substring(5).trim());
-                  if (msgObj.msg === "process_completed") {
-                    qReader.cancel();
-                    var out = msgObj.output || {};
-                    if (out.error) {
-                      return null;
-                    }
-                    var d = out.data || [];
-                    if (d.length > 0 && d[0]) {
-                      return {
-                        reply: String(d[0]).trim(),
-                        tier: "max",
-                        model: "AravKataria/vajra-lora"
-                      };
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch (queueErr) {}
 
       return null;
     }
 
-    async function tryDirectHfSpace(userPrompt, contextFiles) {
+    async function tryDirectHfSpace(userPrompt, contextFiles, onToken) {
       try {
         var fullPrompt = userPrompt;
         if (contextFiles && Object.keys(contextFiles).length > 0) {
@@ -3799,19 +5648,73 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        // 1. Try High-Speed Turbo Burst: ZeroGPU Space (vajra) - A10G GPU (<3s latency)
-        var gpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 30000);
-        if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) return gpuRes;
+        // 1. PRIMARY WORKHORSE: Always route to 2 vCPU Space first (4-bit 7B GGUF Engine)
+        var vcpuFailed = false;
+        var vcpuBusy = false;
+        var vcpuTokensReceived = false;
+        try {
+          var vcpuRes = await _executeSingleHfSpaceQuery(
+            VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
+            fullPrompt,
+            directHeaders,
+            55000,
+            function(chunk) {
+              vcpuTokensReceived = true;
+              if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
+            }
+          );
+          if (vcpuRes) {
+            if (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+              return {
+                reply: vcpuRes.reply,
+                tier: "standard",
+                model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+              };
+            }
+            if (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+              vcpuBusy = true;
+            }
+          } else {
+            vcpuFailed = true;
+          }
+        } catch (vcpuErr) {
+          vcpuFailed = true;
+        }
 
-        // 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 0 GPU quota used
-        var vcpuRes = await _executeSingleHfSpaceQuery(VAJRA_HF_SPACE_URL.replace(/\/$/, ""), fullPrompt, directHeaders, 120000);
-        if (vcpuRes && vcpuRes.reply && !vcpuRes.isRateLimited) return vcpuRes;
+        // 2. TRUE LAST RESORT: ZeroGPU A10G Burst (only if 2 vCPU is busy or unreachable AND no tokens were received)
+        var zeroGpuAvailable = !isZeroGpuCircuitOpen();
+        if (!vcpuTokensReceived && (vcpuBusy || vcpuFailed) && zeroGpuAvailable) {
+          console.log("⚡ [VAJRA Last Resort] 2 vCPU " + (vcpuBusy ? "busy/overflow" : "failed") + " -> Escalating to ZeroGPU A10G as last resort...");
+          try {
+            var gpuRes = await _executeSingleHfSpaceQuery(
+              VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
+              fullPrompt,
+              directHeaders,
+              30000,
+              function(chunk) {
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
+              }
+            );
+            if (gpuRes) {
+              if (gpuRes.isRateLimited) {
+                return gpuRes;
+              }
+              if (gpuRes.reply && gpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+                return {
+                  reply: gpuRes.reply,
+                  tier: "burst",
+                  model: "AravKataria/vajra-lora (ZeroGPU Burst)"
+                };
+              }
+            }
+          } catch (gpuErr) {}
+        }
 
       } catch (e) {}
       return null;
     }
 
-    async function tryFastLlmInference(userPrompt, sess, extraFiles) {
+    async function tryFastLlmInference(userPrompt, sess, extraFiles, onToken) {
       var contextFiles = null;
       if (extraFiles && Object.keys(extraFiles).length > 0) {
         contextFiles = extraFiles;
@@ -3821,6 +5724,13 @@
 
       var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
 
+      // 1. Primary & Overflow Direct Spaces: 2 vCPU Primary -> ZeroGPU Overflow (if 2 vCPU busy)
+      try {
+        var directRes = await tryDirectHfSpace(userPrompt, contextFiles, onToken);
+        if (directRes && directRes.reply) return directRes;
+      } catch (e) {}
+
+      // 2. Safety Fallback: 24/7 Cloud Backend Gateway (Render)
       var payload = JSON.stringify({
         prompt: userPrompt,
         files: contextFiles,
@@ -3829,7 +5739,6 @@
         hf_token: storedHfToken || null
       });
 
-      // 1. Try 24/7 Cloud Backend Gateway
       try {
         var backendHeaders = {
           "Content-Type": "application/json"
@@ -3842,31 +5751,23 @@
           method: "POST",
           headers: backendHeaders,
           body: payload,
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(15000)
         });
-        if (hfResp.status === 429) {
-          // Backend busy; fall through to direct neural engine spaces
-        } else if (hfResp.ok) {
+        if (hfResp.ok) {
           var hfData = await hfResp.json();
           if (hfData && hfData.reply && !hfData.rate_limited) {
             return {
               reply: hfData.reply,
-              model: hfData.model,
-              tier: hfData.tier
+              model: hfData.model || "VAJRA Cloud Gateway",
+              tier: hfData.tier || "gateway"
             };
           }
         }
       } catch (e) {
-        // Backend starting or timeout, proceed to neural gateway fallback
+        // Backend starting or timeout, proceed to local fallbacks
       }
 
-      // 2. Try Direct Neural Engine Gateway (Runs fine-tuned AravKataria/vajra-lora 7B model)
-      try {
-        var directRes = await tryDirectHfSpace(userPrompt, contextFiles);
-        if (directRes && directRes.reply) return directRes;
-      } catch (e) {}
-
-      // 3. Try Local FastAPI Backend (if running locally on port 8000)
+      // 3. Local FastAPI Backend (if running locally on port 8000)
       try {
         var localResp = await fetch(VAJRA_LOCAL_BACKEND + "/api/chat", {
           method: "POST",
@@ -3886,13 +5787,6 @@
         }
         if (localResp.ok) {
           var lData = await localResp.json();
-          if (lData && lData.rate_limited) {
-            return {
-              isRateLimited: true,
-              reply: lData.reply,
-              retryAfter: lData.retry_after || 60
-            };
-          }
           if (lData && lData.reply) {
             return {
               reply: lData.reply,
@@ -3903,7 +5797,7 @@
         }
       } catch (e) {}
 
-      // 4. Try Local Ollama Endpoint (if running locally on port 11434)
+      // 4. Local Ollama Endpoint (if running locally on port 11434)
       try {
         var messages = [{ role: "system", content: VAJRA_SYSTEM_PROMPT }];
         if (contextFiles) {
@@ -3929,7 +5823,7 @@
         if (ollamaResp.ok) {
           var oData = await ollamaResp.json();
           if (oData && oData.choices && oData.choices[0] && oData.choices[0].message) {
-            return { reply: oData.choices[0].message.content };
+            return { reply: oData.choices[0].message.content, model: "Ollama (Local)", tier: "local" };
           }
         }
       } catch (e) {}
@@ -4313,6 +6207,8 @@
         return;
       }
 
+      activeGenerationAbortController = new AbortController();
+      setGenerating(true);
       showTypingIndicator();
       var sess = getActiveSession();
 
@@ -4322,6 +6218,7 @@
         if (isFinderScanIntent(q) && hasFiles && (!extraFiles || Object.keys(extraFiles).length > 1)) {
           var scanFiles = (extraFiles && Object.keys(extraFiles).length > 0) ? extraFiles : (sess && sess.files ? sess.files : {});
           removeTypingIndicator();
+          setGenerating(false);
           startScanAnalysis((sess ? sess.workspaceId : "attached_workspace"), scanFiles);
           return;
         }
@@ -4387,6 +6284,7 @@
             '</div>';
 
           appendSessionMessage("bot", responseHtml);
+          setGenerating(false);
           return;
         }
 
@@ -4456,14 +6354,128 @@
         if (localResp !== null && (!extraFiles || Object.keys(extraFiles).length === 0)) {
           removeTypingIndicator();
           appendSessionMessage("bot", localResp, "VAJRA REASONING AUDIT");
+          setGenerating(false);
           return;
         }
 
-        // 4. Network LLM Inference — all real questions go here
-        var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles);
-        if (inferenceRes) {
+        // 4. Speculative Parallel Neural Inference
+        // Channel A: Fast 0.5B Speculative Draft (<1.5s) with Frosted Glass Shimmer
+        // Channel B: Deep 7B Reasoning Pipeline (2 vCPU / ZeroGPU Burst)
+        var typewriter = null;
+        // 4. Smart Classifier: Basic Technical Question vs Deep Forensic Audit
+        var hasAttachedFiles = Boolean(
+          (chunkedExtraFiles && Object.keys(chunkedExtraFiles).length > 0) ||
+          (sess && sess.files && Object.keys(sess.files).length > 0)
+        );
+        var isDeepAudit = hasAttachedFiles || q.length > 350 ||
+          /\b(audit|scan|ast|taint|exploit|cwe-\d+|patch|sink|disassembl|decompile|decompil|invariant|formal proof|vulnerability report)\b/i.test(q);
+
+        var storedHfToken = localStorage.getItem("vajra_hf_token") || "";
+        var directHeaders = { "Content-Type": "application/json" };
+        if (storedHfToken) {
+          directHeaders["Authorization"] = "Bearer " + storedHfToken;
+        }
+
+        // Speculative Dual-Channel Neural Reasoning Pipeline:
+        // Channel A: Fast 0.5B Speculative Draft (<1.5s) rendered with Frosted Glassmorphism Shimmer
+        // Channel B: Deep 7B Reasoning Pipeline (Optimized 2 vCPU -> ZeroGPU Bailout -> 0.5B fallback)
+        var typewriter = null;
+        var isDeepResolved = false;
+        var draftReplyText = null;
+
+        var pipelinePref = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
+
+        if (pipelinePref === "lite") {
+          var liteDraft = await tryFastDraftQuery(q, directHeaders);
           removeTypingIndicator();
+          if (liteDraft && liteDraft.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+            typewriter = createStreamTypewriter("Qwen/Qwen2.5-Coder-0.5B-Instruct");
+            if (typewriter) typewriter.finish(liteDraft, { tier: "lite", model: "Qwen/Qwen2.5-Coder-0.5B-Instruct" });
+            return;
+          }
+        }
+
+        // Hard Ceiling Timer: Dissolves glass if deep reasoner exceeds 75s
+        var glassCeilingTimer = setTimeout(function() {
+          if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+            console.warn("⏱️ [VAJRA Guard] Ceiling reached: dissolving glass overlay and presenting draft response.");
+            typewriter.removeGlassOverlay();
+            typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+            if (draftReplyText) {
+              typewriter.finish(draftReplyText, { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
+            }
+          }
+        }, 75000);
+
+        if (pipelinePref !== "deep") {
+          // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
+          var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
+            if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+              return null;
+            }
+            draftReplyText = draftText;
+            if (!typewriter && !isDeepResolved) {
+              removeTypingIndicator();
+              typewriter = createStreamTypewriter("VAJRA AUDIT [2 vCPU Engine]");
+              if (typewriter) {
+                typewriter.enableSpeculativeDraft(draftText);
+              }
+            } else if (typewriter && !isDeepResolved && (!typewriter.isDraftActive || !typewriter.isDraftActive()) && (!typewriter.hasText || !typewriter.hasText())) {
+              typewriter.enableSpeculativeDraft(draftText);
+            }
+            return draftText;
+          }).catch(function() { return null; });
+
+          // Wait up to 4.5s for 0.5B draft to render before 7B starts
+          await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4500); })]);
+        }
+
+        // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
+        function handleStreamChunk(chunkText, badge) {
+          if (!chunkText || chunkText.trim().length === 0 || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+            return;
+          }
+          if (!typewriter) {
+            removeTypingIndicator();
+            typewriter = createStreamTypewriter(badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+          }
+          if (typewriter.isDraftActive && typewriter.isDraftActive()) {
+            typewriter.replaceDraftWithStream(chunkText, badge);
+          } else {
+            typewriter.onToken(chunkText);
+            if (badge) {
+              typewriter.updateBadge(badge);
+            }
+          }
+        }
+
+        // Launch Channel B AFTER draft has CPU time: Deep 7B Reasoning
+        var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles, function(chunk, badge) {
+          handleStreamChunk(chunk, badge);
+        });
+
+        isDeepResolved = true;
+        clearTimeout(glassCeilingTimer);
+
+        if (inferenceRes) {
           if (inferenceRes.isRateLimited) {
+            if (typewriter && typewriter.hasText && typewriter.hasText()) {
+              typewriter.removeGlassOverlay();
+              typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+              typewriter.finish(typewriter.getAccumulatedText(), {
+                tier: "standard",
+                model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+              });
+              return;
+            }
+            if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+              typewriter.removeGlassOverlay();
+              typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+              typewriter.finish(draftReplyText || "", { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
+              return;
+            }
+            if (typewriter) typewriter.abort();
+            removeTypingIndicator();
             var formattedHtml = inferenceRes.reply
               .replace(/\n\n/g, "</p><p style='margin-top:0.5rem;'>")
               .replace(/\n/g, "<br>")
@@ -4481,34 +6493,66 @@
             );
 
             startRateLimitCooldown(Math.min(inferenceRes.retryAfter || 30, 30));
+            setGenerating(false);
             return;
           }
 
           if (inferenceRes.reply) {
-            var codeBlockMatch = inferenceRes.reply.match(/```(html|htm|python|py|javascript|js)?\s*([\s\S]+?)```/i);
-            var artifactCardHtml = "";
-            if (codeBlockMatch && codeBlockMatch[2] && codeBlockMatch[2].length > 60) {
-              var lang = (codeBlockMatch[1] || "html").toLowerCase();
-              var codeContent = codeBlockMatch[2].trim();
-              var genExt = lang.includes("py") ? "main.py" : (lang.includes("js") ? "script.js" : "index.html");
-              var genType = lang.includes("py") ? "PYTHON" : (lang.includes("js") ? "JS" : "HTML");
-              var fId = registerArtifactFile(genExt, codeContent, genType);
-              artifactCardHtml = renderFileArtifactCard(fId, genExt, genType, codeContent);
-            }
-            var formattedHtml2 = formatBotMarkdown(inferenceRes.reply);
+            removeTypingIndicator();
             var badge = "";
-            if (inferenceRes.tier === "ultra_lite" || inferenceRes.tier === "ultra_lite_fallback") {
+            if (inferenceRes.model && !inferenceRes.model.includes("VAJRA Cloud Gateway")) {
+              badge = inferenceRes.model;
+            } else if (inferenceRes.tier === "ultra_lite" || inferenceRes.tier === "ultra_lite_fallback") {
               badge = "VAJRA ULTRA-LITE [0.5B]";
             } else if (inferenceRes.tier === "standard") {
-              badge = "VAJRA STANDARD [7B]";
+              badge = "VAJRA STANDARD [7B 2 vCPU]";
+            } else if (inferenceRes.tier === "cloud_router") {
+              badge = "VAJRA CLOUD ROUTER [7B]";
+            } else if (inferenceRes.tier === "burst") {
+              badge = "VAJRA BURST [7B ZeroGPU]";
             } else if (inferenceRes.tier === "max") {
               badge = "VAJRA MAX [7B LoRA]";
             } else if (inferenceRes.model) {
               badge = inferenceRes.model;
             }
-            appendSessionMessage("bot", formattedHtml2 + (artifactCardHtml ? "<p style='margin-top:10px; font-weight:600;'>Generated Artifact &amp; Live Preview:</p>" + artifactCardHtml : ""), badge);
+
+            if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+              typewriter.refineWithVerified(inferenceRes.reply, {
+                tier: inferenceRes.tier,
+                model: badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+              });
+              return;
+            }
+
+            if (!typewriter) {
+              typewriter = createStreamTypewriter(badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+              typewriter.onToken(inferenceRes.reply);
+            }
+            typewriter.finish(inferenceRes.reply, {
+              tier: inferenceRes.tier,
+              model: badge
+            });
             return;
           }
+        }
+
+        // If Deep Reasoning returned empty/failed, but draft or streamed text was generated on screen:
+        if (typewriter && typewriter.hasText && typewriter.hasText()) {
+          typewriter.removeGlassOverlay();
+          typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+          typewriter.finish(typewriter.getAccumulatedText(), { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
+          return;
+        }
+
+        if (typewriter && draftReplyText) {
+          typewriter.removeGlassOverlay();
+          typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+          typewriter.finish(draftReplyText, { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
+          return;
+        }
+
+        if (typewriter) {
+          typewriter.abort();
         }
 
         // 5. Final static fallback (network failed AND no local match)
@@ -4527,9 +6571,11 @@
             '</p>';
         }
         appendSessionMessage("bot", response, "VAJRA REASONING AUDIT");
+        setGenerating(false);
       } catch (err) {
         removeTypingIndicator();
         appendSessionMessage("bot", "<p><b>VAJRA System Note:</b> Query processed. Provide a repository or source file to run the AST security audit.</p>");
+        setGenerating(false);
       }
     }
 
@@ -4588,15 +6634,103 @@
       }
     });
 
-    // ─── CONSISTENT CROSS-PLATFORM KEYBOARD SHORTCUTS ───
-    // Alt+N (browser & native safe), Ctrl+Shift+N, and Ctrl+K / Cmd+K
+    // ─── CONSISTENT CROSS-PLATFORM KEYBOARD SHORTCUTS (CUSTOMIZABLE) ───
     document.addEventListener("keydown", function (e) {
-      var isNewAnalysis = (e.altKey && e.key.toLowerCase() === "n") ||
-                          (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n") ||
-                          ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k");
+      var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+      var isInput = tag === "input" || tag === "textarea" || tag === "select";
+
+      // 1. Stop generation / Close modal: Escape
+      if (e.key === "Escape") {
+        var activeModal = document.querySelector(".modal-backdrop.active");
+        if (activeModal) {
+          window.closeModal(activeModal.id);
+          return;
+        }
+        if (isGenerating && typeof stopGeneration === "function") {
+          stopGeneration();
+          return;
+        }
+      }
+
+      // 2. Open Settings / Preferences: Ctrl+, or Alt+,
+      var settingsPref = localStorage.getItem("vajra_shortcut_settings") || "ctrl_comma";
+      var isOpenSettings = false;
+      if (settingsPref === "alt_comma") {
+        isOpenSettings = e.altKey && (e.key === "," || e.code === "Comma");
+      } else {
+        isOpenSettings = (e.ctrlKey || e.metaKey) && (e.key === "," || e.code === "Comma");
+      }
+      if (isOpenSettings) {
+        e.preventDefault();
+        openHfTokenModal();
+        return;
+      }
+
+      // 3. New Casefile / Chat session
+      var newChatPref = localStorage.getItem("vajra_shortcut_new_chat") || "ctrl_k";
+      var isNewAnalysis = false;
+      if (newChatPref === "alt_n") {
+        isNewAnalysis = e.altKey && e.key.toLowerCase() === "n";
+      } else if (newChatPref === "ctrl_shift_n") {
+        isNewAnalysis = e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n";
+      } else {
+        isNewAnalysis = ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") ||
+                        (e.altKey && e.key.toLowerCase() === "n") ||
+                        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n");
+      }
       if (isNewAnalysis) {
         e.preventDefault();
         createNewSession();
+        return;
+      }
+
+      // 4. Toggle Sidebar Navigation
+      var sidebarPref = localStorage.getItem("vajra_shortcut_sidebar") || "ctrl_b";
+      var isSidebar = false;
+      if (sidebarPref === "alt_b") {
+        isSidebar = e.altKey && e.key.toLowerCase() === "b";
+      } else {
+        isSidebar = ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") || (e.altKey && e.key.toLowerCase() === "b");
+      }
+      if (isSidebar) {
+        e.preventDefault();
+        var toggleBtn = document.getElementById("toggleSidebarBtn");
+        if (toggleBtn) toggleBtn.click();
+        return;
+      }
+
+      // 5. Toggle Theme (Dark / Light)
+      var themePref = localStorage.getItem("vajra_shortcut_theme") || "alt_t";
+      var isTheme = false;
+      if (themePref === "ctrl_shift_t") {
+        isTheme = e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "t";
+      } else {
+        isTheme = (e.altKey && e.key.toLowerCase() === "t") || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "t");
+      }
+      if (isTheme) {
+        e.preventDefault();
+        if (typeof toggleTheme === "function") toggleTheme();
+        return;
+      }
+
+      // 6. Focus prompt composer
+      var focusPref = localStorage.getItem("vajra_shortcut_focus") || "slash";
+      var isFocus = false;
+      if (focusPref === "ctrl_slash") {
+        isFocus = (e.ctrlKey || e.metaKey) && e.key === "/";
+      } else if (focusPref === "alt_slash") {
+        isFocus = e.altKey && e.key === "/";
+      } else {
+        isFocus = !isInput && e.key === "/";
+      }
+      if (isFocus) {
+        e.preventDefault();
+        var cInp = document.getElementById("composerInput");
+        if (cInp) {
+          cInp.focus();
+          cInp.select();
+        }
+        return;
       }
     });
 
@@ -4750,9 +6884,16 @@
         }
       });
       composerTextarea.addEventListener("keydown", function (e) {
-        // Enter sends message, Shift+Enter inserts newline
-        if (e.key === "Enter" && !e.shiftKey) {
+        var sendMode = localStorage.getItem("vajra_shortcut_send") || "enter";
+        var shouldSubmit = false;
+        if (sendMode === "ctrl_enter") {
+          shouldSubmit = (e.key === "Enter" && (e.ctrlKey || e.metaKey));
+        } else {
+          shouldSubmit = (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey);
+        }
+        if (shouldSubmit) {
           e.preventDefault();
+          if (isGenerating) return;
           if (composerForm) {
             composerForm.dispatchEvent(new Event("submit"));
           }
@@ -4763,6 +6904,7 @@
     if (composerForm) {
       composerForm.addEventListener("submit", function (e) {
         e.preventDefault();
+        if (isGenerating) return;
         if (!composerTextarea) composerTextarea = document.getElementById("composerInput");
         var text = (composerTextarea ? composerTextarea.value : "").trim();
         var attachments = currentComposerAttachments.slice();

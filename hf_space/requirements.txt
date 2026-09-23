@@ -9,3 +9,4 @@ accelerate>=0.30.0
 gradio==4.44.1
 uvicorn>=0.27.0
 pydantic>=2.6.0
+llama-cpp-python @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.35/llama_cpp_python-0.3.35-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl

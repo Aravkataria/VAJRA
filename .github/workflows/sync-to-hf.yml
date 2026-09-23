@@ -2,7 +2,7 @@ name: Sync to Hugging Face Space
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/stream-typewriter-inference ]
     paths:
       - 'hf_space/**'
       - 'hf_zerogpu_space/**'
