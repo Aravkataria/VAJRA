@@ -80,24 +80,21 @@ def get_draft_model():
     return draft_tokenizer, draft_model
 
 def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
-    # 1. Direct Local 0.5B CPU Generation (Fastest, zero network overhead, ~40 tokens/sec)
+    # 1. Direct Local 0.5B CPU Generation (Ultra-fast <1.5s speculative draft)
     try:
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
-                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."},
+                {"role": "system", "content": "You are VAJRA-Draft, an instant technical reasoner. Explain concisely and clearly in 2-3 complete sentences."},
                 {"role": "user", "content": prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             inputs = tok([text_in], return_tensors="pt")
-            with torch.no_grad():
+            with torch.inference_mode():
                 ids = m.generate(
                     **inputs,
-                    max_new_tokens=320,
-                    temperature=0.25,
-                    top_p=0.9,
-                    repetition_penalty=1.08,
-                    do_sample=True,
+                    max_new_tokens=70,
+                    do_sample=False,
                     eos_token_id=tok.eos_token_id,
                     pad_token_id=tok.eos_token_id
                 )
