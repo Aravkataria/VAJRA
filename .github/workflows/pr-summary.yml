@@ -1,0 +1,193 @@
+name: Auto PR Summary & Changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  summarize-pr:
+    name: Generate PR Summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Generate and Update PR Description
+        uses: actions/github-script@v7
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            const pull_number = pr.number;
+
+            // 1. Fetch changed files
+            let files = [];
+            try {
+              const filesResp = await github.rest.pulls.listFiles({
+                owner,
+                repo,
+                pull_number,
+                per_page: 100
+              });
+              files = filesResp.data;
+            } catch (err) {
+              console.error("Failed to fetch files:", err);
+            }
+
+            // 2. Fetch commits
+            let commits = [];
+            try {
+              const commitsResp = await github.rest.pulls.listCommits({
+                owner,
+                repo,
+                pull_number,
+                per_page: 100
+              });
+              commits = commitsResp.data;
+            } catch (err) {
+              console.error("Failed to fetch commits:", err);
+            }
+
+            // 3. Classify changes and categorize commits
+            const categories = {
+              features: [],
+              fixes: [],
+              ui: [],
+              perf: [],
+              docs: [],
+              others: []
+            };
+
+            for (const c of commits) {
+              const msg = c.commit.message.split("\n")[0].trim();
+              const lower = msg.toLowerCase();
+              if (lower.startsWith("feat") || lower.includes("feature")) {
+                categories.features.push(msg);
+              } else if (lower.startsWith("fix") || lower.includes("bug")) {
+                categories.fixes.push(msg);
+              } else if (lower.startsWith("ui") || lower.includes("ui:") || lower.includes("style")) {
+                categories.ui.push(msg);
+              } else if (lower.startsWith("perf") || lower.includes("optimiz") || lower.includes("speed")) {
+                categories.perf.push(msg);
+              } else if (lower.startsWith("docs") || lower.includes("readme")) {
+                categories.docs.push(msg);
+              } else {
+                categories.others.push(msg);
+              }
+            }
+
+            // 4. Build changed files summary table
+            let totalAdditions = 0;
+            let totalDeletions = 0;
+            let fileTableRows = [];
+
+            for (const f of files) {
+              totalAdditions += f.additions;
+              totalDeletions += f.deletions;
+              const statusEmoji = f.status === "added" ? "✨ Added" : (f.status === "removed" ? "🗑️ Deleted" : "📝 Modified");
+              fileTableRows.push(`| \`${f.filename}\` | ${statusEmoji} | +${f.additions} | -${f.deletions} |`);
+            }
+
+            const filesTable = fileTableRows.length > 0
+              ? `| File | Status | Additions | Deletions |\n| :--- | :---: | :---: | :---: |\n` + fileTableRows.join("\n")
+              : `*No file diff detected.*`;
+
+            // 5. Construct Markdown sections
+            let changeBreakdown = "";
+            if (categories.features.length > 0) {
+              changeBreakdown += `#### 🚀 New Features\n` + categories.features.map(m => `- ${m}`).join("\n") + "\n\n";
+            }
+            if (categories.fixes.length > 0) {
+              changeBreakdown += `#### 🐛 Bug Fixes\n` + categories.fixes.map(m => `- ${m}`).join("\n") + "\n\n";
+            }
+            if (categories.ui.length > 0) {
+              changeBreakdown += `#### 🎨 UI & Interface Improvements\n` + categories.ui.map(m => `- ${m}`).join("\n") + "\n\n";
+            }
+            if (categories.perf.length > 0) {
+              changeBreakdown += `#### ⚡ Performance & Engine Optimizations\n` + categories.perf.map(m => `- ${m}`).join("\n") + "\n\n";
+            }
+            if (categories.docs.length > 0) {
+              changeBreakdown += `#### 📚 Documentation & Guides\n` + categories.docs.map(m => `- ${m}`).join("\n") + "\n\n";
+            }
+            if (categories.others.length > 0 && changeBreakdown === "") {
+              changeBreakdown += `#### 🔧 Other Changes\n` + categories.others.map(m => `- ${m}`).join("\n") + "\n\n";
+            }
+
+            // 6. Optional AI Executive Summary via Gemini API if secret exists
+            let aiSummarySection = "";
+            const geminiKey = process.env.GEMINI_API_KEY;
+            if (geminiKey) {
+              try {
+                const promptText = `Summarize this GitHub pull request in 2-3 concise, high-impact bullet points:\n\nTitle: ${pr.title}\nCommits:\n${commits.map(c => c.commit.message).join("\n")}\n\nFiles changed:\n${files.map(f => f.filename).join("\n")}`;
+                const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }]
+                  })
+                });
+                if (geminiResp.ok) {
+                  const data = await geminiResp.json();
+                  const summaryText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (summaryText) {
+                    aiSummarySection = `### 🤖 AI Executive Summary\n${summaryText.trim()}\n\n`;
+                  }
+                }
+              } catch (aiErr) {
+                console.warn("AI generation failed, falling back to structural summary:", aiErr.message);
+              }
+            }
+
+            // 7. Compose final PR body preserving author notes
+            const START_MARKER = "<!-- VAJRA-PR-SUMMARY-START -->";
+            const END_MARKER = "<!-- VAJRA-PR-SUMMARY-END -->";
+
+            const summaryBody = `${START_MARKER}
+## 📋 Automated PR Summary
+
+${aiSummarySection}### 📊 Overview & Metrics
+- **Files Changed**: ${files.length}
+- **Lines Added**: +${totalAdditions}
+- **Lines Deleted**: -${totalDeletions}
+- **Total Commits**: ${commits.length}
+
+${changeBreakdown}### 📁 Changed Files Details
+<details>
+<summary>Click to view files table (${files.length} changed)</summary>
+
+${filesTable}
+
+</details>
+
+---
+*Generated automatically by VAJRA Auto PR Summary Workflow.*
+${END_MARKER}`;
+
+            let currentBody = pr.body || "";
+            let updatedBody = "";
+
+            if (currentBody.includes(START_MARKER) && currentBody.includes(END_MARKER)) {
+              const regex = new RegExp(`${START_MARKER}[\\s\\S]*?${END_MARKER}`, "g");
+              updatedBody = currentBody.replace(regex, summaryBody).trim();
+            } else if (currentBody.trim().length > 0) {
+              updatedBody = `${currentBody.trim()}\n\n${summaryBody}`;
+            } else {
+              updatedBody = summaryBody;
+            }
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number,
+              body: updatedBody
+            });
+
+            console.log(`✅ Successfully updated description for PR #${pull_number}`);
