@@ -3966,7 +3966,6 @@
       }
 
       function refineWithVerified(finalText, meta) {
-        removeGlassOverlay();
         if (intervalId) {
           clearInterval(intervalId);
           intervalId = null;
@@ -3998,6 +3997,12 @@
         removeGlassOverlay: removeGlassOverlay,
         refineWithVerified: refineWithVerified,
         isDraftActive: function() { return isSpeculativeDraft; },
+        hasText: function() {
+          return (fullIncomingText && fullIncomingText.trim().length > 0) || (currentDraftText && currentDraftText.trim().length > 0);
+        },
+        getAccumulatedText: function() {
+          return fullIncomingText || currentDraftText || "";
+        },
         onToken: function(text) {
           fullIncomingText = text;
           if (!intervalId) {
@@ -4303,8 +4308,11 @@
 
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
+      var streamProducedTokens = false;
+
       for (var k = 0; k < candidateEndpoints.length; k++) {
         var ep = candidateEndpoints[k];
+        var latestText = "";
         try {
           var callResp = await fetch(hfEndpoint + ep, {
             method: "POST",
@@ -4338,7 +4346,6 @@
                 var buffer = "";
                 var isComplete = false;
                 var currentEvent = "";
-                var latestText = "";
                 var receivedFirstToken = false;
                 var bailoutTimer = null;
 
@@ -4370,7 +4377,7 @@
                         } else if (currentEvent === "complete") {
                           isComplete = true;
                         } else if (currentEvent === "error") {
-                          reader.cancel();
+                          try { reader.cancel(); } catch (e) {}
                           break;
                         }
                       } else if (line.startsWith("data:")) {
@@ -4380,6 +4387,7 @@
                             latestText = extractGradioText(payload[0], latestText);
                             if (!receivedFirstToken && latestText.trim().length > 0) {
                               receivedFirstToken = true;
+                              streamProducedTokens = true;
                               if (bailoutTimer) clearTimeout(bailoutTimer);
                             }
                             if (onToken && typeof onToken === "function") {
@@ -4387,7 +4395,7 @@
                             }
                             if (isComplete || currentEvent === "complete") {
                               if (bailoutTimer) clearTimeout(bailoutTimer);
-                              reader.cancel();
+                              try { reader.cancel(); } catch (e) {}
                               return {
                                 reply: latestText.trim(),
                                 tier: isZeroGpu ? "burst" : "standard",
@@ -4407,7 +4415,7 @@
                   return { reply: null, timedOutFirstToken: true };
                 }
 
-                if (latestText) {
+                if (latestText && latestText.trim().length > 0) {
                   return {
                     reply: latestText.trim(),
                     tier: isZeroGpu ? "burst" : "standard",
@@ -4418,86 +4426,108 @@
             }
           }
         } catch (callErr) {
+          if (latestText && latestText.trim().length > 0) {
+            return {
+              reply: latestText.trim(),
+              tier: isZeroGpu ? "burst" : "standard",
+              model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+            };
+          }
           if (firstTokenTimeoutMs && !receivedFirstToken) {
             return { reply: null, timedOutFirstToken: true };
           }
         }
+
+        if (streamProducedTokens) {
+          break;
+        }
       }
 
-      // 2. Gradio Queue Fallback (/queue/join on fn_index 0)
-      try {
-        var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
-        var joinResp = await fetch(hfEndpoint + "/queue/join", {
-          method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({
-            data: [fullPrompt],
-            event_data: null,
-            fn_index: 0,
-            session_hash: sessionHash,
-            trigger_id: 7
-          }),
-          signal: getActiveSignal(12000)
-        });
-        if (joinResp.ok) {
-          var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
+      if (streamProducedTokens && latestText && latestText.trim().length > 0) {
+        return {
+          reply: latestText.trim(),
+          tier: isZeroGpu ? "burst" : "standard",
+          model: isZeroGpu ? "AravKataria/vajra-lora (ZeroGPU Burst)" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+        };
+      }
+
+      // 2. Gradio Queue Fallback (/queue/join on fn_index 0) - only if candidate endpoints didn't stream
+      if (!streamProducedTokens) {
+        try {
+          var sessionHash = "vajra_web_" + Math.random().toString(36).substring(2, 10);
+          var joinResp = await fetch(hfEndpoint + "/queue/join", {
+            method: "POST",
             headers: directHeaders,
-            signal: getActiveSignal(sTimeout)
+            body: JSON.stringify({
+              data: [fullPrompt],
+              event_data: null,
+              fn_index: 0,
+              session_hash: sessionHash,
+              trigger_id: 7
+            }),
+            signal: getActiveSignal(12000)
           });
-          if (dataStreamResp.ok && dataStreamResp.body) {
-            var qReader = dataStreamResp.body.getReader();
-            var qDecoder = new TextDecoder("utf-8");
-            var qBuffer = "";
-            var qLatestText = "";
-            while (true) {
-              var qChunk = await qReader.read();
-              if (qChunk.done) break;
-              qBuffer += qDecoder.decode(qChunk.value, { stream: true });
-              var qLines = qBuffer.split("\n");
-              qBuffer = qLines.pop() || "";
-              for (var j = 0; j < qLines.length; j++) {
-                var qLine = qLines[j].trim();
-                if (qLine.startsWith("data:")) {
-                  try {
-                    var msgObj = JSON.parse(qLine.substring(5).trim());
-                    if (msgObj.msg === "process_generating" || msgObj.msg === "process_completed") {
-                      var out = msgObj.output || {};
-                      if (out.error) {
-                        return null;
-                      }
-                      var d = out.data || [];
-                      if (d.length > 0 && d[0] !== undefined) {
-                        qLatestText = extractGradioText(d[0], qLatestText);
-                        if (onToken && typeof onToken === "function") {
-                          onToken(qLatestText);
+          if (joinResp.ok) {
+            var dataStreamResp = await fetch(hfEndpoint + "/queue/data?session_hash=" + sessionHash, {
+              headers: directHeaders,
+              signal: getActiveSignal(sTimeout)
+            });
+            if (dataStreamResp.ok && dataStreamResp.body) {
+              var qReader = dataStreamResp.body.getReader();
+              var qDecoder = new TextDecoder("utf-8");
+              var qBuffer = "";
+              var qLatestText = "";
+              while (true) {
+                var qChunk = await qReader.read();
+                if (qChunk.done) break;
+                qBuffer += qDecoder.decode(qChunk.value, { stream: true });
+                var qLines = qBuffer.split("\n");
+                qBuffer = qLines.pop() || "";
+                for (var j = 0; j < qLines.length; j++) {
+                  var qLine = qLines[j].trim();
+                  if (qLine.startsWith("data:")) {
+                    try {
+                      var msgObj = JSON.parse(qLine.substring(5).trim());
+                      if (msgObj.msg === "process_generating" || msgObj.msg === "process_completed") {
+                        var out = msgObj.output || {};
+                        if (out.error) {
+                          return null;
                         }
-                        if (msgObj.msg === "process_completed") {
-                          qReader.cancel();
-                          return {
-                            reply: qLatestText.trim(),
-                            tier: isZeroGpu ? "burst" : "standard",
-                            model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
-                          };
+                        var d = out.data || [];
+                        if (d.length > 0 && d[0] !== undefined) {
+                          qLatestText = extractGradioText(d[0], qLatestText);
+                          streamProducedTokens = true;
+                          if (onToken && typeof onToken === "function") {
+                            onToken(qLatestText);
+                          }
+                          if (msgObj.msg === "process_completed") {
+                            try { qReader.cancel(); } catch (e) {}
+                            return {
+                              reply: qLatestText.trim(),
+                              tier: isZeroGpu ? "burst" : "standard",
+                              model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
+                            };
+                          }
                         }
                       }
-                    }
-                  } catch (qErr) {}
+                    } catch (qErr) {}
+                  }
                 }
               }
-            }
-            if (qLatestText) {
-              return {
-                reply: qLatestText.trim(),
-                tier: isZeroGpu ? "burst" : "standard",
-                model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
-              };
+              if (qLatestText && qLatestText.trim().length > 0) {
+                return {
+                  reply: qLatestText.trim(),
+                  tier: isZeroGpu ? "burst" : "standard",
+                  model: isZeroGpu ? "AravKataria/vajra-lora" : "AravKataria/vajra-7b-gguf"
+                };
+              }
             }
           }
-        }
-      } catch (queueErr) {}
+        } catch (queueErr) {}
+      }
 
-      // 3. Direct FastAPI /v1/chat route (for 2 vCPU Space if Gradio stream fails)
-      if (!isZeroGpu) {
+      // 3. Direct FastAPI /v1/chat route (for 2 vCPU Space ONLY if no stream tokens arrived)
+      if (!isZeroGpu && !streamProducedTokens) {
         try {
           var v1ChatResp = await fetch(hfEndpoint + "/v1/chat", {
             method: "POST",
@@ -4609,6 +4639,7 @@
         // 1. PRIMARY WORKHORSE: Always route to 2 vCPU Space first (4-bit 7B GGUF Engine)
         var vcpuFailed = false;
         var vcpuBusy = false;
+        var vcpuTokensReceived = false;
         try {
           var vcpuRes = await _executeSingleHfSpaceQuery(
             VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
@@ -4616,6 +4647,7 @@
             directHeaders,
             55000,
             function(chunk) {
+              vcpuTokensReceived = true;
               if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
             }
           );
@@ -4637,9 +4669,9 @@
           vcpuFailed = true;
         }
 
-        // 2. TRUE LAST RESORT: ZeroGPU A10G Burst (only if 2 vCPU is busy or unreachable)
+        // 2. TRUE LAST RESORT: ZeroGPU A10G Burst (only if 2 vCPU is busy or unreachable AND no tokens were received)
         var zeroGpuAvailable = !isZeroGpuCircuitOpen();
-        if ((vcpuBusy || vcpuFailed) && zeroGpuAvailable) {
+        if (!vcpuTokensReceived && (vcpuBusy || vcpuFailed) && zeroGpuAvailable) {
           console.log("⚡ [VAJRA Last Resort] 2 vCPU " + (vcpuBusy ? "busy/overflow" : "failed") + " -> Escalating to ZeroGPU A10G as last resort...");
           try {
             var gpuRes = await _executeSingleHfSpaceQuery(
@@ -5399,10 +5431,19 @@
 
         if (inferenceRes) {
           if (inferenceRes.isRateLimited) {
+            if (typewriter && typewriter.hasText && typewriter.hasText()) {
+              typewriter.removeGlassOverlay();
+              typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+              typewriter.finish(typewriter.getAccumulatedText(), {
+                tier: "standard",
+                model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+              });
+              return;
+            }
             if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
               typewriter.removeGlassOverlay();
-              typewriter.updateBadge("VAJRA ULTRA-LITE [0.5B]");
-              typewriter.finish(draftReplyText || "", { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
+              typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+              typewriter.finish(draftReplyText || "", { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
               return;
             }
             if (typewriter) typewriter.abort();
@@ -5467,7 +5508,14 @@
           }
         }
 
-        // If Deep Reasoning returned empty/failed, but draft was generated on screen:
+        // If Deep Reasoning returned empty/failed, but draft or streamed text was generated on screen:
+        if (typewriter && typewriter.hasText && typewriter.hasText()) {
+          typewriter.removeGlassOverlay();
+          typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+          typewriter.finish(typewriter.getAccumulatedText(), { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
+          return;
+        }
+
         if (typewriter && draftReplyText) {
           typewriter.removeGlassOverlay();
           typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
