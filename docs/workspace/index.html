@@ -3881,8 +3881,9 @@
       var glassOverlay = null;
       var statusTag = null;
       var isSpeculativeDraft = false;
+      var currentDraftText = "";
 
-      function enableSpeculativeDraft() {
+      function enableSpeculativeDraft(initialText) {
         if (isSpeculativeDraft) return;
         isSpeculativeDraft = true;
         card.classList.add("speculative-draft");
@@ -3895,7 +3896,52 @@
         glassOverlay = document.createElement("div");
         glassOverlay.className = "speculative-glass-overlay";
         card.appendChild(glassOverlay);
-        updateBadge("SPECULATIVE DRAFT [0.5B]");
+        updateBadge("⚡ SPECULATIVE DRAFT [0.5B]");
+
+        if (cursor) cursor.style.display = "none";
+
+        if (initialText) {
+          currentDraftText = initialText;
+          if (textSpan) {
+            textSpan.innerHTML = escapeHtml(initialText).replace(/\n/g, "<br>") + ' <span class="typewriter-cursor">▌</span>';
+          }
+          smartScrollToBottom(stream, group);
+        }
+      }
+
+      function replaceDraftWithStream(newText, newBadge) {
+        if (!newText || newText.trim().length === 0) return;
+        if (statusTag) {
+          statusTag.innerHTML = '<span>⚡ 7B VERIFIED ENGINE</span><span style="opacity:0.5;">·</span><span>Refining word-by-word with neural engine...</span>';
+        }
+        if (newBadge) {
+          updateBadge(newBadge);
+        }
+
+        if (currentDraftText && currentDraftText.trim().length > 0) {
+          var draftWords = currentDraftText.trim().split(/(\s+)/);
+          var verifiedWords = newText.trim().split(/(\s+)/);
+          var vCount = verifiedWords.length;
+
+          var verifiedPart = escapeHtml(newText).replace(/\n/g, "<br>");
+          var remainingDraft = "";
+          if (vCount < draftWords.length) {
+            remainingDraft = escapeHtml(draftWords.slice(vCount).join("")).replace(/\n/g, "<br>");
+          }
+
+          if (textSpan) {
+            if (remainingDraft) {
+              textSpan.innerHTML = verifiedPart + ' <span class="typewriter-cursor">▌</span> <span style="opacity:0.55;">' + remainingDraft + '</span>';
+            } else {
+              textSpan.innerHTML = verifiedPart + ' <span class="typewriter-cursor">▌</span>';
+            }
+          }
+        } else {
+          if (textSpan) {
+            textSpan.innerHTML = escapeHtml(newText).replace(/\n/g, "<br>") + ' <span class="typewriter-cursor">▌</span>';
+          }
+        }
+        smartScrollToBottom(stream, group);
       }
 
       function removeGlassOverlay() {
@@ -3915,6 +3961,8 @@
         }
         card.classList.remove("speculative-draft");
         isSpeculativeDraft = false;
+        currentDraftText = "";
+        if (cursor) cursor.style.display = "";
       }
 
       function refineWithVerified(finalText, meta) {
@@ -3927,7 +3975,7 @@
         finalMetadata = meta || {};
         isFinished = true;
         if (meta && (meta.model || meta.tier)) {
-          var b = meta.model || (meta.tier === "burst" ? "VAJRA BURST [7B ZeroGPU]" : (meta.tier === "cloud_router" ? "VAJRA CLOUD ROUTER [7B]" : "VAJRA AUDIT VERIFIED [7B LoRA]"));
+          var b = meta.model || (meta.tier === "burst" ? "VAJRA BURST [7B ZeroGPU]" : (meta.tier === "cloud_router" ? "VAJRA CLOUD ROUTER [7B]" : "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"));
           updateBadge(b);
         }
 
@@ -3946,6 +3994,7 @@
       var selfInstance = {
         group: group,
         enableSpeculativeDraft: enableSpeculativeDraft,
+        replaceDraftWithStream: replaceDraftWithStream,
         removeGlassOverlay: removeGlassOverlay,
         refineWithVerified: refineWithVerified,
         isDraftActive: function() { return isSpeculativeDraft; },
@@ -5290,33 +5339,31 @@
             removeTypingIndicator();
             typewriter = createStreamTypewriter("⚡ SPECULATIVE DRAFT [0.5B]");
             if (typewriter) {
-              typewriter.enableSpeculativeDraft();
-              typewriter.onToken(draftText);
+              typewriter.enableSpeculativeDraft(draftText);
             }
           }
           return draftText;
         }).catch(function() { return null; });
 
-        // CRITICAL: Wait for 0.5B draft to finish (max 8s) before starting 7B.
-        // Both models share the same 2 vCPU — running simultaneously causes CPU
-        // starvation where 0.5B becomes slow and 7B balloons from 15s to 130s+.
-        // By staggering: 0.5B finishes in ~3-5s with full CPU, THEN 7B gets full CPU.
-        await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 8000); })]);
+        // Wait up to 4s for 0.5B draft to render before 7B starts
+        await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4000); })]);
 
-        // Handle streaming chunks from Channel B (if available)
+        // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
         function handleStreamChunk(chunkText, badge) {
           if (!chunkText || chunkText.trim().length === 0 || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
             return;
           }
           if (!typewriter) {
             removeTypingIndicator();
-            typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
-          } else if (typewriter.isDraftActive && typewriter.isDraftActive()) {
-            typewriter.removeGlassOverlay();
+            typewriter = createStreamTypewriter(badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
           }
-          typewriter.onToken(chunkText);
-          if (badge) {
-            typewriter.updateBadge(badge);
+          if (typewriter.isDraftActive && typewriter.isDraftActive()) {
+            typewriter.replaceDraftWithStream(chunkText, badge);
+          } else {
+            typewriter.onToken(chunkText);
+            if (badge) {
+              typewriter.updateBadge(badge);
+            }
           }
         }
 
