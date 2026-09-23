@@ -264,11 +264,15 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                 max_tokens=240,
                 temperature=0.25,
                 top_p=0.9,
-                repeat_penalty=1.08
+                repeat_penalty=1.15,
+                stop=["<|im_end|>", "<|im_start|>", "<|endoftext|>", "\nUser:", "\n\nUser:"]
             )
-            reply = output["choices"][0]["message"]["content"].strip()
+            raw_reply = output["choices"][0]["message"]["content"].strip()
+            for marker in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
+                if marker in raw_reply:
+                    raw_reply = raw_reply.split(marker)[0].strip()
             print("✅ [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
-            return reply, "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
+            return raw_reply, "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
 
         load_cpu_model()
 
@@ -333,7 +337,6 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
         in_len = model_inputs.input_ids.shape[1]
         res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
-        # Ensure code blocks finish cleanly if generation ended on a code fence
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
         del model_inputs, generated_ids
@@ -374,7 +377,8 @@ def gradio_generate(prompt: str):
                     max_tokens=240,
                     temperature=0.25,
                     top_p=0.9,
-                    repeat_penalty=1.08,
+                    repeat_penalty=1.15,
+                    stop=["<|im_end|>", "<|im_start|>", "<|endoftext|>", "\nUser:", "\n\nUser:"],
                     stream=True
                 ):
                     try:
@@ -385,6 +389,13 @@ def gradio_generate(prompt: str):
                                 content = delta.get("content")
                                 if content:
                                     accumulated += content
+                                    # Break immediately if end markers appear to prevent looping
+                                    if any(m in accumulated for m in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]):
+                                        for m in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
+                                            if m in accumulated:
+                                                accumulated = accumulated.split(m)[0].strip()
+                                        yield accumulated
+                                        return
                                     yield accumulated
                     except Exception as chunk_parse_err:
                         pass
@@ -401,9 +412,13 @@ def gradio_generate(prompt: str):
                     max_tokens=240,
                     temperature=0.25,
                     top_p=0.9,
-                    repeat_penalty=1.08
+                    repeat_penalty=1.15,
+                    stop=["<|im_end|>", "<|im_start|>", "<|endoftext|>", "\nUser:", "\n\nUser:"]
                 )
                 direct_reply = direct_out["choices"][0]["message"]["content"].strip()
+                for m in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
+                    if m in direct_reply:
+                        direct_reply = direct_reply.split(m)[0].strip()
                 if direct_reply:
                     yield direct_reply
                     return

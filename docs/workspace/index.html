@@ -3979,7 +3979,16 @@
           updateBadge(b);
         }
 
-        finalizeDisplay();
+        // Render full text under glass first so output is 100% complete
+        if (textSpan) {
+          textSpan.innerHTML = escapeHtml(finalText).replace(/\n/g, "<br>");
+        }
+        smartScrollToBottom(stream, group);
+
+        // Keep the glassmorphic overlay on a little longer so the user sees the complete output settled under glass, then smoothly dissolve
+        setTimeout(function() {
+          finalizeDisplay();
+        }, 1400);
       }
 
       var selfInstance = {
@@ -5330,17 +5339,17 @@
         var isDeepResolved = false;
         var draftReplyText = null;
 
-        // Hard Ceiling Timer: Dissolves glass at second 25 so user NEVER gets stuck waiting
+        // Hard Ceiling Timer: Dissolves glass if deep reasoner exceeds 75s
         var glassCeilingTimer = setTimeout(function() {
           if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
             console.warn("⏱️ [VAJRA Guard] Ceiling reached: dissolving glass overlay and presenting draft response.");
             typewriter.removeGlassOverlay();
-            typewriter.updateBadge("VAJRA ULTRA-LITE [0.5B]");
+            typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
             if (draftReplyText) {
-              typewriter.finish(draftReplyText, { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
+              typewriter.finish(draftReplyText, { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
             }
           }
-        }, 45000);
+        }, 75000);
 
         // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
         var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
