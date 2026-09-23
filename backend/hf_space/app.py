@@ -261,7 +261,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
             output = llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=420,
+                max_tokens=240,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.08
@@ -371,7 +371,7 @@ def gradio_generate(prompt: str):
             try:
                 for chunk in llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=420,
+                    max_tokens=240,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.08,
@@ -398,7 +398,7 @@ def gradio_generate(prompt: str):
             try:
                 direct_out = llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=420,
+                    max_tokens=240,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.08
