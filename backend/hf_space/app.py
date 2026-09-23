@@ -93,7 +93,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             with torch.inference_mode():
                 ids = m.generate(
                     **inputs,
-                    max_new_tokens=70,
+                    max_new_tokens=40,
                     do_sample=False,
                     eos_token_id=tok.eos_token_id,
                     pad_token_id=tok.eos_token_id
@@ -230,8 +230,8 @@ def load_cpu_model():
         print(f"❌ [VAJRA v2] CPU Model load error: {err}")
         model_load_failed = True
 
-VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
-Answer software security, code auditing, AST verification, threat modeling, and technical questions concisely, authoritatively, and completely. Deliver focused, high-precision explanations (under 130 words) that conclude naturally with a clear summary without trailing off mid-sentence."""
+VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Technical Intelligence System, engineered and fine-tuned by Arav Kataria.
+Provide comprehensive, structured, in-depth technical explanations. Detail core principles, mathematical formulation/equations, mechanism, key characteristics, and real-world significance. Ensure every response is thorough, authoritative, and complete."""
 
 # =====================================================================
 # 4. INFERENCE WITH CONCURRENCY LOCK & LOAD SHEDDING
@@ -261,7 +261,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
             output = llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=180,
+                max_tokens=420,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.08
@@ -371,7 +371,7 @@ def gradio_generate(prompt: str):
             try:
                 for chunk in llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=180,
+                    max_tokens=420,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.08,
@@ -398,7 +398,7 @@ def gradio_generate(prompt: str):
             try:
                 direct_out = llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=180,
+                    max_tokens=420,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.08
