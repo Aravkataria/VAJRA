@@ -4268,6 +4268,30 @@
       var sTimeout = streamTimeoutMs || 85000;
       var isZeroGpu = (hfEndpoint.indexOf("vajra.hf.space") !== -1 && hfEndpoint.indexOf("vajra-v2") === -1);
 
+      function extractGradioText(rawItem, prevAcc) {
+        if (rawItem === null || rawItem === undefined) return prevAcc || "";
+        if (Array.isArray(rawItem)) {
+          if (rawItem.length >= 3 && rawItem[0] === "append") {
+            var diffDelta = String(rawItem[2] || "");
+            return (prevAcc || "") + diffDelta;
+          }
+          if (rawItem.length > 0) {
+            return extractGradioText(rawItem[0], prevAcc);
+          }
+        }
+        if (typeof rawItem === "string") {
+          if (rawItem.startsWith("append,,") || rawItem.startsWith("append,")) {
+            var cleanDiff = rawItem.replace(/^append,*\s*/, "");
+            return (prevAcc || "") + (prevAcc && !prevAcc.endsWith(" ") && !cleanDiff.startsWith(" ") ? " " : "") + cleanDiff;
+          }
+          if (prevAcc && rawItem.length >= prevAcc.length && rawItem.startsWith(prevAcc.slice(0, Math.min(prevAcc.length, 12)))) {
+            return rawItem;
+          }
+          return (prevAcc || "") + rawItem;
+        }
+        return String(rawItem || "");
+      }
+
       // 1. Try Gradio 4 Client API (/call/generate_vajra_reply)
       var candidateEndpoints = ["/call/generate_vajra_reply", "/call/gradio_generate"];
       for (var k = 0; k < candidateEndpoints.length; k++) {
@@ -4344,7 +4368,7 @@
                         try {
                           var payload = JSON.parse(line.substring(5).trim());
                           if (Array.isArray(payload) && payload.length > 0 && payload[0] !== undefined) {
-                            latestText = String(payload[0]);
+                            latestText = extractGradioText(payload[0], latestText);
                             if (!receivedFirstToken && latestText.trim().length > 0) {
                               receivedFirstToken = true;
                               if (bailoutTimer) clearTimeout(bailoutTimer);
@@ -4434,7 +4458,7 @@
                       }
                       var d = out.data || [];
                       if (d.length > 0 && d[0] !== undefined) {
-                        qLatestText = String(d[0]);
+                        qLatestText = extractGradioText(d[0], qLatestText);
                         if (onToken && typeof onToken === "function") {
                           onToken(qLatestText);
                         }
@@ -4581,7 +4605,7 @@
             VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
             fullPrompt,
             directHeaders,
-            40000,
+            55000,
             function(chunk) {
               if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
             }
@@ -5417,13 +5441,13 @@
             if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
               typewriter.refineWithVerified(inferenceRes.reply, {
                 tier: inferenceRes.tier,
-                model: badge || "VAJRA AUDIT VERIFIED [7B LoRA]"
+                model: badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
               });
               return;
             }
 
             if (!typewriter) {
-              typewriter = createStreamTypewriter(badge || "VAJRA REASONING AUDIT");
+              typewriter = createStreamTypewriter(badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
               typewriter.onToken(inferenceRes.reply);
             }
             typewriter.finish(inferenceRes.reply, {
@@ -5434,11 +5458,11 @@
           }
         }
 
-        // If Deep Reasoning returned empty/failed, but draft is active on screen:
-        if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
+        // If Deep Reasoning returned empty/failed, but draft was generated on screen:
+        if (typewriter && draftReplyText) {
           typewriter.removeGlassOverlay();
-          typewriter.updateBadge("VAJRA ULTRA-LITE [0.5B]");
-          typewriter.finish(draftReplyText || "", { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
+          typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
+          typewriter.finish(draftReplyText, { tier: "standard", model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)" });
           return;
         }
 
