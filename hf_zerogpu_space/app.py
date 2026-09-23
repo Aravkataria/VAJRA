@@ -79,8 +79,10 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 # =====================================================================
 # 3. ZEROGPU INFERENCE FUNCTION
 # =====================================================================
-@spaces.GPU(duration=60)
+@spaces.GPU(duration=25)
 def generate_vajra_reply(prompt: str) -> str:
+    print(f"⚡ [VAJRA ZeroGPU] Incoming inference request on A10G: {prompt[:80]}...")
+    t0 = time.time()
     try:
         clean_prompt = sanitize_and_check_injection(prompt)
         messages = [
@@ -99,7 +101,7 @@ def generate_vajra_reply(prompt: str) -> str:
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
-                max_new_tokens=450,
+                max_new_tokens=280,
                 temperature=0.2,
                 top_p=0.9,
                 repetition_penalty=1.1,
@@ -112,6 +114,9 @@ def generate_vajra_reply(prompt: str) -> str:
         res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
+
+        print(f"✅ [VAJRA ZeroGPU] A10G GPU inference completed in {time.time() - t0:.2f}s!")
+        return res_text.strip()
 
         del model_inputs, generated_ids
         gc.collect()
@@ -143,6 +148,13 @@ with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
         inputs=user_input,
         outputs=output_display,
         api_name="generate_vajra_reply"
+    )
+    alias_btn = gr.Button("Alias", visible=False)
+    alias_btn.click(
+        fn=generate_vajra_reply,
+        inputs=user_input,
+        outputs=output_display,
+        api_name="gradio_generate"
     )
 
 # =====================================================================

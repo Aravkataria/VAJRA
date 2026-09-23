@@ -1,16 +1,20 @@
-# scripts/colab_one_click_quantize.py
+# kaggle/kaggle_one_click_quantize.py
 """
-1-Click Google Colab / Kaggle Free Quantization Script.
-Copy & paste this into a free Google Colab notebook (T4 GPU runtime).
-Takes ~4 minutes total. 100% Free. Uses 0 MB of your home internet data.
+VAJRA 7B GGUF Quantization Pipeline for Kaggle Notebooks.
+Uses /tmp for high-capacity 70+ GB storage so Kaggle never runs out of disk space.
 """
 
-COLAB_CELL_CODE = '''# ==============================================================================
-# 🚀 1-CLICK VAJRA 7B GGUF QUANTIZATION (FREE GOOGLE COLAB)
+KAGGLE_CODE = '''# ==============================================================================
+# 🚀 VAJRA 7B GGUF 4-BIT QUANTIZATION FOR KAGGLE
 # ==============================================================================
-# 1. Click "Runtime" -> "Change runtime type" -> Select "T4 GPU" (Free)
-# 2. Run this cell. Enter your Hugging Face Token (with WRITE permissions) when prompted.
+# 📌 Instructions for Kaggle:
+# 1. In the right sidebar: Settings -> Internet -> Turn ON!
+# 2. Accelerator: None (CPU, 30 GB RAM) or GPU T4 x2 / P100 (Free)
+# 3. Paste this cell and click "Run".
 # ==============================================================================
+
+# Clean up any leftover files from previous attempts to guarantee maximum free space
+!rm -rf /kaggle/working/* /tmp/vajra* /tmp/llama.cpp
 
 !pip install -q transformers torch accelerate huggingface_hub gguf safetensors sentencepiece protobuf
 
@@ -21,22 +25,39 @@ from huggingface_hub import HfApi, login, hf_hub_download, snapshot_download
 from getpass import getpass
 from transformers import AutoTokenizer
 
+# 1. Hugging Face Authentication
 HF_TOKEN = os.getenv("HF_TOKEN")
 if not HF_TOKEN:
-    HF_TOKEN = getpass("🔑 Enter Hugging Face Access Token (WRITE permissions): ").strip()
+    try:
+        from kaggle_secrets import UserSecretsClient
+        user_secrets = UserSecretsClient()
+        HF_TOKEN = user_secrets.get_secret("HF_TOKEN")
+    except Exception:
+        pass
+
+if not HF_TOKEN:
+    HF_TOKEN = getpass("🔑 Enter your Hugging Face Access Token (WRITE permissions): ").strip()
+
 login(token=HF_TOKEN)
+print("✅ Authenticated with Hugging Face!")
 
 BASE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 LORA_MODEL = "AravKataria/vajra-lora"
-MERGED_DIR = "./vajra_merged_7b"
+
+# Use /tmp for intermediate files (70+ GB capacity, avoids Kaggle /working 20 GB limit)
+MERGED_DIR = "/tmp/vajra_merged_7b"
+LLAMA_DIR = "/tmp/llama.cpp"
+F16_GGUF = "/tmp/vajra-7b-f16.gguf"
+FINAL_GGUF = "/kaggle/working/vajra-7b-q4_k_m.gguf"
+
 os.makedirs(MERGED_DIR, exist_ok=True)
 
-# 1. Save Tokenizer
+# 2. Save Tokenizer
 print(f"[*] Saving tokenizer from {BASE_MODEL}...")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, token=HF_TOKEN, trust_remote_code=True)
 tokenizer.save_pretrained(MERGED_DIR)
 
-# 2. Download LoRA adapter files (~162 MB)
+# 3. Download LoRA adapter (~162 MB)
 print(f"[*] Downloading LoRA adapter from {LORA_MODEL}...")
 lora_weights_path = hf_hub_download(repo_id=LORA_MODEL, filename="adapter_model.safetensors", token=HF_TOKEN)
 lora_config_path = hf_hub_download(repo_id=LORA_MODEL, filename="adapter_config.json", token=HF_TOKEN)
@@ -64,14 +85,14 @@ for k, v in lora_state.items():
 
 print(f"[*] Indexed {len(lora_a_map)} target LoRA layers.")
 
-# 3. Locate Base Model Files (already cached in Colab)
-print(f"[*] Locating base model files for {BASE_MODEL}...")
+# 4. Download Base Model Shards
+print(f"[*] Downloading base model shards for {BASE_MODEL}...")
 base_dir = snapshot_download(repo_id=BASE_MODEL, token=HF_TOKEN, allow_patterns=["*.json", "*.safetensors"])
 
 for jf in glob.glob(os.path.join(base_dir, "*.json")):
     shutil.copy2(jf, MERGED_DIR)
 
-# 4. Merge shard-by-shard (Uses only ~3.8 GB RAM per shard, zero OOM risk!)
+# 5. Merge shard-by-shard into /tmp/vajra_merged_7b
 safetensor_files = sorted(glob.glob(os.path.join(base_dir, "*.safetensors")))
 print(f"[*] Merging {len(safetensor_files)} base safetensor shards...")
 
@@ -102,28 +123,42 @@ for idx, sf in enumerate(safetensor_files, 1):
 
 print(f"✅ LoRA weights merged successfully into {MERGED_DIR}!")
 
-# Free memory before building llama.cpp
+# Free memory before llama.cpp build
 del lora_state, lora_a_map, lora_b_map
 gc.collect()
 
-print("⚙️ Building llama.cpp tools...")
-!git clone https://github.com/ggerganov/llama.cpp.git
-!cd llama.cpp && cmake -B build && cmake --build build --config Release -j$(nproc)
-!pip install -q -r llama.cpp/requirements.txt
+# 6. Fast Build llama-quantize in /tmp
+print("⚙️ Building llama-quantize tool...")
+!git clone https://github.com/ggerganov/llama.cpp.git {LLAMA_DIR}
+!cd {LLAMA_DIR} && cmake -B build -DGGML_BUILD_TESTS=OFF -DGGML_BUILD_EXAMPLES=OFF && cmake --build build --target llama-quantize -j$(nproc)
+!pip install -q -r {LLAMA_DIR}/requirements.txt
 
+# 7. Convert to intermediate FP16 GGUF in /tmp
 print("📦 Converting merged checkpoint to intermediate FP16 GGUF...")
-!python llama.cpp/convert_hf_to_gguf.py ./vajra_merged_7b --outtype f16 --outfile vajra-7b-f16.gguf
+!python {LLAMA_DIR}/convert_hf_to_gguf.py {MERGED_DIR} --outtype f16 --outfile {F16_GGUF}
 
+# IMMEDIATELY delete merged safetensors directory to free 15 GB of disk space before quantizing
+print("🧹 Removing raw safetensors shards to free disk...")
+shutil.rmtree(MERGED_DIR, ignore_errors=True)
+
+# 8. Quantize to 4-bit Q4_K_M (~4.2 GB) directly into /kaggle/working
 print("⚡ Quantizing to 4-bit Q4_K_M (~4.2 GB)...")
-!./llama.cpp/build/bin/llama-quantize vajra-7b-f16.gguf vajra-7b-q4_k_m.gguf Q4_K_M
-!rm -f vajra-7b-f16.gguf
+!{LLAMA_DIR}/build/bin/llama-quantize {F16_GGUF} {FINAL_GGUF} Q4_K_M
 
+# Delete intermediate 15 GB F16 GGUF file
+!rm -f {F16_GGUF}
+!rm -rf {LLAMA_DIR}
+
+print("✅ Quantization complete! Final model ready:")
+!ls -lh {FINAL_GGUF}
+
+# 9. Upload Quantized GGUF Model to Hugging Face
 DEST_REPO = "AravKataria/vajra-7b-gguf"
 print(f"🚀 Uploading vajra-7b-q4_k_m.gguf to Hugging Face ({DEST_REPO})...")
 api = HfApi(token=HF_TOKEN)
 api.create_repo(repo_id=DEST_REPO, repo_type="model", exist_ok=True)
 api.upload_file(
-    path_or_fileobj="vajra-7b-q4_k_m.gguf",
+    path_or_fileobj=FINAL_GGUF,
     path_in_repo="vajra-7b-q4_k_m.gguf",
     repo_id=DEST_REPO,
     repo_type="model",
@@ -137,4 +172,4 @@ print("="*65)
 '''
 
 if __name__ == "__main__":
-    print(COLAB_CELL_CODE)
+    print(KAGGLE_CODE)
