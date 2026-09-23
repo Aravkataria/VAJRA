@@ -93,32 +93,32 @@ jobs:
               totalAdditions += f.additions;
               totalDeletions += f.deletions;
               const statusEmoji = f.status === "added" ? "✨ Added" : (f.status === "removed" ? "🗑️ Deleted" : "📝 Modified");
-              fileTableRows.push(`| \`${f.filename}\` | ${statusEmoji} | +${f.additions} | -${f.deletions} |`);
+              fileTableRows.push("| `" + f.filename + "` | " + statusEmoji + " | +" + f.additions + " | -" + f.deletions + " |");
             }
 
             const filesTable = fileTableRows.length > 0
-              ? `| File | Status | Additions | Deletions |\n| :--- | :---: | :---: | :---: |\n` + fileTableRows.join("\n")
-              : `*No file diff detected.*`;
+              ? "| File | Status | Additions | Deletions |\n| :--- | :---: | :---: | :---: |\n" + fileTableRows.join("\n")
+              : "*No file diff detected.*";
 
             // 5. Construct Markdown sections
             let changeBreakdown = "";
             if (categories.features.length > 0) {
-              changeBreakdown += `#### 🚀 New Features\n` + categories.features.map(m => `- ${m}`).join("\n") + "\n\n";
+              changeBreakdown += "#### 🚀 New Features\n" + categories.features.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.fixes.length > 0) {
-              changeBreakdown += `#### 🐛 Bug Fixes\n` + categories.fixes.map(m => `- ${m}`).join("\n") + "\n\n";
+              changeBreakdown += "#### 🐛 Bug Fixes\n" + categories.fixes.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.ui.length > 0) {
-              changeBreakdown += `#### 🎨 UI & Interface Improvements\n` + categories.ui.map(m => `- ${m}`).join("\n") + "\n\n";
+              changeBreakdown += "#### 🎨 UI & Interface Improvements\n" + categories.ui.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.perf.length > 0) {
-              changeBreakdown += `#### ⚡ Performance & Engine Optimizations\n` + categories.perf.map(m => `- ${m}`).join("\n") + "\n\n";
+              changeBreakdown += "#### ⚡ Performance & Engine Optimizations\n" + categories.perf.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.docs.length > 0) {
-              changeBreakdown += `#### 📚 Documentation & Guides\n` + categories.docs.map(m => `- ${m}`).join("\n") + "\n\n";
+              changeBreakdown += "#### 📚 Documentation & Guides\n" + categories.docs.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.others.length > 0 && changeBreakdown === "") {
-              changeBreakdown += `#### 🔧 Other Changes\n` + categories.others.map(m => `- ${m}`).join("\n") + "\n\n";
+              changeBreakdown += "#### 🔧 Other Changes\n" + categories.others.map(m => "- " + m).join("\n") + "\n\n";
             }
 
             // 6. Optional AI Executive Summary via Gemini API if secret exists
@@ -126,8 +126,8 @@ jobs:
             const geminiKey = process.env.GEMINI_API_KEY;
             if (geminiKey) {
               try {
-                const promptText = `Summarize this GitHub pull request in 2-3 concise, high-impact bullet points:\n\nTitle: ${pr.title}\nCommits:\n${commits.map(c => c.commit.message).join("\n")}\n\nFiles changed:\n${files.map(f => f.filename).join("\n")}`;
-                const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+                const promptText = "Summarize this GitHub pull request in 2-3 concise, high-impact bullet points:\n\nTitle: " + pr.title + "\nCommits:\n" + commits.map(c => c.commit.message).join("\n") + "\n\nFiles changed:\n" + files.map(f => f.filename).join("\n");
+                const geminiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiKey, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -138,7 +138,7 @@ jobs:
                   const data = await geminiResp.json();
                   const summaryText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
                   if (summaryText) {
-                    aiSummarySection = `### 🤖 AI Executive Summary\n${summaryText.trim()}\n\n`;
+                    aiSummarySection = "### 🤖 AI Executive Summary\n" + summaryText.trim() + "\n\n";
                   }
                 }
               } catch (aiErr) {
@@ -150,35 +150,41 @@ jobs:
             const START_MARKER = "<!-- VAJRA-PR-SUMMARY-START -->";
             const END_MARKER = "<!-- VAJRA-PR-SUMMARY-END -->";
 
-            const summaryBody = `${START_MARKER}
-## 📋 Automated PR Summary
+            const summaryLines = [
+              START_MARKER,
+              "## 📋 Automated PR Summary",
+              "",
+              aiSummarySection,
+              "### 📊 Overview & Metrics",
+              "- **Files Changed**: " + files.length,
+              "- **Lines Added**: +" + totalAdditions,
+              "- **Lines Deleted**: -" + totalDeletions,
+              "- **Total Commits**: " + commits.length,
+              "",
+              changeBreakdown,
+              "### 📁 Changed Files Details",
+              "<details>",
+              "<summary>Click to view files table (" + files.length + " changed)</summary>",
+              "",
+              filesTable,
+              "",
+              "</details>",
+              "",
+              "---",
+              "*Generated automatically by VAJRA Auto PR Summary Workflow.*",
+              END_MARKER
+            ];
 
-${aiSummarySection}### 📊 Overview & Metrics
-- **Files Changed**: ${files.length}
-- **Lines Added**: +${totalAdditions}
-- **Lines Deleted**: -${totalDeletions}
-- **Total Commits**: ${commits.length}
-
-${changeBreakdown}### 📁 Changed Files Details
-<details>
-<summary>Click to view files table (${files.length} changed)</summary>
-
-${filesTable}
-
-</details>
-
----
-*Generated automatically by VAJRA Auto PR Summary Workflow.*
-${END_MARKER}`;
+            const summaryBody = summaryLines.filter(line => line !== undefined && line !== null).join("\n");
 
             let currentBody = pr.body || "";
             let updatedBody = "";
 
             if (currentBody.includes(START_MARKER) && currentBody.includes(END_MARKER)) {
-              const regex = new RegExp(`${START_MARKER}[\\s\\S]*?${END_MARKER}`, "g");
+              const regex = new RegExp(START_MARKER + "[\\s\\S]*?" + END_MARKER, "g");
               updatedBody = currentBody.replace(regex, summaryBody).trim();
             } else if (currentBody.trim().length > 0) {
-              updatedBody = `${currentBody.trim()}\n\n${summaryBody}`;
+              updatedBody = currentBody.trim() + "\n\n" + summaryBody;
             } else {
               updatedBody = summaryBody;
             }
@@ -190,4 +196,4 @@ ${END_MARKER}`;
               body: updatedBody
             });
 
-            console.log(`✅ Successfully updated description for PR #${pull_number}`);
+            console.log("✅ Successfully updated description for PR #" + pull_number);
