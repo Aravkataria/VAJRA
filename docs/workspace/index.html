@@ -3893,7 +3893,6 @@
       }
 
       var glassOverlay = null;
-      var statusTag = null;
       var isSpeculativeDraft = false;
       var currentDraftText = "";
 
@@ -3902,15 +3901,9 @@
         isSpeculativeDraft = true;
         card.classList.add("speculative-draft");
 
-        statusTag = document.createElement("div");
-        statusTag.className = "speculative-status-tag";
-        statusTag.innerHTML = '<span>⚡ SPECULATIVE DRAFT</span><span style="opacity:0.5;">·</span><span>Refining with Deep Reasoner...</span>';
-        card.insertBefore(statusTag, textSpan);
-
         glassOverlay = document.createElement("div");
         glassOverlay.className = "speculative-glass-overlay";
         card.appendChild(glassOverlay);
-        updateBadge("⚡ SPECULATIVE DRAFT [0.5B]");
 
         if (cursor) cursor.style.display = "none";
 
@@ -3925,9 +3918,6 @@
 
       function replaceDraftWithStream(newText, newBadge) {
         if (!newText || newText.trim().length === 0) return;
-        if (statusTag) {
-          statusTag.innerHTML = '<span>⚡ 7B VERIFIED ENGINE</span><span style="opacity:0.5;">·</span><span>Refining word-by-word with neural engine...</span>';
-        }
         if (newBadge) {
           updateBadge(newBadge);
         }
@@ -3969,10 +3959,6 @@
             }
           }, 450);
         }
-        if (statusTag && statusTag.parentNode) {
-          statusTag.parentNode.removeChild(statusTag);
-          statusTag = null;
-        }
         card.classList.remove("speculative-draft");
         isSpeculativeDraft = false;
         currentDraftText = "";
@@ -3993,16 +3979,7 @@
           updateBadge(b);
         }
 
-        if (textSpan) {
-          textSpan.style.transition = "opacity 0.2s ease";
-          textSpan.style.opacity = "0.2";
-        }
-        setTimeout(function() {
-          finalizeDisplay();
-          if (textSpan) {
-            textSpan.style.opacity = "1";
-          }
-        }, 180);
+        finalizeDisplay();
       }
 
       var selfInstance = {
@@ -4026,13 +4003,11 @@
           if (meta && meta.model) {
             updateBadge(meta.model);
           }
-          if (!fullIncomingText) {
-            if (intervalId) clearInterval(intervalId);
+          if (intervalId) {
+            clearInterval(intervalId);
             intervalId = null;
-            finalizeDisplay();
-          } else if (!intervalId) {
-            intervalId = setInterval(tick, 16);
           }
+          finalizeDisplay();
         },
         abort: function() {
           if (intervalId) clearInterval(intervalId);
@@ -5351,7 +5326,7 @@
           draftReplyText = draftText;
           if (!typewriter && !isDeepResolved) {
             removeTypingIndicator();
-            typewriter = createStreamTypewriter("⚡ SPECULATIVE DRAFT [0.5B]");
+            typewriter = createStreamTypewriter("VAJRA AUDIT [2 vCPU Engine]");
             if (typewriter) {
               typewriter.enableSpeculativeDraft(draftText);
             }
