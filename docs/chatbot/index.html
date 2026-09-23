@@ -4535,105 +4535,64 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
-        var isComplex = classifyQueryComplexity(fullPrompt);
-        var zeroGpuAvailable = !isZeroGpuCircuitOpen();
-
-        if (isComplex && zeroGpuAvailable) {
-          // Complex queries -> Route to ZeroGPU A10G burst first (~6s latency)
-          try {
-            var gpuRes = await _executeSingleHfSpaceQuery(
-              VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
-              fullPrompt,
-              directHeaders,
-              25000,
-              function(chunk) {
-                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
-              }
-            );
-            if (gpuRes && gpuRes.reply && !gpuRes.isRateLimited) {
-              return {
-                reply: gpuRes.reply,
-                tier: "burst",
-                model: "AravKataria/vajra-lora (ZeroGPU Burst)"
-              };
+        // 1. PRIMARY WORKHORSE: Always route to 2 vCPU Space first (4-bit 7B GGUF Engine)
+        var vcpuFailed = false;
+        var vcpuBusy = false;
+        try {
+          var vcpuRes = await _executeSingleHfSpaceQuery(
+            VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
+            fullPrompt,
+            directHeaders,
+            40000,
+            function(chunk) {
+              if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
             }
-          } catch (gpuErr) {}
-
-          // Fallback to 2 vCPU if ZeroGPU unavailable or exhausted
-          try {
-            var vcpuRes = await _executeSingleHfSpaceQuery(
-              VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
-              fullPrompt,
-              directHeaders,
-              35000,
-              function(chunk) {
-                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
-              }
-            );
-            if (vcpuRes && vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+          );
+          if (vcpuRes) {
+            if (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
               return {
                 reply: vcpuRes.reply,
                 tier: "standard",
                 model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
               };
             }
-          } catch (vcpuErr) {}
+            if (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+              vcpuBusy = true;
+            }
+          } else {
+            vcpuFailed = true;
+          }
+        } catch (vcpuErr) {
+          vcpuFailed = true;
+        }
 
-        } else {
-          // Routine queries or ZeroGPU cooling down -> Route to 2 vCPU Space first with 8.0s Fast Bailout
-          var vcpuTimedOut = false;
-          var vcpuBusy = false;
+        // 2. TRUE LAST RESORT: ZeroGPU A10G Burst (only if 2 vCPU is busy or unreachable)
+        var zeroGpuAvailable = !isZeroGpuCircuitOpen();
+        if ((vcpuBusy || vcpuFailed) && zeroGpuAvailable) {
+          console.log("⚡ [VAJRA Last Resort] 2 vCPU " + (vcpuBusy ? "busy/overflow" : "failed") + " -> Escalating to ZeroGPU A10G as last resort...");
           try {
-            var vcpuRes2 = await _executeSingleHfSpaceQuery(
-              VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
+            var gpuRes = await _executeSingleHfSpaceQuery(
+              VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
               fullPrompt,
               directHeaders,
-              35000,
+              30000,
               function(chunk) {
-                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
-              },
-              zeroGpuAvailable ? 8000 : 0 // 8s watchdog only if ZeroGPU is ready to receive bailout
-            );
-            if (vcpuRes2) {
-              if (vcpuRes2.timedOutFirstToken) {
-                vcpuTimedOut = true;
-              } else if (vcpuRes2.reply) {
-                if (vcpuRes2.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
-                  return {
-                    reply: vcpuRes2.reply,
-                    tier: "standard",
-                    model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
-                  };
-                }
-                vcpuBusy = true;
+                if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
               }
-            }
-          } catch (vcpuErr) {
-            vcpuTimedOut = true;
-          }
-
-          // Fast Bailout to ZeroGPU if 2 vCPU timed out (>8s without first token) or was busy
-          if ((vcpuTimedOut || vcpuBusy) && zeroGpuAvailable) {
-            console.log("⚡ [VAJRA Fast Bailout] 2 vCPU " + (vcpuBusy ? "busy" : "exceeded 8s TTFT") + " -> Fast Bailout to ZeroGPU A10G...");
-            try {
-              var gpuRes2 = await _executeSingleHfSpaceQuery(
-                VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
-                fullPrompt,
-                directHeaders,
-                25000,
-                function(chunk) {
-                  if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
-                }
-              );
-              if (gpuRes2 && gpuRes2.reply && !gpuRes2.isRateLimited) {
+            );
+            if (gpuRes) {
+              if (gpuRes.isRateLimited) {
+                return gpuRes;
+              }
+              if (gpuRes.reply && gpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
                 return {
-                  reply: gpuRes2.reply,
+                  reply: gpuRes.reply,
                   tier: "burst",
                   model: "AravKataria/vajra-lora (ZeroGPU Burst)"
                 };
               }
-            } catch (gpuErr) {}
-          }
+            }
+          } catch (gpuErr) {}
         }
 
       } catch (e) {}
@@ -5319,7 +5278,7 @@
               typewriter.finish(draftReplyText, { tier: "ultra_lite", model: "VAJRA ULTRA-LITE [0.5B]" });
             }
           }
-        }, 25000);
+        }, 45000);
 
         // Launch Channel A in background
         var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
