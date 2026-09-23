@@ -1872,6 +1872,237 @@
       gap: 0.5rem;
     }
 
+    /* ─── TWO-COLUMN SETTINGS DIALOG (PREFERENCES PANEL) ─── */
+    .settings-dialog-frame {
+      width: 94vw !important;
+      max-width: 860px !important;
+      height: 80vh !important;
+      max-height: 620px !important;
+      min-height: 480px !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: row !important;
+      overflow: hidden !important;
+      border-radius: 12px !important;
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-medium) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    .settings-modal-sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: var(--bg-base);
+      border-right: 1px solid var(--border-subtle);
+      padding: 1rem 0.65rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-y: auto;
+    }
+
+    .settings-sidebar-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.35rem 0.65rem 0.5rem;
+    }
+
+    .settings-nav-item {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 0.45rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+      font-family: inherit;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .settings-nav-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+
+    .settings-nav-item.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    [data-theme="light"] .settings-nav-item:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="light"] .settings-nav-item.active {
+      background: rgba(0, 0, 0, 0.09);
+      color: var(--text-primary);
+    }
+
+    .settings-modal-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-surface);
+    }
+
+    .settings-main-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 1.25rem 1.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem 1.6rem 2rem;
+    }
+
+    .settings-main-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.6rem;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-base);
+    }
+
+    .settings-section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin: 1.2rem 0 0.45rem;
+    }
+
+    .settings-section-title:first-child {
+      margin-top: 0;
+    }
+
+    .settings-group-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .settings-row {
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-row-label {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .settings-row-desc {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
+      line-height: 1.35;
+    }
+
+    .segmented-pill {
+      display: inline-flex;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .segmented-pill-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .segmented-pill-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .segmented-pill-btn.active {
+      background: var(--bg-hover, rgba(255, 255, 255, 0.12));
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    [data-theme="light"] .segmented-pill-btn.active {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .kbd-chip {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.7rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-medium);
+      border-bottom: 2px solid var(--border-strong);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--text-primary);
+      display: inline-block;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] .kbd-chip {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.15);
+      border-bottom-color: rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 680px) {
+      .settings-dialog-frame {
+        flex-direction: column !important;
+        height: 92vh !important;
+        max-height: 92vh !important;
+      }
+      .settings-modal-sidebar {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-height: 110px;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-subtle);
+        overflow-x: auto;
+        flex-direction: row;
+        gap: 0.5rem;
+      }
+    }
+
     /* Drag and drop full window overlay */
     .drag-drop-overlay {
       display: none;
@@ -2451,109 +2682,468 @@
     </div>
   </div>
 
-  <!-- Preferences & Engine Settings Modal -->
+  <!-- Preferences & Engine Settings Modal (Modern Two-Column Layout) -->
   <div class="modal-backdrop" id="hfTokenModal">
-    <div class="modal-frame" style="max-width: 520px;">
-      <!-- Header -->
-      <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:0.6rem; border-bottom:1px solid var(--border-subtle);">
-        <div style="font-size:0.98rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; color:var(--text-primary);">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--spark);"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span>Preferences &amp; Engine Settings</span>
-        </div>
-        <button class="btn-icon" onclick="closeModal('hfTokenModal')" style="padding:4px;" title="Close">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-
-      <!-- Appearance -->
-      <div>
-        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">
-          Appearance &amp; Animation
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem;">
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Theme Mode</label>
-            <select id="prefThemeSelect" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;" onchange="onPrefThemeChange(this.value)">
-              <option value="dark">Dark Theme (Default)</option>
-              <option value="light">Light Theme</option>
-            </select>
+    <div class="modal-frame settings-dialog-frame">
+      <!-- LEFT SIDEBAR -->
+      <div class="settings-modal-sidebar">
+        <div>
+          <div class="settings-sidebar-header">Settings</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button type="button" class="settings-nav-item active" data-tab="settings-general" onclick="switchSettingsTab('settings-general')">
+              <span>General</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-application" onclick="switchSettingsTab('settings-application')">
+              <span>Application</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-appearance" onclick="switchSettingsTab('settings-appearance')">
+              <span>Appearance</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-models" onclick="switchSettingsTab('settings-models')">
+              <span>Models</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-customizations" onclick="switchSettingsTab('settings-customizations')">
+              <span>Customizations</span>
+            </button>
+            <button type="button" class="settings-nav-item" data-tab="settings-browser" onclick="switchSettingsTab('settings-browser')">
+              <span>Browser</span>
+            </button>
           </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Stream Typewriter</label>
-            <select id="prefStreamSpeed" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;">
-              <option value="smooth">Smooth Animation (Default)</option>
-              <option value="fast">Fast Real-time</option>
-              <option value="instant">Instant Render</option>
-            </select>
+          <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; padding:14px 10px 4px;">Not in Project</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button type="button" class="settings-nav-item" data-tab="settings-conversations" onclick="switchSettingsTab('settings-conversations')">
+              <span>Conversations</span>
+            </button>
           </div>
         </div>
+        <div style="padding-top:8px; border-top:1px solid var(--border-subtle); display:flex; flex-direction:column; gap:2px;">
+          <button type="button" class="settings-nav-item" data-tab="settings-shortcuts" onclick="switchSettingsTab('settings-shortcuts')">
+            <span>Shortcuts</span>
+          </button>
+          <button type="button" class="settings-nav-item" onclick="closeModal('hfTokenModal'); openBugReportModal();">
+            <span>Provide Feedback</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Neural Reasoning Engine -->
-      <div>
-        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">
-          Neural Reasoning Engine
-        </div>
-        <div style="display:flex; flex-direction:column; gap:0.45rem;">
+      <!-- RIGHT MAIN CONTENT PANEL -->
+      <div class="settings-modal-main">
+        <!-- Main Header -->
+        <div class="settings-main-header">
           <div>
-            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Inference Architecture</label>
-            <select id="prefPipelineSelect" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;">
-              <option value="hybrid">⚡ Dual-Channel (0.5B Speculative Draft + 7B Engine)</option>
-              <option value="deep">🔒 Dedicated 7B Model Only</option>
-              <option value="lite">🚀 Ultra-Fast 0.5B Speculative Only</option>
-            </select>
+            <h2 id="settingsTabTitle" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin:0 0 3px 0;">General</h2>
+            <div id="settingsTabSubtitle" style="font-size:0.78rem; color:var(--text-muted);">Configure agent execution, queued message delivery, and permissions.</div>
           </div>
-          <div>
-            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Response Detail</label>
-            <select id="prefDetailSelect" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;">
-              <option value="balanced">Balanced (1–2 Focused Technical Paragraphs)</option>
-              <option value="deep">Deep Forensic (Full Architecture &amp; AST Sinks)</option>
-            </select>
+          <button class="btn-icon" onclick="closeModal('hfTokenModal')" style="padding:4px;" title="Close Settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Main Body Tabs -->
+        <div class="settings-main-content">
+          <!-- 1. GENERAL TAB -->
+          <div class="settings-tab-pane" id="settings-general">
+            <div class="settings-section-title">Execution</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Queued Messages</div>
+                  <div class="settings-row-desc">Configure when follow-up messages are sent. Keyboard shortcuts ℹ️</div>
+                </div>
+                <div class="segmented-pill" id="prefQueuePill">
+                  <button type="button" class="segmented-pill-btn active" data-val="queue" onclick="selectSegmented('prefQueuePill', 'queue')">Queue</button>
+                  <button type="button" class="segmented-pill-btn" data-val="immediate" onclick="selectSegmented('prefQueuePill', 'immediate')">Send Immediately</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Reasoning Depth</div>
+                  <div class="settings-row-desc">Controls multi-step verification depth and AST tree analysis passes.</div>
+                </div>
+                <select id="prefReasoningDepth" class="modal-input" style="width:auto; min-width:180px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="balanced">Balanced (Standard)</option>
+                  <option value="deep">Thorough (Deep Chain)</option>
+                  <option value="speed">Speed (Direct AST)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Global Permissions</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Security Preset</div>
+                  <div class="settings-row-desc">Controls the actions the agent can take. Learn more about Default ℹ️</div>
+                </div>
+                <select id="prefSecurityPreset" class="modal-input" style="width:auto; min-width:150px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="default">Default</option>
+                  <option value="strict">Strict (Zero-Write)</option>
+                  <option value="permissive">Permissive</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Tool Permissions <span style="font-size:0.68rem; padding:1px 6px; border-radius:10px; background:rgba(255,255,255,0.08); color:var(--text-secondary); margin-left:4px;">9</span></div>
+                  <div class="settings-row-desc">Modify permissions for file, terminal, and MCP tools.</div>
+                </div>
+                <button type="button" class="btn-tool-chip" onclick="switchSettingsTab('settings-customizations')" style="font-size:0.75rem; padding:4px 12px;">Open</button>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Agent Behavior</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Artifact Review Policy</div>
+                  <div class="settings-row-desc">Whether the agent asks you to review its documents.</div>
+                </div>
+                <select id="prefArtifactPolicy" class="modal-input" style="width:auto; min-width:150px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="ask">Always Ask</option>
+                  <option value="auto">Auto-Accept</option>
+                  <option value="manual">Manual Review</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Network Permissions</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Data Privacy Boundary</div>
+                  <div class="settings-row-desc">Zero-retention in-browser reasoning. Inputs never stored on external tracking servers.</div>
+                </div>
+                <div class="segmented-pill" id="prefLocalBoundary">
+                  <button type="button" class="segmented-pill-btn active" data-val="enforced" onclick="selectSegmented('prefLocalBoundary', 'enforced')">Enforced</button>
+                  <button type="button" class="segmented-pill-btn" data-val="hybrid" onclick="selectSegmented('prefLocalBoundary', 'hybrid')">Hybrid</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. APPLICATION TAB -->
+          <div class="settings-tab-pane" id="settings-application" style="display:none;">
+            <div class="settings-section-title">System &amp; Diagnostics</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Execution Environment</div>
+                  <div class="settings-row-desc">WebAssembly v2 + WebGPU ZeroGPU Client Engine.</div>
+                </div>
+                <span class="badge" style="background:rgba(34,197,94,0.12); color:#4ade80; border:1px solid rgba(34,197,94,0.25); font-size:0.72rem; padding:2px 8px; border-radius:4px; font-weight:600;">WASM-v2 Active</span>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Client Version</div>
+                  <div class="settings-row-desc">VAJRA Autonomous Cyber-Reasoning Engine.</div>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:0.74rem; color:var(--text-muted);">v2.4.0 (x86_64)</span>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Storage &amp; Telemetry</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Casefile Local Storage</div>
+                  <div class="settings-row-desc">Disk space allocated in browser for saved audits and casefiles.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                  <span id="prefStorageSize" style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">Calculating...</span>
+                  <button type="button" class="btn-tool-chip" onclick="clearCasefileStorage()" style="color:#ef4444; font-size:0.72rem; padding:3px 8px;">Clear Storage</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Anonymous Crash Telemetry</div>
+                  <div class="settings-row-desc">Send client-side crash errors to help improve AST verification rules.</div>
+                </div>
+                <div class="segmented-pill" id="prefTelemetryPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefTelemetryPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefTelemetryPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. APPEARANCE TAB -->
+          <div class="settings-tab-pane" id="settings-appearance" style="display:none;">
+            <div class="settings-section-title">Theme &amp; Visuals</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Theme Mode</div>
+                  <div class="settings-row-desc">Choose between high-contrast dark or clean light appearance.</div>
+                </div>
+                <div class="segmented-pill" id="prefThemePill">
+                  <button type="button" class="segmented-pill-btn active" data-val="dark" onclick="selectSegmented('prefThemePill', 'dark')">Dark Theme</button>
+                  <button type="button" class="segmented-pill-btn" data-val="light" onclick="selectSegmented('prefThemePill', 'light')">Light Theme</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Stream Typewriter Speed</div>
+                  <div class="settings-row-desc">Select character animation speed for streaming reasoning output.</div>
+                </div>
+                <select id="prefStreamSpeed" class="modal-input" style="width:auto; min-width:180px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="smooth">Smooth Animation (Default)</option>
+                  <option value="fast">Fast Real-time</option>
+                  <option value="instant">Instant Render</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Frosted Glass Overlay</div>
+                  <div class="settings-row-desc">Display glassmorphic blur over 0.5B speculative draft while 7B reasoner streams.</div>
+                </div>
+                <div class="segmented-pill" id="prefGlassPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefGlassPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefGlassPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Auto-scroll Output Stream</div>
+                  <div class="settings-row-desc">Automatically scroll viewport to keep newly generated tokens in view.</div>
+                </div>
+                <div class="segmented-pill" id="prefAutoScrollPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefAutoScrollPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefAutoScrollPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. MODELS TAB -->
+          <div class="settings-tab-pane" id="settings-models" style="display:none;">
+            <div class="settings-section-title">Neural Reasoning Engine</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Inference Architecture</div>
+                  <div class="settings-row-desc">Dual-channel speculation pairs 0.5B instant drafting with 7B deep reasoning.</div>
+                </div>
+                <select id="prefPipelineSelect" class="modal-input" style="width:auto; min-width:260px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="hybrid">⚡ Dual-Channel (0.5B Speculative + 7B Engine)</option>
+                  <option value="deep">🔒 Dedicated 7B Model Only</option>
+                  <option value="lite">🚀 Ultra-Fast 0.5B Speculative Only</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Response Detail Level</div>
+                  <div class="settings-row-desc">Target concise summary or exhaustive forensic architecture analysis.</div>
+                </div>
+                <select id="prefDetailSelect" class="modal-input" style="width:auto; min-width:260px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                  <option value="balanced">Balanced (1–2 Focused Technical Paragraphs)</option>
+                  <option value="deep">Deep Forensic (Full Architecture &amp; AST Sinks)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Cloud Acceleration &amp; GPU (Optional)</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div style="flex:1;">
+                  <div class="settings-row-label">Hugging Face User Token</div>
+                  <div class="settings-row-desc">Connect free personal read token for dedicated ZeroGPU A10G burst acceleration (&lt;9s).</div>
+                  <div style="margin-top:0.4rem; display:flex; gap:0.4rem; max-width:380px;">
+                    <input type="password" id="hfTokenInput" class="modal-input" placeholder="Optional: hf_..." style="font-family:monospace; font-size:0.75rem; flex:1; padding:4px 8px;">
+                    <button type="button" class="btn-tool-chip" onclick="toggleTokenVisibility()" style="font-size:0.7rem; padding:4px 8px;">Show</button>
+                  </div>
+                </div>
+                <div id="hfTokenStatus" style="font-size:0.74rem; color:var(--text-muted); text-align:right;">Shared Public Quota</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. CUSTOMIZATIONS TAB -->
+          <div class="settings-tab-pane" id="settings-customizations" style="display:none;">
+            <div class="settings-section-title">AST &amp; Verification Rules</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Rule Verifiers Status</div>
+                  <div class="settings-row-desc">Active security analyzers: AST Sinks, Memory Bounds, Race Conditions, Cryptography.</div>
+                </div>
+                <span style="font-size:0.75rem; color:var(--ok, #4ade80); font-weight:600;">6/6 Verifiers Ready</span>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Strict Pointer Sanitization</div>
+                  <div class="settings-row-desc">Flag out-of-bounds pointer offsets and unvalidated buffer allocations.</div>
+                </div>
+                <div class="segmented-pill" id="prefAstStrictPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="strict" onclick="selectSegmented('prefAstStrictPill', 'strict')">Strict</button>
+                  <button type="button" class="segmented-pill-btn" data-val="standard" onclick="selectSegmented('prefAstStrictPill', 'standard')">Standard</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Custom System Directives</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div style="width:100%;">
+                  <div class="settings-row-label">Custom Instruction Prompt</div>
+                  <div class="settings-row-desc" style="margin-bottom:0.4rem;">Injected into the reasoner prompt context for every analysis.</div>
+                  <input type="text" id="prefCustomPrompt" class="modal-input" placeholder="e.g. Focus on memory safety and concurrency bugs..." style="font-size:0.75rem; padding:5px 8px;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. BROWSER TAB -->
+          <div class="settings-tab-pane" id="settings-browser" style="display:none;">
+            <div class="settings-section-title">Sandboxed Environment</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Live Preview Sandbox</div>
+                  <div class="settings-row-desc">Render generated code artifacts in an isolated browser iframe sandbox.</div>
+                </div>
+                <div class="segmented-pill" id="prefSandboxPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enabled" onclick="selectSegmented('prefSandboxPill', 'enabled')">Enabled</button>
+                  <button type="button" class="segmented-pill-btn" data-val="disabled" onclick="selectSegmented('prefSandboxPill', 'disabled')">Disabled</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">External Documentation Fetching</div>
+                  <div class="settings-row-desc">Allow fetching public code libraries and security vulnerability advisories.</div>
+                </div>
+                <div class="segmented-pill" id="prefWebReaderPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="permitted" onclick="selectSegmented('prefWebReaderPill', 'permitted')">Permitted</button>
+                  <button type="button" class="segmented-pill-btn" data-val="ask" onclick="selectSegmented('prefWebReaderPill', 'ask')">Ask Always</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7. CONVERSATIONS TAB -->
+          <div class="settings-tab-pane" id="settings-conversations" style="display:none;">
+            <div class="settings-section-title">Audit Casefiles &amp; History</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Export Forensic Casefiles</div>
+                  <div class="settings-row-desc">Download complete chat history, generated code artifacts, and reasoning logs.</div>
+                </div>
+                <button type="button" class="btn-tool-chip" onclick="exportAllCasefiles()" style="font-size:0.75rem; padding:4px 12px;">Export JSON</button>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Clear All History</div>
+                  <div class="settings-row-desc">Permanently erase all chat messages and reset active session.</div>
+                </div>
+                <button type="button" class="btn-tool-chip" onclick="closeModal('hfTokenModal'); openModal('clearConfirmModal');" style="color:#ef4444; font-size:0.75rem; padding:4px 12px;">Clear All History</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8. SHORTCUTS TAB (KEYBOARD SHORTCUTS & CUSTOMIZATION) -->
+          <div class="settings-tab-pane" id="settings-shortcuts" style="display:none;">
+            <div class="settings-section-title">Chat &amp; Execution</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Send Message</div>
+                  <div class="settings-row-desc">Key combination to submit the prompt from the composer.</div>
+                </div>
+                <div class="segmented-pill" id="prefShortcutSendPill">
+                  <button type="button" class="segmented-pill-btn active" data-val="enter" onclick="selectSegmented('prefShortcutSendPill', 'enter')">Enter</button>
+                  <button type="button" class="segmented-pill-btn" data-val="ctrl_enter" onclick="selectSegmented('prefShortcutSendPill', 'ctrl_enter')">Ctrl + Enter</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">New Casefile / Analysis</div>
+                  <div class="settings-row-desc">Clear active conversation and start a new audit session.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutNewChat" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="ctrl_k">Ctrl + K (Default)</option>
+                    <option value="alt_n">Alt + N</option>
+                    <option value="ctrl_shift_n">Ctrl + Shift + N</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Focus Input Composer</div>
+                  <div class="settings-row-desc">Jump cursor focus directly into the chat prompt box.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutFocus" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="slash">/ (Slash) (Default)</option>
+                    <option value="ctrl_slash">Ctrl + /</option>
+                    <option value="alt_slash">Alt + /</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Stop Generation / Dismiss</div>
+                  <div class="settings-row-desc">Halt streaming reasoner output or close active modal window.</div>
+                </div>
+                <kbd class="kbd-chip">Esc</kbd>
+              </div>
+            </div>
+
+            <div class="settings-section-title">Navigation &amp; Interface</div>
+            <div class="settings-group-card">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Toggle Left Sidebar</div>
+                  <div class="settings-row-desc">Expand or collapse the audit history sidebar.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutSidebar" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="ctrl_b">Ctrl + B (Default)</option>
+                    <option value="alt_b">Alt + B</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Toggle Dark / Light Theme</div>
+                  <div class="settings-row-desc">Instantly flip between dark and light workspace styling.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutTheme" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="alt_t">Alt + T (Default)</option>
+                    <option value="ctrl_shift_t">Ctrl + Shift + T</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Open Preferences Panel</div>
+                  <div class="settings-row-desc">Access settings, models, and shortcuts from anywhere.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <select id="prefShortcutSettings" class="modal-input" style="width:auto; min-width:160px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
+                    <option value="ctrl_comma">Ctrl + , (Default)</option>
+                    <option value="alt_comma">Alt + ,</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+              <button type="button" class="btn-tool-chip" onclick="resetShortcutDefaults()" style="font-size:0.75rem;">Reset Shortcuts to Default</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Analysis Options -->
-      <div>
-        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem;">
-          Analysis Options
-        </div>
-        <div style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.78rem; color:var(--text-secondary);">
-          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-            <input type="checkbox" id="prefAutoScroll" checked style="accent-color:var(--spark);">
-            <span>Auto-scroll to latest tokens during output generation</span>
-          </label>
-          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-            <input type="checkbox" id="prefGlassOverlay" checked style="accent-color:var(--spark);">
-            <span>Enable frosted glassmorphic overlay for speculative drafts</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Cloud Acceleration (Optional) -->
-      <div>
-        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">
-          Cloud Acceleration <span style="font-weight:400; text-transform:none;">(Optional)</span>
-        </div>
-        <div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:0.35rem; line-height:1.35;">
-          VAJRA runs 24/7 on dedicated cloud infrastructure. You can optionally connect a free personal Hugging Face Token for priority GPU burst allocation.
-        </div>
-        <div style="display:flex; gap:0.4rem; align-items:center;">
-          <input type="password" id="hfTokenInput" class="modal-input" placeholder="Optional: hf_..." style="font-family:monospace; font-size:0.75rem; flex:1; padding:5px 8px;">
-          <button type="button" class="btn-tool-chip" onclick="toggleTokenVisibility()" style="font-size:0.7rem; padding:4px 8px;">Show</button>
-        </div>
-        <div style="font-size:0.68rem; color:var(--text-muted); margin-top:0.25rem;">
-          Stored locally in your browser. Never sent to third-party tracking services.
-        </div>
-        <div id="hfTokenStatus" style="font-size:0.75rem; margin-top:0.35rem; display:none;"></div>
-      </div>
-
-      <!-- Actions -->
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding-top:0.6rem; border-top:1px solid var(--border-subtle); margin-top:0.2rem;">
-        <button type="button" class="btn-tool-chip" onclick="resetAllPreferences()" style="font-size:0.74rem;">Reset Defaults</button>
-        <div style="display:flex; gap:0.5rem;">
-          <button type="button" class="btn-tool-chip" onclick="closeModal('hfTokenModal')">Cancel</button>
-          <button type="button" class="btn-run-scan" onclick="saveAllPreferences()">Save Preferences</button>
+        <!-- Main Footer -->
+        <div class="settings-main-footer">
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <button type="button" class="btn-tool-chip" onclick="resetAllPreferences()" style="font-size:0.75rem;">Reset Defaults</button>
+            <span id="settingsStatusNotice" style="font-size:0.75rem; color:var(--ok, #4ade80); display:none;"></span>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn-tool-chip" onclick="closeModal('hfTokenModal')">Cancel</button>
+            <button type="button" class="btn-run-scan" onclick="saveAllPreferences()">Save Preferences</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3576,35 +4166,191 @@
       }, 2500);
     };
 
-    window.openHfTokenModal = function () {
+    // ─── COMPREHENSIVE SETTINGS & PREFERENCES CONTROLLER ───
+    var SETTINGS_TAB_DATA = {
+      "settings-general": {
+        title: "General",
+        subtitle: "Configure agent execution, queued message delivery, and permissions."
+      },
+      "settings-application": {
+        title: "Application",
+        subtitle: "System runtime diagnostics, local casefile storage, and telemetry."
+      },
+      "settings-appearance": {
+        title: "Appearance",
+        subtitle: "Personalize theme, visual effects, and typewriter animation."
+      },
+      "settings-models": {
+        title: "Models",
+        subtitle: "Configure dual-channel neural reasoners and GPU priority."
+      },
+      "settings-customizations": {
+        title: "Customizations",
+        subtitle: "Configure agent reasoning directives and AST verification rules."
+      },
+      "settings-browser": {
+        title: "Browser",
+        subtitle: "Autonomous browser interaction and web artifact sandbox."
+      },
+      "settings-conversations": {
+        title: "Conversations",
+        subtitle: "Manage local chat history, session state, and exports."
+      },
+      "settings-shortcuts": {
+        title: "Shortcuts",
+        subtitle: "View and customize keyboard shortcuts for navigation and execution."
+      }
+    };
+
+    window.switchSettingsTab = function (tabId) {
+      document.querySelectorAll(".settings-nav-item").forEach(function (item) {
+        if (item.getAttribute("data-tab") === tabId) {
+          item.classList.add("active");
+        } else {
+          item.classList.remove("active");
+        }
+      });
+      document.querySelectorAll(".settings-tab-pane").forEach(function (pane) {
+        pane.style.display = (pane.id === tabId) ? "block" : "none";
+      });
+      var info = SETTINGS_TAB_DATA[tabId];
+      if (info) {
+        var tEl = document.getElementById("settingsTabTitle");
+        var sEl = document.getElementById("settingsTabSubtitle");
+        if (tEl) tEl.textContent = info.title;
+        if (sEl) sEl.textContent = info.subtitle;
+      }
+    };
+
+    window.selectSegmented = function (containerId, val) {
+      var cont = document.getElementById(containerId);
+      if (!cont) return;
+      cont.querySelectorAll(".segmented-pill-btn").forEach(function (btn) {
+        if (btn.getAttribute("data-val") === val) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+      cont.setAttribute("data-selected", val);
+
+      if (containerId === "prefThemePill") {
+        onPrefThemeChange(val);
+      }
+    };
+
+    window.getSegmentedVal = function (containerId, defaultVal) {
+      var cont = document.getElementById(containerId);
+      if (!cont) return defaultVal;
+      var active = cont.querySelector(".segmented-pill-btn.active");
+      return active ? (active.getAttribute("data-val") || defaultVal) : defaultVal;
+    };
+
+    window.openHfTokenModal = function (defaultTab) {
+      // General
+      var queueVal = localStorage.getItem("vajra_queue_messages") || "queue";
+      selectSegmented("prefQueuePill", queueVal);
+
+      var depthEl = document.getElementById("prefReasoningDepth");
+      if (depthEl) depthEl.value = localStorage.getItem("vajra_reasoning_depth") || "balanced";
+
+      var secEl = document.getElementById("prefSecurityPreset");
+      if (secEl) secEl.value = localStorage.getItem("vajra_security_preset") || "default";
+
+      var artEl = document.getElementById("prefArtifactPolicy");
+      if (artEl) artEl.value = localStorage.getItem("vajra_artifact_policy") || "ask";
+
+      var boundaryVal = localStorage.getItem("vajra_local_boundary") || "enforced";
+      selectSegmented("prefLocalBoundary", boundaryVal);
+
+      // Application
+      var telemVal = localStorage.getItem("vajra_telemetry") || "enabled";
+      selectSegmented("prefTelemetryPill", telemVal);
+
+      try {
+        var rawData = localStorage.getItem("vajra_casefiles_v3") || "";
+        var byteCount = new Blob([rawData]).size;
+        var szText = byteCount > 1024 ? (byteCount / 1024).toFixed(1) + " KB" : byteCount + " B";
+        var szEl = document.getElementById("prefStorageSize");
+        if (szEl) szEl.textContent = szText + " used";
+      } catch (e) {}
+
+      // Appearance
       var curTheme = document.documentElement.getAttribute("data-theme") || "dark";
-      var themeSelect = document.getElementById("prefThemeSelect");
-      if (themeSelect) themeSelect.value = curTheme;
+      selectSegmented("prefThemePill", curTheme);
 
       var streamSpeed = document.getElementById("prefStreamSpeed");
       if (streamSpeed) streamSpeed.value = localStorage.getItem("vajra_stream_speed") || "smooth";
 
+      var glassVal = localStorage.getItem("vajra_glass_overlay") !== "false" ? "enabled" : "disabled";
+      selectSegmented("prefGlassPill", glassVal);
+
+      var autoScrollVal = localStorage.getItem("vajra_autoscroll") !== "false" ? "enabled" : "disabled";
+      selectSegmented("prefAutoScrollPill", autoScrollVal);
+
+      // Models
       var pipeline = document.getElementById("prefPipelineSelect");
       if (pipeline) pipeline.value = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
 
       var detail = document.getElementById("prefDetailSelect");
       if (detail) detail.value = localStorage.getItem("vajra_detail_level") || "balanced";
 
-      var autoScroll = document.getElementById("prefAutoScroll");
-      if (autoScroll) autoScroll.checked = localStorage.getItem("vajra_autoscroll") !== "false";
-
-      var glassOverlay = document.getElementById("prefGlassOverlay");
-      if (glassOverlay) glassOverlay.checked = localStorage.getItem("vajra_glass_overlay") !== "false";
-
       var inp = document.getElementById("hfTokenInput");
+      var tokenVal = localStorage.getItem("vajra_hf_token") || "";
       if (inp) {
-        inp.value = localStorage.getItem("vajra_hf_token") || "";
+        inp.value = tokenVal;
         inp.type = "password";
       }
 
       var st = document.getElementById("hfTokenStatus");
-      if (st) st.style.display = "none";
+      if (st) {
+        if (tokenVal) {
+          st.textContent = "✅ ZeroGPU A10G Acceleration Active";
+          st.style.color = "var(--ok, #4ade80)";
+        } else {
+          st.textContent = "Operating on shared public quotas.";
+          st.style.color = "var(--text-muted)";
+        }
+      }
 
+      // Customizations
+      var astStrictVal = localStorage.getItem("vajra_ast_strict") || "strict";
+      selectSegmented("prefAstStrictPill", astStrictVal);
+
+      var customPrompt = document.getElementById("prefCustomPrompt");
+      if (customPrompt) customPrompt.value = localStorage.getItem("vajra_custom_directive") || "";
+
+      // Browser
+      var sandboxVal = localStorage.getItem("vajra_sandbox") || "enabled";
+      selectSegmented("prefSandboxPill", sandboxVal);
+
+      var webReaderVal = localStorage.getItem("vajra_web_reader") || "permitted";
+      selectSegmented("prefWebReaderPill", webReaderVal);
+
+      // Shortcuts
+      var sendMode = localStorage.getItem("vajra_shortcut_send") || "enter";
+      selectSegmented("prefShortcutSendPill", sendMode);
+
+      var selNew = document.getElementById("prefShortcutNewChat");
+      if (selNew) selNew.value = localStorage.getItem("vajra_shortcut_new_chat") || "ctrl_k";
+
+      var selFocus = document.getElementById("prefShortcutFocus");
+      if (selFocus) selFocus.value = localStorage.getItem("vajra_shortcut_focus") || "slash";
+
+      var selSb = document.getElementById("prefShortcutSidebar");
+      if (selSb) selSb.value = localStorage.getItem("vajra_shortcut_sidebar") || "ctrl_b";
+
+      var selThm = document.getElementById("prefShortcutTheme");
+      if (selThm) selThm.value = localStorage.getItem("vajra_shortcut_theme") || "alt_t";
+
+      var selSet = document.getElementById("prefShortcutSettings");
+      if (selSet) selSet.value = localStorage.getItem("vajra_shortcut_settings") || "ctrl_comma";
+
+      // Status text reset
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) notice.style.display = "none";
+
+      switchSettingsTab(defaultTab || "settings-general");
       window.openModal("hfTokenModal");
     };
 
@@ -3621,47 +4367,49 @@
     window.toggleTokenVisibility = function () {
       var inp = document.getElementById("hfTokenInput");
       if (!inp) return;
+      var btn = event ? event.target : null;
       if (inp.type === "password") {
         inp.type = "text";
+        if (btn) btn.textContent = "Hide";
       } else {
         inp.type = "password";
+        if (btn) btn.textContent = "Show";
       }
     };
 
     window.saveAllPreferences = function () {
-      var themeSelect = document.getElementById("prefThemeSelect");
-      if (themeSelect) {
-        var thm = themeSelect.value;
-        document.documentElement.setAttribute("data-theme", thm);
-        try { localStorage.setItem("vajra-theme", thm); } catch (e) {}
-        var textEl = document.getElementById("themeToggleText");
-        if (textEl) textEl.textContent = thm === "light" ? "Dark Mode" : "Light Mode";
-      }
+      // General
+      localStorage.setItem("vajra_queue_messages", getSegmentedVal("prefQueuePill", "queue"));
+      var depthEl = document.getElementById("prefReasoningDepth");
+      if (depthEl) localStorage.setItem("vajra_reasoning_depth", depthEl.value);
+      var secEl = document.getElementById("prefSecurityPreset");
+      if (secEl) localStorage.setItem("vajra_security_preset", secEl.value);
+      var artEl = document.getElementById("prefArtifactPolicy");
+      if (artEl) localStorage.setItem("vajra_artifact_policy", artEl.value);
+      localStorage.setItem("vajra_local_boundary", getSegmentedVal("prefLocalBoundary", "enforced"));
+
+      // Application
+      localStorage.setItem("vajra_telemetry", getSegmentedVal("prefTelemetryPill", "enabled"));
+
+      // Appearance
+      var thm = getSegmentedVal("prefThemePill", "dark");
+      document.documentElement.setAttribute("data-theme", thm);
+      try { localStorage.setItem("vajra-theme", thm); } catch (e) {}
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) textEl.textContent = thm === "light" ? "Dark Mode" : "Light Mode";
 
       var streamSpeed = document.getElementById("prefStreamSpeed");
-      if (streamSpeed) {
-        localStorage.setItem("vajra_stream_speed", streamSpeed.value);
-      }
+      if (streamSpeed) localStorage.setItem("vajra_stream_speed", streamSpeed.value);
 
+      localStorage.setItem("vajra_glass_overlay", getSegmentedVal("prefGlassPill", "enabled") === "enabled" ? "true" : "false");
+      localStorage.setItem("vajra_autoscroll", getSegmentedVal("prefAutoScrollPill", "enabled") === "enabled" ? "true" : "false");
+
+      // Models
       var pipeline = document.getElementById("prefPipelineSelect");
-      if (pipeline) {
-        localStorage.setItem("vajra_pipeline_mode", pipeline.value);
-      }
+      if (pipeline) localStorage.setItem("vajra_pipeline_mode", pipeline.value);
 
       var detail = document.getElementById("prefDetailSelect");
-      if (detail) {
-        localStorage.setItem("vajra_detail_level", detail.value);
-      }
-
-      var autoScroll = document.getElementById("prefAutoScroll");
-      if (autoScroll) {
-        localStorage.setItem("vajra_autoscroll", autoScroll.checked ? "true" : "false");
-      }
-
-      var glassOverlay = document.getElementById("prefGlassOverlay");
-      if (glassOverlay) {
-        localStorage.setItem("vajra_glass_overlay", glassOverlay.checked ? "true" : "false");
-      }
+      if (detail) localStorage.setItem("vajra_detail_level", detail.value);
 
       var inp = document.getElementById("hfTokenInput");
       var tokenVal = inp ? inp.value.trim() : "";
@@ -3671,26 +4419,64 @@
         localStorage.removeItem("vajra_hf_token");
       }
 
-      var st = document.getElementById("hfTokenStatus");
-      if (st) {
-        st.style.display = "block";
-        st.style.color = "var(--ok, #4ade80)";
-        st.textContent = "✅ Preferences saved successfully!";
+      // Customizations
+      localStorage.setItem("vajra_ast_strict", getSegmentedVal("prefAstStrictPill", "strict"));
+      var customPrompt = document.getElementById("prefCustomPrompt");
+      if (customPrompt) localStorage.setItem("vajra_custom_directive", customPrompt.value.trim());
+
+      // Browser
+      localStorage.setItem("vajra_sandbox", getSegmentedVal("prefSandboxPill", "enabled"));
+      localStorage.setItem("vajra_web_reader", getSegmentedVal("prefWebReaderPill", "permitted"));
+
+      // Shortcuts
+      localStorage.setItem("vajra_shortcut_send", getSegmentedVal("prefShortcutSendPill", "enter"));
+      var selNew = document.getElementById("prefShortcutNewChat");
+      if (selNew) localStorage.setItem("vajra_shortcut_new_chat", selNew.value);
+      var selFocus = document.getElementById("prefShortcutFocus");
+      if (selFocus) localStorage.setItem("vajra_shortcut_focus", selFocus.value);
+      var selSb = document.getElementById("prefShortcutSidebar");
+      if (selSb) localStorage.setItem("vajra_shortcut_sidebar", selSb.value);
+      var selThm = document.getElementById("prefShortcutTheme");
+      if (selThm) localStorage.setItem("vajra_shortcut_theme", selThm.value);
+      var selSet = document.getElementById("prefShortcutSettings");
+      if (selSet) localStorage.setItem("vajra_shortcut_settings", selSet.value);
+
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) {
+        notice.style.display = "inline";
+        notice.style.color = "var(--ok, #4ade80)";
+        notice.textContent = "✅ Preferences saved!";
       }
 
       setTimeout(function () {
         window.closeModal("hfTokenModal");
-      }, 900);
+      }, 750);
     };
 
     window.resetAllPreferences = function () {
       try {
+        localStorage.removeItem("vajra_queue_messages");
+        localStorage.removeItem("vajra_reasoning_depth");
+        localStorage.removeItem("vajra_security_preset");
+        localStorage.removeItem("vajra_artifact_policy");
+        localStorage.removeItem("vajra_local_boundary");
+        localStorage.removeItem("vajra_telemetry");
         localStorage.removeItem("vajra_stream_speed");
         localStorage.removeItem("vajra_pipeline_mode");
         localStorage.removeItem("vajra_detail_level");
         localStorage.removeItem("vajra_autoscroll");
         localStorage.removeItem("vajra_glass_overlay");
         localStorage.removeItem("vajra_hf_token");
+        localStorage.removeItem("vajra_ast_strict");
+        localStorage.removeItem("vajra_custom_directive");
+        localStorage.removeItem("vajra_sandbox");
+        localStorage.removeItem("vajra_web_reader");
+        localStorage.removeItem("vajra_shortcut_send");
+        localStorage.removeItem("vajra_shortcut_new_chat");
+        localStorage.removeItem("vajra_shortcut_focus");
+        localStorage.removeItem("vajra_shortcut_sidebar");
+        localStorage.removeItem("vajra_shortcut_theme");
+        localStorage.removeItem("vajra_shortcut_settings");
         localStorage.setItem("vajra-theme", "dark");
       } catch (e) {}
 
@@ -3698,35 +4484,70 @@
       var textEl = document.getElementById("themeToggleText");
       if (textEl) textEl.textContent = "Light Mode";
 
-      var themeSelect = document.getElementById("prefThemeSelect");
-      if (themeSelect) themeSelect.value = "dark";
+      openHfTokenModal("settings-general");
 
-      var streamSpeed = document.getElementById("prefStreamSpeed");
-      if (streamSpeed) streamSpeed.value = "smooth";
-
-      var pipeline = document.getElementById("prefPipelineSelect");
-      if (pipeline) pipeline.value = "hybrid";
-
-      var detail = document.getElementById("prefDetailSelect");
-      if (detail) detail.value = "balanced";
-
-      var autoScroll = document.getElementById("prefAutoScroll");
-      if (autoScroll) autoScroll.checked = true;
-
-      var glassOverlay = document.getElementById("prefGlassOverlay");
-      if (glassOverlay) glassOverlay.checked = true;
-
-      var inp = document.getElementById("hfTokenInput");
-      if (inp) {
-        inp.value = "";
-        inp.type = "password";
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) {
+        notice.style.display = "inline";
+        notice.style.color = "var(--text-muted)";
+        notice.textContent = "Reset to default preferences.";
       }
+    };
 
-      var st = document.getElementById("hfTokenStatus");
-      if (st) {
-        st.style.display = "block";
-        st.style.color = "var(--text-muted)";
-        st.textContent = "Reset to default preferences.";
+    window.resetShortcutDefaults = function () {
+      localStorage.removeItem("vajra_shortcut_send");
+      localStorage.removeItem("vajra_shortcut_new_chat");
+      localStorage.removeItem("vajra_shortcut_focus");
+      localStorage.removeItem("vajra_shortcut_sidebar");
+      localStorage.removeItem("vajra_shortcut_theme");
+      localStorage.removeItem("vajra_shortcut_settings");
+
+      selectSegmented("prefShortcutSendPill", "enter");
+      var selNew = document.getElementById("prefShortcutNewChat");
+      if (selNew) selNew.value = "ctrl_k";
+      var selFocus = document.getElementById("prefShortcutFocus");
+      if (selFocus) selFocus.value = "slash";
+      var selSb = document.getElementById("prefShortcutSidebar");
+      if (selSb) selSb.value = "ctrl_b";
+      var selThm = document.getElementById("prefShortcutTheme");
+      if (selThm) selThm.value = "alt_t";
+      var selSet = document.getElementById("prefShortcutSettings");
+      if (selSet) selSet.value = "ctrl_comma";
+
+      var notice = document.getElementById("settingsStatusNotice");
+      if (notice) {
+        notice.style.display = "inline";
+        notice.style.color = "var(--ok, #4ade80)";
+        notice.textContent = "Shortcuts reset to defaults.";
+      }
+    };
+
+    window.exportAllCasefiles = function () {
+      try {
+        var data = localStorage.getItem("vajra_casefiles_v3") || "[]";
+        var blob = new Blob([data], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "vajra_casefiles_" + (new Date().toISOString().slice(0, 10)) + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert("Unable to export casefiles: " + e.message);
+      }
+    };
+
+    window.clearCasefileStorage = function () {
+      if (confirm("Are you sure you want to clear all stored forensic casefiles? This cannot be undone.")) {
+        localStorage.removeItem("vajra_casefiles_v3");
+        state.sessions = [];
+        state.activeSessionId = null;
+        if (typeof renderSessionList === "function") renderSessionList();
+        if (typeof createNewSession === "function") createNewSession();
+        var sz = document.getElementById("prefStorageSize");
+        if (sz) sz.textContent = "0 B used";
       }
     };
 
@@ -5813,15 +6634,103 @@
       }
     });
 
-    // ─── CONSISTENT CROSS-PLATFORM KEYBOARD SHORTCUTS ───
-    // Alt+N (browser & native safe), Ctrl+Shift+N, and Ctrl+K / Cmd+K
+    // ─── CONSISTENT CROSS-PLATFORM KEYBOARD SHORTCUTS (CUSTOMIZABLE) ───
     document.addEventListener("keydown", function (e) {
-      var isNewAnalysis = (e.altKey && e.key.toLowerCase() === "n") ||
-                          (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n") ||
-                          ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k");
+      var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+      var isInput = tag === "input" || tag === "textarea" || tag === "select";
+
+      // 1. Stop generation / Close modal: Escape
+      if (e.key === "Escape") {
+        var activeModal = document.querySelector(".modal-backdrop.active");
+        if (activeModal) {
+          window.closeModal(activeModal.id);
+          return;
+        }
+        if (isGenerating && typeof stopGeneration === "function") {
+          stopGeneration();
+          return;
+        }
+      }
+
+      // 2. Open Settings / Preferences: Ctrl+, or Alt+,
+      var settingsPref = localStorage.getItem("vajra_shortcut_settings") || "ctrl_comma";
+      var isOpenSettings = false;
+      if (settingsPref === "alt_comma") {
+        isOpenSettings = e.altKey && (e.key === "," || e.code === "Comma");
+      } else {
+        isOpenSettings = (e.ctrlKey || e.metaKey) && (e.key === "," || e.code === "Comma");
+      }
+      if (isOpenSettings) {
+        e.preventDefault();
+        openHfTokenModal();
+        return;
+      }
+
+      // 3. New Casefile / Chat session
+      var newChatPref = localStorage.getItem("vajra_shortcut_new_chat") || "ctrl_k";
+      var isNewAnalysis = false;
+      if (newChatPref === "alt_n") {
+        isNewAnalysis = e.altKey && e.key.toLowerCase() === "n";
+      } else if (newChatPref === "ctrl_shift_n") {
+        isNewAnalysis = e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n";
+      } else {
+        isNewAnalysis = ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") ||
+                        (e.altKey && e.key.toLowerCase() === "n") ||
+                        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "n");
+      }
       if (isNewAnalysis) {
         e.preventDefault();
         createNewSession();
+        return;
+      }
+
+      // 4. Toggle Sidebar Navigation
+      var sidebarPref = localStorage.getItem("vajra_shortcut_sidebar") || "ctrl_b";
+      var isSidebar = false;
+      if (sidebarPref === "alt_b") {
+        isSidebar = e.altKey && e.key.toLowerCase() === "b";
+      } else {
+        isSidebar = ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") || (e.altKey && e.key.toLowerCase() === "b");
+      }
+      if (isSidebar) {
+        e.preventDefault();
+        var toggleBtn = document.getElementById("toggleSidebarBtn");
+        if (toggleBtn) toggleBtn.click();
+        return;
+      }
+
+      // 5. Toggle Theme (Dark / Light)
+      var themePref = localStorage.getItem("vajra_shortcut_theme") || "alt_t";
+      var isTheme = false;
+      if (themePref === "ctrl_shift_t") {
+        isTheme = e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "t";
+      } else {
+        isTheme = (e.altKey && e.key.toLowerCase() === "t") || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "t");
+      }
+      if (isTheme) {
+        e.preventDefault();
+        if (typeof toggleTheme === "function") toggleTheme();
+        return;
+      }
+
+      // 6. Focus prompt composer
+      var focusPref = localStorage.getItem("vajra_shortcut_focus") || "slash";
+      var isFocus = false;
+      if (focusPref === "ctrl_slash") {
+        isFocus = (e.ctrlKey || e.metaKey) && e.key === "/";
+      } else if (focusPref === "alt_slash") {
+        isFocus = e.altKey && e.key === "/";
+      } else {
+        isFocus = !isInput && e.key === "/";
+      }
+      if (isFocus) {
+        e.preventDefault();
+        var cInp = document.getElementById("composerInput");
+        if (cInp) {
+          cInp.focus();
+          cInp.select();
+        }
+        return;
       }
     });
 
@@ -5975,8 +6884,14 @@
         }
       });
       composerTextarea.addEventListener("keydown", function (e) {
-        // Enter sends message, Shift+Enter inserts newline
-        if (e.key === "Enter" && !e.shiftKey) {
+        var sendMode = localStorage.getItem("vajra_shortcut_send") || "enter";
+        var shouldSubmit = false;
+        if (sendMode === "ctrl_enter") {
+          shouldSubmit = (e.key === "Enter" && (e.ctrlKey || e.metaKey));
+        } else {
+          shouldSubmit = (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey);
+        }
+        if (shouldSubmit) {
           e.preventDefault();
           if (isGenerating) return;
           if (composerForm) {
