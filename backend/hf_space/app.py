@@ -537,6 +537,13 @@ with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
         outputs=output_display,
         api_name="generate_vajra_reply"
     )
+    alias_send_button = gr.Button("SubmitAlias", visible=False)
+    alias_send_button.click(
+        fn=gradio_generate,
+        inputs=user_input,
+        outputs=output_display,
+        api_name="gradio_generate"
+    )
 
     draft_button = gr.Button("Draft", visible=False)
     draft_output = gr.Markdown(visible=False)
