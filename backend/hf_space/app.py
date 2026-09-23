@@ -104,6 +104,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             in_len = inputs.input_ids.shape[1]
             res = tok.decode(ids[0, in_len:], skip_special_tokens=True).strip()
             del inputs, ids
+            gc.collect()
             if res:
                 return res
     except Exception as e:

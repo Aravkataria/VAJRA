@@ -5280,7 +5280,7 @@
           }
         }, 45000);
 
-        // Launch Channel A in background
+        // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
         var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
           if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
             return null;
@@ -5296,6 +5296,12 @@
           }
           return draftText;
         }).catch(function() { return null; });
+
+        // CRITICAL: Wait for 0.5B draft to finish (max 8s) before starting 7B.
+        // Both models share the same 2 vCPU — running simultaneously causes CPU
+        // starvation where 0.5B becomes slow and 7B balloons from 15s to 130s+.
+        // By staggering: 0.5B finishes in ~3-5s with full CPU, THEN 7B gets full CPU.
+        await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 8000); })]);
 
         // Handle streaming chunks from Channel B (if available)
         function handleStreamChunk(chunkText, badge) {
@@ -5314,6 +5320,7 @@
           }
         }
 
+        // Launch Channel B AFTER draft has CPU time: Deep 7B Reasoning
         var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles, function(chunk, badge) {
           handleStreamChunk(chunk, badge);
         });
