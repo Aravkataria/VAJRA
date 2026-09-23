@@ -2451,34 +2451,109 @@
     </div>
   </div>
 
-  <!-- Hugging Face Token & Engine Settings Modal -->
+  <!-- Preferences & Engine Settings Modal -->
   <div class="modal-backdrop" id="hfTokenModal">
-    <div class="modal-frame" style="max-width: 480px;">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
-        <div style="font-size:0.95rem; font-weight:700; display:flex; align-items:center; gap:0.5rem;">
+    <div class="modal-frame" style="max-width: 520px;">
+      <!-- Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:0.6rem; border-bottom:1px solid var(--border-subtle);">
+        <div style="font-size:0.98rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; color:var(--text-primary);">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--spark);"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span>Neural Engine Settings &amp; GPU Acceleration</span>
+          <span>Preferences &amp; Engine Settings</span>
         </div>
         <button class="btn-icon" onclick="closeModal('hfTokenModal')" style="padding:4px;" title="Close">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.85rem; line-height:1.4;">
-        Connect your free personal <b>Hugging Face Token</b> to unlock dedicated <b>ZeroGPU A10G acceleration</b>. Reduces response time from ~140s on CPU down to <b>&lt;9 seconds</b>.
-      </div>
-      <div style="margin-bottom:0.6rem;">
-        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Hugging Face User Token (Read access)</label>
-        <input type="password" id="hfTokenInput" class="modal-input" placeholder="hf_..." style="margin-bottom:0.35rem; font-family:monospace;">
-        <div style="font-size:0.7rem; color:var(--text-muted);">
-          Get a free token in 10 seconds at <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener" style="color:var(--spark);">huggingface.co/settings/tokens</a>. Stored locally in your browser only.
+
+      <!-- Appearance -->
+      <div>
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">
+          Appearance &amp; Animation
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem;">
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Theme Mode</label>
+            <select id="prefThemeSelect" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;" onchange="onPrefThemeChange(this.value)">
+              <option value="dark">Dark Theme (Default)</option>
+              <option value="light">Light Theme</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Stream Typewriter</label>
+            <select id="prefStreamSpeed" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;">
+              <option value="smooth">Smooth Animation (Default)</option>
+              <option value="fast">Fast Real-time</option>
+              <option value="instant">Instant Render</option>
+            </select>
+          </div>
         </div>
       </div>
-      <div id="hfTokenStatus" style="font-size:0.78rem; margin-bottom:0.6rem; display:none;"></div>
-      <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-top:1rem;">
-        <button type="button" class="btn-tool-chip" onclick="clearHfToken()" style="color:#ef4444;">Clear Token</button>
+
+      <!-- Neural Reasoning Engine -->
+      <div>
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.4rem;">
+          Neural Reasoning Engine
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.45rem;">
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Inference Architecture</label>
+            <select id="prefPipelineSelect" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;">
+              <option value="hybrid">⚡ Dual-Channel (0.5B Speculative Draft + 7B Engine)</option>
+              <option value="deep">🔒 Dedicated 7B Model Only</option>
+              <option value="lite">🚀 Ultra-Fast 0.5B Speculative Only</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Response Detail</label>
+            <select id="prefDetailSelect" class="modal-input" style="padding:5px 8px; font-size:0.78rem; cursor:pointer;">
+              <option value="balanced">Balanced (1–2 Focused Technical Paragraphs)</option>
+              <option value="deep">Deep Forensic (Full Architecture &amp; AST Sinks)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis Options -->
+      <div>
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.35rem;">
+          Analysis Options
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.35rem; font-size:0.78rem; color:var(--text-secondary);">
+          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" id="prefAutoScroll" checked style="accent-color:var(--spark);">
+            <span>Auto-scroll to latest tokens during output generation</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" id="prefGlassOverlay" checked style="accent-color:var(--spark);">
+            <span>Enable frosted glassmorphic overlay for speculative drafts</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Cloud Acceleration (Optional) -->
+      <div>
+        <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:700; color:var(--text-muted); margin-bottom:0.3rem;">
+          Cloud Acceleration <span style="font-weight:400; text-transform:none;">(Optional)</span>
+        </div>
+        <div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:0.35rem; line-height:1.35;">
+          VAJRA runs 24/7 on dedicated cloud infrastructure. You can optionally connect a free personal Hugging Face Token for priority GPU burst allocation.
+        </div>
+        <div style="display:flex; gap:0.4rem; align-items:center;">
+          <input type="password" id="hfTokenInput" class="modal-input" placeholder="Optional: hf_..." style="font-family:monospace; font-size:0.75rem; flex:1; padding:5px 8px;">
+          <button type="button" class="btn-tool-chip" onclick="toggleTokenVisibility()" style="font-size:0.7rem; padding:4px 8px;">Show</button>
+        </div>
+        <div style="font-size:0.68rem; color:var(--text-muted); margin-top:0.25rem;">
+          Stored locally in your browser. Never sent to third-party tracking services.
+        </div>
+        <div id="hfTokenStatus" style="font-size:0.75rem; margin-top:0.35rem; display:none;"></div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding-top:0.6rem; border-top:1px solid var(--border-subtle); margin-top:0.2rem;">
+        <button type="button" class="btn-tool-chip" onclick="resetAllPreferences()" style="font-size:0.74rem;">Reset Defaults</button>
         <div style="display:flex; gap:0.5rem;">
           <button type="button" class="btn-tool-chip" onclick="closeModal('hfTokenModal')">Cancel</button>
-          <button type="button" class="btn-run-scan" onclick="saveHfToken()">Save &amp; Accelerate</button>
+          <button type="button" class="btn-run-scan" onclick="saveAllPreferences()">Save Preferences</button>
         </div>
       </div>
     </div>
@@ -3502,48 +3577,161 @@
     };
 
     window.openHfTokenModal = function () {
+      var curTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      var themeSelect = document.getElementById("prefThemeSelect");
+      if (themeSelect) themeSelect.value = curTheme;
+
+      var streamSpeed = document.getElementById("prefStreamSpeed");
+      if (streamSpeed) streamSpeed.value = localStorage.getItem("vajra_stream_speed") || "smooth";
+
+      var pipeline = document.getElementById("prefPipelineSelect");
+      if (pipeline) pipeline.value = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
+
+      var detail = document.getElementById("prefDetailSelect");
+      if (detail) detail.value = localStorage.getItem("vajra_detail_level") || "balanced";
+
+      var autoScroll = document.getElementById("prefAutoScroll");
+      if (autoScroll) autoScroll.checked = localStorage.getItem("vajra_autoscroll") !== "false";
+
+      var glassOverlay = document.getElementById("prefGlassOverlay");
+      if (glassOverlay) glassOverlay.checked = localStorage.getItem("vajra_glass_overlay") !== "false";
+
       var inp = document.getElementById("hfTokenInput");
+      if (inp) {
+        inp.value = localStorage.getItem("vajra_hf_token") || "";
+        inp.type = "password";
+      }
+
       var st = document.getElementById("hfTokenStatus");
-      if (inp) inp.value = localStorage.getItem("vajra_hf_token") || "";
       if (st) st.style.display = "none";
+
       window.openModal("hfTokenModal");
     };
 
-    window.saveHfToken = function () {
-      var inp = document.getElementById("hfTokenInput");
-      var st = document.getElementById("hfTokenStatus");
-      var val = inp ? inp.value.trim() : "";
-      if (!val) {
-        localStorage.removeItem("vajra_hf_token");
-        if (st) {
-          st.style.display = "block";
-          st.style.color = "var(--text-muted)";
-          st.textContent = "Token removed. Operating with shared public quotas.";
-        }
-      } else {
-        localStorage.setItem("vajra_hf_token", val);
-        if (st) {
-          st.style.display = "block";
-          st.style.color = "var(--ok, #4ade80)";
-          st.textContent = "✅ Token saved! ZeroGPU A10G acceleration active.";
-        }
-      }
-      setTimeout(function () {
-        window.closeModal("hfTokenModal");
-      }, 1100);
+    window.onPrefThemeChange = function (val) {
+      if (!val) return;
+      document.documentElement.setAttribute("data-theme", val);
+      try {
+        localStorage.setItem("vajra-theme", val);
+      } catch (e) {}
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) textEl.textContent = val === "light" ? "Dark Mode" : "Light Mode";
     };
 
-    window.clearHfToken = function () {
-      localStorage.removeItem("vajra_hf_token");
+    window.toggleTokenVisibility = function () {
       var inp = document.getElementById("hfTokenInput");
+      if (!inp) return;
+      if (inp.type === "password") {
+        inp.type = "text";
+      } else {
+        inp.type = "password";
+      }
+    };
+
+    window.saveAllPreferences = function () {
+      var themeSelect = document.getElementById("prefThemeSelect");
+      if (themeSelect) {
+        var thm = themeSelect.value;
+        document.documentElement.setAttribute("data-theme", thm);
+        try { localStorage.setItem("vajra-theme", thm); } catch (e) {}
+        var textEl = document.getElementById("themeToggleText");
+        if (textEl) textEl.textContent = thm === "light" ? "Dark Mode" : "Light Mode";
+      }
+
+      var streamSpeed = document.getElementById("prefStreamSpeed");
+      if (streamSpeed) {
+        localStorage.setItem("vajra_stream_speed", streamSpeed.value);
+      }
+
+      var pipeline = document.getElementById("prefPipelineSelect");
+      if (pipeline) {
+        localStorage.setItem("vajra_pipeline_mode", pipeline.value);
+      }
+
+      var detail = document.getElementById("prefDetailSelect");
+      if (detail) {
+        localStorage.setItem("vajra_detail_level", detail.value);
+      }
+
+      var autoScroll = document.getElementById("prefAutoScroll");
+      if (autoScroll) {
+        localStorage.setItem("vajra_autoscroll", autoScroll.checked ? "true" : "false");
+      }
+
+      var glassOverlay = document.getElementById("prefGlassOverlay");
+      if (glassOverlay) {
+        localStorage.setItem("vajra_glass_overlay", glassOverlay.checked ? "true" : "false");
+      }
+
+      var inp = document.getElementById("hfTokenInput");
+      var tokenVal = inp ? inp.value.trim() : "";
+      if (tokenVal) {
+        localStorage.setItem("vajra_hf_token", tokenVal);
+      } else {
+        localStorage.removeItem("vajra_hf_token");
+      }
+
       var st = document.getElementById("hfTokenStatus");
-      if (inp) inp.value = "";
+      if (st) {
+        st.style.display = "block";
+        st.style.color = "var(--ok, #4ade80)";
+        st.textContent = "✅ Preferences saved successfully!";
+      }
+
+      setTimeout(function () {
+        window.closeModal("hfTokenModal");
+      }, 900);
+    };
+
+    window.resetAllPreferences = function () {
+      try {
+        localStorage.removeItem("vajra_stream_speed");
+        localStorage.removeItem("vajra_pipeline_mode");
+        localStorage.removeItem("vajra_detail_level");
+        localStorage.removeItem("vajra_autoscroll");
+        localStorage.removeItem("vajra_glass_overlay");
+        localStorage.removeItem("vajra_hf_token");
+        localStorage.setItem("vajra-theme", "dark");
+      } catch (e) {}
+
+      document.documentElement.setAttribute("data-theme", "dark");
+      var textEl = document.getElementById("themeToggleText");
+      if (textEl) textEl.textContent = "Light Mode";
+
+      var themeSelect = document.getElementById("prefThemeSelect");
+      if (themeSelect) themeSelect.value = "dark";
+
+      var streamSpeed = document.getElementById("prefStreamSpeed");
+      if (streamSpeed) streamSpeed.value = "smooth";
+
+      var pipeline = document.getElementById("prefPipelineSelect");
+      if (pipeline) pipeline.value = "hybrid";
+
+      var detail = document.getElementById("prefDetailSelect");
+      if (detail) detail.value = "balanced";
+
+      var autoScroll = document.getElementById("prefAutoScroll");
+      if (autoScroll) autoScroll.checked = true;
+
+      var glassOverlay = document.getElementById("prefGlassOverlay");
+      if (glassOverlay) glassOverlay.checked = true;
+
+      var inp = document.getElementById("hfTokenInput");
+      if (inp) {
+        inp.value = "";
+        inp.type = "password";
+      }
+
+      var st = document.getElementById("hfTokenStatus");
       if (st) {
         st.style.display = "block";
         st.style.color = "var(--text-muted)";
-        st.textContent = "Token cleared. Using standard public mode.";
+        st.textContent = "Reset to default preferences.";
       }
     };
+
+    window.saveHfToken = window.saveAllPreferences;
+    window.clearHfToken = window.resetAllPreferences;
 
     window.closeSidebarMobile = function () {
       var sb = document.getElementById("appSidebar");
@@ -3613,6 +3801,7 @@
 
     function smartScrollToBottom(stream, targetEl) {
       if (!stream) return;
+      if (localStorage.getItem("vajra_autoscroll") === "false") return;
       requestAnimationFrame(function() {
         if (stream.scrollHeight <= stream.clientHeight) {
           stream.scrollTop = 0;
@@ -3828,7 +4017,8 @@
         var maxToRender = isFinished ? totalTokens : Math.max(0, totalTokens - 5);
 
         if (renderedTokenCount < maxToRender) {
-          var step = (isFinished && (totalTokens - renderedTokenCount > 15)) ? 3 : 1;
+          var speedPref = localStorage.getItem("vajra_stream_speed") || "smooth";
+          var step = speedPref === "instant" ? totalTokens : ((isFinished && (totalTokens - renderedTokenCount > 15)) ? 3 : (speedPref === "fast" ? 2 : 1));
           renderedTokenCount = Math.min(maxToRender, renderedTokenCount + step);
           var partialStr = tokens.slice(0, renderedTokenCount).join("");
           if (textSpan) {
@@ -3897,9 +4087,12 @@
         isSpeculativeDraft = true;
         card.classList.add("speculative-draft");
 
-        glassOverlay = document.createElement("div");
-        glassOverlay.className = "speculative-glass-overlay";
-        card.appendChild(glassOverlay);
+        var useGlass = localStorage.getItem("vajra_glass_overlay") !== "false";
+        if (useGlass) {
+          glassOverlay = document.createElement("div");
+          glassOverlay.className = "speculative-glass-overlay";
+          card.appendChild(glassOverlay);
+        }
 
         if (cursor) cursor.style.display = "none";
 
@@ -4002,7 +4195,9 @@
         onToken: function(text) {
           fullIncomingText = text;
           if (!intervalId) {
-            intervalId = setInterval(tick, 22);
+            var speedPref = localStorage.getItem("vajra_stream_speed") || "smooth";
+            var intervalDelay = speedPref === "instant" ? 1 : (speedPref === "fast" ? 10 : 22);
+            intervalId = setInterval(tick, intervalDelay);
           }
         },
         updateBadge: updateBadge,
@@ -5367,6 +5562,18 @@
         var isDeepResolved = false;
         var draftReplyText = null;
 
+        var pipelinePref = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
+
+        if (pipelinePref === "lite") {
+          var liteDraft = await tryFastDraftQuery(q, directHeaders);
+          removeTypingIndicator();
+          if (liteDraft && liteDraft.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+            typewriter = createStreamTypewriter("Qwen/Qwen2.5-Coder-0.5B-Instruct");
+            if (typewriter) typewriter.finish(liteDraft, { tier: "lite", model: "Qwen/Qwen2.5-Coder-0.5B-Instruct" });
+            return;
+          }
+        }
+
         // Hard Ceiling Timer: Dissolves glass if deep reasoner exceeds 75s
         var glassCeilingTimer = setTimeout(function() {
           if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
@@ -5379,26 +5586,28 @@
           }
         }, 75000);
 
-        // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
-        var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
-          if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
-            return null;
-          }
-          draftReplyText = draftText;
-          if (!typewriter && !isDeepResolved) {
-            removeTypingIndicator();
-            typewriter = createStreamTypewriter("VAJRA AUDIT [2 vCPU Engine]");
-            if (typewriter) {
+        if (pipelinePref !== "deep") {
+          // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
+          var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
+            if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+              return null;
+            }
+            draftReplyText = draftText;
+            if (!typewriter && !isDeepResolved) {
+              removeTypingIndicator();
+              typewriter = createStreamTypewriter("VAJRA AUDIT [2 vCPU Engine]");
+              if (typewriter) {
+                typewriter.enableSpeculativeDraft(draftText);
+              }
+            } else if (typewriter && !isDeepResolved && (!typewriter.isDraftActive || !typewriter.isDraftActive()) && (!typewriter.hasText || !typewriter.hasText())) {
               typewriter.enableSpeculativeDraft(draftText);
             }
-          } else if (typewriter && !isDeepResolved && (!typewriter.isDraftActive || !typewriter.isDraftActive()) && (!typewriter.hasText || !typewriter.hasText())) {
-            typewriter.enableSpeculativeDraft(draftText);
-          }
-          return draftText;
-        }).catch(function() { return null; });
+            return draftText;
+          }).catch(function() { return null; });
 
-        // Wait up to 4.5s for 0.5B draft to render before 7B starts
-        await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4500); })]);
+          // Wait up to 4.5s for 0.5B draft to render before 7B starts
+          await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4500); })]);
+        }
 
         // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
         function handleStreamChunk(chunkText, badge) {
