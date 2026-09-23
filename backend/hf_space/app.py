@@ -64,6 +64,10 @@ def get_draft_model():
     global draft_tokenizer, draft_model
     if draft_model is None:
         try:
+            try:
+                torch.set_num_threads(2)
+            except Exception:
+                pass
             print(f"🔒 [VAJRA v2] Initializing Fast 0.5B Speculative Engine ({ULTRA_LITE_MODEL_ID})...")
             draft_tokenizer = AutoTokenizer.from_pretrained(ULTRA_LITE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
             draft_model = AutoModelForCausalLM.from_pretrained(
@@ -80,12 +84,12 @@ def get_draft_model():
     return draft_tokenizer, draft_model
 
 def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
-    # 1. Direct Local 0.5B CPU Generation (Ultra-fast <1.5s speculative draft)
+    # 1. Direct Local 0.5B CPU Generation (Ultra-fast speculative draft)
     try:
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
-                {"role": "system", "content": "You are VAJRA-Draft, an instant technical reasoner. Explain concisely and clearly in 2-3 complete sentences."},
+                {"role": "system", "content": "You are VAJRA-Draft. Give a direct, concise 1-2 sentence technical summary."},
                 {"role": "user", "content": prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -93,7 +97,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             with torch.inference_mode():
                 ids = m.generate(
                     **inputs,
-                    max_new_tokens=40,
+                    max_new_tokens=45,
                     do_sample=False,
                     eos_token_id=tok.eos_token_id,
                     pad_token_id=tok.eos_token_id
@@ -101,7 +105,10 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             in_len = inputs.input_ids.shape[1]
             res = tok.decode(ids[0, in_len:], skip_special_tokens=True).strip()
             del inputs, ids
-            gc.collect()
+            if res and not res.endswith(('.', '!', '?')):
+                last_p = max(res.rfind('.'), res.rfind('!'), res.rfind('?'))
+                if last_p > 20:
+                    res = res[:last_p + 1].strip()
             if res:
                 return res
     except Exception as e:
@@ -230,8 +237,8 @@ def load_cpu_model():
         print(f"❌ [VAJRA v2] CPU Model load error: {err}")
         model_load_failed = True
 
-VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Technical Intelligence System, engineered and fine-tuned by Arav Kataria.
-Provide comprehensive, structured, in-depth technical explanations. Detail core principles, mathematical formulation/equations, mechanism, key characteristics, and real-world significance. Ensure every response is thorough, authoritative, and complete."""
+VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning System engineered and fine-tuned by Arav Kataria.
+Provide a clear, high-value, and complete technical explanation in 1 to 2 focused paragraphs. Directly explain the core mechanism, key characteristics, and significance. Conclude cleanly without dangling lists or unfinished thoughts."""
 
 # =====================================================================
 # 4. INFERENCE WITH CONCURRENCY LOCK & LOAD SHEDDING
@@ -261,7 +268,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
             output = llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=240,
+                max_tokens=170,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.15,
@@ -271,6 +278,10 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             for marker in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
                 if marker in raw_reply:
                     raw_reply = raw_reply.split(marker)[0].strip()
+            if raw_reply and not raw_reply.endswith(('.', '!', '?', '`', '}')):
+                last_punct = max(raw_reply.rfind('.'), raw_reply.rfind('!'), raw_reply.rfind('?'))
+                if last_punct > len(raw_reply) // 2:
+                    raw_reply = raw_reply[:last_punct + 1].strip()
             print("✅ [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
             return raw_reply, "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
 
@@ -374,7 +385,7 @@ def gradio_generate(prompt: str):
             try:
                 for chunk in llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=240,
+                    max_tokens=170,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.15,
@@ -394,6 +405,10 @@ def gradio_generate(prompt: str):
                                         for m in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
                                             if m in accumulated:
                                                 accumulated = accumulated.split(m)[0].strip()
+                                        if accumulated and not accumulated.endswith(('.', '!', '?', '`', '}')):
+                                            last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
+                                            if last_p > len(accumulated) // 2:
+                                                accumulated = accumulated[:last_p + 1].strip()
                                         yield accumulated
                                         return
                                     yield accumulated
@@ -403,13 +418,18 @@ def gradio_generate(prompt: str):
                 print(f"⚠️ GGUF stream=True note: {stream_err}")
 
             if accumulated:
+                if not accumulated.endswith(('.', '!', '?', '`', '}')):
+                    last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
+                    if last_p > len(accumulated) // 2:
+                        accumulated = accumulated[:last_p + 1].strip()
+                        yield accumulated
                 return
 
             # Non-streaming fallback if stream=True produced no tokens
             try:
                 direct_out = llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=240,
+                    max_tokens=170,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.15,
@@ -420,6 +440,10 @@ def gradio_generate(prompt: str):
                     if m in direct_reply:
                         direct_reply = direct_reply.split(m)[0].strip()
                 if direct_reply:
+                    if not direct_reply.endswith(('.', '!', '?', '`', '}')):
+                        last_p = max(direct_reply.rfind('.'), direct_reply.rfind('!'), direct_reply.rfind('?'))
+                        if last_p > len(direct_reply) // 2:
+                            direct_reply = direct_reply[:last_p + 1].strip()
                     yield direct_reply
                     return
             except Exception as direct_err:
