@@ -4558,7 +4558,7 @@
           method: "POST",
           headers: directHeaders,
           body: JSON.stringify({ prompt: userPrompt }),
-          signal: getActiveSignal(6000)
+          signal: getActiveSignal(12000)
         });
         if (v1Resp.ok) {
           var v1Data = await v1Resp.json();
@@ -5395,12 +5395,14 @@
             if (typewriter) {
               typewriter.enableSpeculativeDraft(draftText);
             }
+          } else if (typewriter && !isDeepResolved && (!typewriter.isDraftActive || !typewriter.isDraftActive()) && (!typewriter.hasText || !typewriter.hasText())) {
+            typewriter.enableSpeculativeDraft(draftText);
           }
           return draftText;
         }).catch(function() { return null; });
 
-        // Wait up to 4s for 0.5B draft to render before 7B starts
-        await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4000); })]);
+        // Wait up to 4.5s for 0.5B draft to render before 7B starts
+        await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4500); })]);
 
         // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
         function handleStreamChunk(chunkText, badge) {
