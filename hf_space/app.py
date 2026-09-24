@@ -128,16 +128,25 @@ def sanitize_and_check_injection(raw_text: str) -> Tuple[str, List[str]]:
 # CONTEXTUAL SAFETY & CONTENT POLICY EVALUATOR (NOT NAIVE KEYWORD FILTER)
 # =====================================================================
 # 1. Technical / Cybersecurity / Biomedical Whitelist
-# Legitimate security testing, software engineering, and scientific inquiries explicitly pass.
+# Legitimate security testing, software engineering, AI/LLMs, and scientific inquiries explicitly pass.
 TECHNICAL_CONTEXT_REGEX = re.compile(
     r"\b("
+    r"llm|large\s+language\s+model|transformer|neural\s+network|deep\s+learning|machine\s+learning|ai\s+model|"
+    r"pytorch|tensorflow|hugging\s*face|fine-?tun\w*|weights|loss|gradient|backprop\w*|scratch|dataset|"
+    r"python|javascript|typescript|c\+\+|golang|rust|java|html|css|sql|nosql|docker|kubernetes|linux|"
+    r"algorithm|data\s+structure|api|backend|frontend|framework|library|compiler|ast|syntax\s+tree|bytecode|"
+    r"react|vue|angular|node|express|fastapi|django|flask|nextjs|tailwind|git|github|database|query|schema|"
+    r"memory|pointer|buffer|stack|heap|concurrency|async|await|coroutine|socket|network|tcp|udp|http|dns|"
+    r"build|code|coding|develop|programming|script|scripting|debug|debugging|refactor|optimize|architecture|system\s+design|"
     r"penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|"
     r"sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|"
     r"race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|"
     r"forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|"
     r"kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|"
     r"sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|"
-    r"data\s+science|machine\s+learning|compiler|ast|syntax\s+tree|bytecode|firmware|packet\s+capture|wireshark"
+    r"anatomy|medicine|medical|physiology|cellular|molecular|genetics|pharmacology|therapy|"
+    r"math|calculus|algebra|linear\s+algebra|matrix|tensor|vector|statistics|probability|"
+    r"firmware|packet\s+capture|wireshark|software|function|variable|class|object|method|repo|repository"
     r")\b",
     re.IGNORECASE
 )
@@ -162,20 +171,20 @@ DESTRUCTIVE_MALWARE_REGEX = re.compile(
 )
 
 POLICY_REFUSAL_NSFW = (
-    "🛡️ **[VAJRA Neural Safety Guard]**\n\n"
+    "**[VAJRA Neural Safety Guard]**\n\n"
     "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Adult Narrative Intent)**\n\n"
     "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, pornographic, or erotic roleplay falls outside acceptable operational boundaries.\n\n"
     "Technical inquiries, cybersecurity audits, and forensic code analyses remain fully available."
 )
 
 POLICY_REFUSAL_HARDBAN = (
-    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
+    "**[VAJRA Content Safety Shield]**\n\n"
     "**Critical Security Event: Absolute Harm Policy Enforcement**\n\n"
     "This request involves non-consensual sexual violence, abuse, or prohibited safety categories and has been terminated immediately. VAJRA enforces zero-tolerance boundaries against harm and non-consensual content."
 )
 
 DEFENSIVE_REFRAME_MALWARE = (
-    "🛡️ **[VAJRA Defensive Security Guardrail]**\n\n"
+    "**[VAJRA Defensive Security Guardrail]**\n\n"
     "**Policy Notice: Defensive Security Reframing Active**\n\n"
     "VAJRA does not construct weaponized destructive malware, unconstrained ransomware, or wiper payloads. "
     "Below is an architectural breakdown of the mechanism from a defensive analysis and detection standpoint, including AST sink remediation and detection signatures:\n\n"
@@ -247,7 +256,9 @@ def classify_neural_intent(prompt: str) -> Tuple[bool, str]:
         verdict = tok.decode(ids[0, in_len:], skip_special_tokens=True).strip().upper()
         del inputs, ids
 
-        if "[UNSAFE]" in verdict or "UNSAFE" in verdict:
+        if verdict.startswith("[SAFE]") or verdict.startswith("SAFE") or ("[SAFE]" in verdict and "[UNSAFE]" not in verdict):
+            return True, "neural_safe"
+        if ("[UNSAFE]" in verdict or verdict.startswith("UNSAFE")) and "NOT UNSAFE" not in verdict and "NOT [UNSAFE]" not in verdict:
             return False, "neural_unsafe"
         return True, "neural_safe"
     except Exception as e:
@@ -498,7 +509,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                 last_punct = max(raw_reply.rfind('.'), raw_reply.rfind('!'), raw_reply.rfind('?'))
                 if last_punct > len(raw_reply) // 2:
                     raw_reply = raw_reply[:last_punct + 1].strip()
-            if not is_safe and reason == "defensive_reframe" and not raw_reply.startswith("🛡️"):
+            if not is_safe and reason == "defensive_reframe" and not raw_reply.startswith(DEFENSIVE_REFRAME_MALWARE):
                 raw_reply = DEFENSIVE_REFRAME_MALWARE + raw_reply
             print("✅ [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
             return scrub_output_secrets(raw_reply), "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
@@ -509,7 +520,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             # 1. Answer immediately on 2 vCPU using fast local engine (~42 tokens/sec, 1.2 GB RAM)
             lite_reply = generate_ultra_lite_reply(clean_prompt, context_files)
             if lite_reply:
-                if not is_safe and reason == "defensive_reframe" and not lite_reply.startswith("🛡️"):
+                if not is_safe and reason == "defensive_reframe" and not lite_reply.startswith(DEFENSIVE_REFRAME_MALWARE):
                     lite_reply = DEFENSIVE_REFRAME_MALWARE + lite_reply
                 print("✅ [VAJRA v2] Query processed locally on 2 vCPU (0.5B engine).")
                 return scrub_output_secrets(lite_reply), "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
@@ -534,7 +545,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                         if isinstance(result, list) and len(result) > 0:
                             text = result[0].get("generated_text", "").strip()
                             if text:
-                                if not is_safe and reason == "defensive_reframe" and not text.startswith("🛡️"):
+                                if not is_safe and reason == "defensive_reframe" and not text.startswith(DEFENSIVE_REFRAME_MALWARE):
                                     text = DEFENSIVE_REFRAME_MALWARE + text
                                 return scrub_output_secrets(text), "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "cloud_router"
                 except Exception as route_err:
@@ -572,7 +583,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
-        if not is_safe and reason == "defensive_reframe" and not res_text.startswith("🛡️"):
+        if not is_safe and reason == "defensive_reframe" and not res_text.startswith(DEFENSIVE_REFRAME_MALWARE):
             res_text = DEFENSIVE_REFRAME_MALWARE + res_text
         del model_inputs, generated_ids
         gc.collect()
