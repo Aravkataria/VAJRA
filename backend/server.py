@@ -155,6 +155,52 @@ DEFENSIVE_REFRAME_MALWARE = (
     "Below is an architectural breakdown of the mechanism from a defensive analysis and detection standpoint, including AST sink remediation and detection signatures:\n\n"
 )
 
+# =====================================================================
+# PII & SENSITIVE DATA GATEKEEPER (Zero-Leak Data Protection)
+# =====================================================================
+PII_PATTERNS = {
+    "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    "PHONE": re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b"),
+    "CREDIT_CARD": re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{15,16}\b"),
+    "SSN_GOV_ID": re.compile(r"\b\d{3}-\d{2}-\d{4}\b|\b[A-Z]{5}\d{4}[A-Z]{1}\b"),
+    "API_KEY_OPENAI": re.compile(r"\bsk-[a-zA-Z0-9_\-]{20,}\b"),
+    "API_KEY_HF": re.compile(r"\bhf_[a-zA-Z0-9]{34,}\b"),
+    "API_KEY_AWS": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    "PRIVATE_KEY": re.compile(r"-----BEGIN (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----[\s\S]*?-----END (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----"),
+    "GITHUB_TOKEN": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{36,}\b"),
+    "AUTH_PASSWORD": re.compile(r"""(?i)(?:password|passwd|secret_key|api_secret)\s*[:=]\s*['"][^'"]{4,}['"]""")
+}
+
+def sanitize_pii_and_secrets(text: str) -> Tuple[str, List[str]]:
+    """
+    Sanitizes personal identifiable information (PII) and secret credentials.
+    Replaces sensitive data with typed redaction tokens [REDACTED_TYPE]
+    so that private data never enters the LLM context or memory.
+    """
+    if not text:
+        return "", []
+    sanitized = text
+    detected_types = []
+    for pii_type, pattern in PII_PATTERNS.items():
+        if pattern.search(sanitized):
+            detected_types.append(pii_type)
+            sanitized = pattern.sub(f"[REDACTED_{pii_type}]", sanitized)
+    return sanitized, detected_types
+
+def scrub_output_secrets(text: str) -> str:
+    """
+    Scrubs any inadvertent leaks of server paths, environment tokens, or sensitive credentials
+    from the generated model output before returning to client.
+    """
+    if not text:
+        return ""
+    scrubbed = text
+    for tok in [GROQ_API_KEY, OPENAI_API_KEY, HF_TOKEN]:
+        if tok and len(tok) > 6 and tok in scrubbed:
+            scrubbed = scrubbed.replace(tok, "[VAJRA_REDACTED_TOKEN]")
+    scrubbed = re.sub(r"[C-Z]:\\[Users|Windows|system32][^\s\"'<>]+", "[REDACTED_SYSTEM_PATH]", scrubbed, flags=re.IGNORECASE)
+    return scrubbed
+
 def evaluate_contextual_safety(raw_text: str):
     """
     Two-Tier Hybrid Safety Architecture:
@@ -238,9 +284,13 @@ async def chat_endpoint(req: ChatRequest, request: Request):
             "security": "Zero-Retention & Cryptographic Session Isolation Verified"
         }, headers=resp_headers)
 
-    prompt_to_run = req.prompt
+    clean_prompt, detected_pii = sanitize_pii_and_secrets(req.prompt)
+    if detected_pii:
+        resp_headers["X-Vajra-DLP-Sanitized"] = "true"
+
+    prompt_to_run = clean_prompt
     if not is_safe and reason == "defensive_reframe":
-        prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {req.prompt}"
+        prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
     cfg = determine_upstream_config()
     messages = [{"role": "system", content: VAJRA_SYSTEM_PROMPT}]
@@ -272,7 +322,7 @@ async def chat_endpoint(req: ChatRequest, request: Request):
         )
         with urllib.request.urlopen(http_req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
+            content = scrub_output_secrets(data["choices"][0]["message"]["content"])
             if not is_safe and reason == "defensive_reframe" and not content.startswith("🛡️"):
                 content = DEFENSIVE_REFRAME_MALWARE + content
             return JSONResponse({

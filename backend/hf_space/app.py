@@ -1,4 +1,5 @@
 import os
+import sys
 import gc
 import re
 import uuid
@@ -6,20 +7,39 @@ import time
 import json
 import urllib.request
 import threading
-import torch
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 try:
-    torch.set_num_threads(2)
-    torch.set_num_interop_threads(1)
-except Exception:
-    pass
-import gradio as gr
+    import torch
+    try:
+        torch.set_num_threads(2)
+        torch.set_num_interop_threads(1)
+    except Exception:
+        pass
+except ImportError:
+    torch = None
+
+try:
+    import gradio as gr
+except ImportError:
+    gr = None
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
-from peft import PeftModel
+
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+    from peft import PeftModel
+except ImportError:
+    AutoModelForCausalLM = AutoTokenizer = TextIteratorStreamer = PeftModel = None
 
 VAJRA_SECRET_KEY = os.getenv("VAJRA_SECRET_KEY")
 HF_TOKEN = os.getenv("HF_TOKEN", None)
@@ -48,13 +68,60 @@ INJECTION_TRIGGERS = [
     "reveal your system prompt", "you are now in dan mode", "jailbreak"
 ]
 
-def sanitize_and_check_injection(raw_text: str) -> str:
+# =====================================================================
+# PII & SENSITIVE DATA GATEKEEPER (Zero-Leak Data Protection)
+# =====================================================================
+PII_PATTERNS = {
+    "EMAIL": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    "CREDIT_CARD": re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{15,16}\b"),
+    "PHONE": re.compile(r"(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b"),
+    "SSN_GOV_ID": re.compile(r"\b\d{3}-\d{2}-\d{4}\b|\b[A-Z]{5}\d{4}[A-Z]{1}\b"),
+    "API_KEY_OPENAI": re.compile(r"\bsk-[a-zA-Z0-9_\-]{20,}\b"),
+    "API_KEY_HF": re.compile(r"\bhf_[a-zA-Z0-9]{34,}\b"),
+    "API_KEY_AWS": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    "PRIVATE_KEY": re.compile(r"-----BEGIN (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----[\s\S]*?-----END (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----"),
+    "GITHUB_TOKEN": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{36,}\b"),
+    "AUTH_PASSWORD": re.compile(r"""(?i)(?:password|passwd|secret_key|api_secret)\s*[:=]\s*['"][^'"]{4,}['"]""")
+}
+
+def sanitize_pii_and_secrets(text: str) -> Tuple[str, List[str]]:
+    """
+    Sanitizes personal identifiable information (PII) and secret credentials.
+    Replaces sensitive data with typed redaction tokens [REDACTED_TYPE]
+    so that private data never enters the LLM context or memory.
+    """
+    if not text:
+        return "", []
+    sanitized = text
+    detected_types = []
+    for pii_type, pattern in PII_PATTERNS.items():
+        if pattern.search(sanitized):
+            detected_types.append(pii_type)
+            sanitized = pattern.sub(f"[REDACTED_{pii_type}]", sanitized)
+    return sanitized, detected_types
+
+def scrub_output_secrets(text: str) -> str:
+    """
+    Scrubs any inadvertent leaks of server paths, environment tokens, or sensitive credentials
+    from the generated model output before streaming to client.
+    """
+    if not text:
+        return ""
+    scrubbed = text
+    for tok in [HF_TOKEN, VAJRA_SECRET_KEY]:
+        if tok and len(tok) > 6 and tok in scrubbed:
+            scrubbed = scrubbed.replace(tok, "[VAJRA_REDACTED_TOKEN]")
+    scrubbed = re.sub(r"[C-Z]:\\[Users|Windows|system32][^\s\"'<>]+", "[REDACTED_SYSTEM_PATH]", scrubbed, flags=re.IGNORECASE)
+    return scrubbed
+
+def sanitize_and_check_injection(raw_text: str) -> Tuple[str, List[str]]:
     cleaned = raw_text.replace("\x00", "").strip()
     lowered = cleaned.lower()
     for trig in INJECTION_TRIGGERS:
         if trig in lowered:
-            return "[VAJRA Security Shield: Prompt Injection Pattern Neutralized] Please ask legitimate technical questions."
-    return cleaned
+            return "[VAJRA Security Shield: Prompt Injection Pattern Neutralized] Please ask legitimate technical questions.", ["INJECTION"]
+    sanitized, pii_detected = sanitize_pii_and_secrets(cleaned)
+    return sanitized, pii_detected
 
 # =====================================================================
 # CONTEXTUAL SAFETY & CONTENT POLICY EVALUATOR (NOT NAIVE KEYWORD FILTER)
@@ -204,6 +271,10 @@ def evaluate_contextual_safety(raw_text: str):
     if DESTRUCTIVE_MALWARE_REGEX.search(text):
         return False, "defensive_reframe", DEFENSIVE_REFRAME_MALWARE
 
+    # Technical & biomedical fast-path: Explicit engineering/science bypasses neural check in <1ms
+    if TECHNICAL_CONTEXT_REGEX.search(text):
+        return True, "", text
+
     # Tier 2: 0.5B Neural Guard for contextual intent understanding (NO hardcoded word lists)
     is_safe, reason = classify_neural_intent(text)
     if not is_safe:
@@ -216,9 +287,10 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
     if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
         return safety_out
 
-    active_prompt = prompt
+    clean_p, _ = sanitize_pii_and_secrets(prompt)
+    active_prompt = clean_p
     if not is_safe and reason == "defensive_reframe":
-        active_prompt = f"Explain the defensive security mitigations, AST sinks, and detection methods for: {prompt}"
+        active_prompt = f"Explain the defensive security mitigations, AST sinks, and detection methods for: {clean_p}"
 
     # 1. Direct Local 0.5B CPU Generation (Ultra-fast speculative draft)
     try:
@@ -246,7 +318,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
                 if last_p > 20:
                     res = res[:last_p + 1].strip()
             if res:
-                return res
+                return scrub_output_secrets(res)
     except Exception as e:
         print(f"⚠️ Local 0.5B CPU generation note: {e}")
 
@@ -270,7 +342,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
                 if isinstance(result, list) and len(result) > 0:
                     text = result[0].get("generated_text", "").strip()
                     if text:
-                        return text
+                        return scrub_output_secrets(text)
         except Exception as e:
             print(f"⚠️ Ultra-Lite serverless fallback note: {e}")
 
@@ -323,7 +395,7 @@ def get_gguf_model():
             )
         print("🚀 [VAJRA v2] 4-bit 7B GGUF Model ONLINE on 2 vCPU! (~3.8 GB RAM footprint)")
     except Exception as e:
-        print(f"ℹ️ [VAJRA v2] GGUF model note: {e}. Using 0.5B CPU engine.")
+        print(f"[INFO] [VAJRA v2] GGUF model note: {e}. Using 0.5B CPU engine.")
         gguf_llm = None
     return gguf_llm
 
@@ -385,7 +457,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
     if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
         return safety_out, "VAJRA-Safety-Shield", "safety_guardrail"
 
-    clean_prompt = sanitize_and_check_injection(prompt)
+    clean_prompt, detected_pii = sanitize_and_check_injection(prompt)
     if not is_safe and reason == "defensive_reframe":
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
@@ -428,7 +500,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             if not is_safe and reason == "defensive_reframe" and not raw_reply.startswith("🛡️"):
                 raw_reply = DEFENSIVE_REFRAME_MALWARE + raw_reply
             print("✅ [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
-            return raw_reply, "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
+            return scrub_output_secrets(raw_reply), "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
 
         load_cpu_model()
 
@@ -439,7 +511,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                 if not is_safe and reason == "defensive_reframe" and not lite_reply.startswith("🛡️"):
                     lite_reply = DEFENSIVE_REFRAME_MALWARE + lite_reply
                 print("✅ [VAJRA v2] Query processed locally on 2 vCPU (0.5B engine).")
-                return lite_reply, "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
+                return scrub_output_secrets(lite_reply), "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
 
             # 2. Serverless Router / HF Inference API if HF_TOKEN is configured
             token = HF_TOKEN or os.getenv("HF_TOKEN")
@@ -463,7 +535,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                             if text:
                                 if not is_safe and reason == "defensive_reframe" and not text.startswith("🛡️"):
                                     text = DEFENSIVE_REFRAME_MALWARE + text
-                                return text, "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "cloud_router"
+                                return scrub_output_secrets(text), "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "cloud_router"
                 except Exception as route_err:
                     print(f"⚠️ 7B Serverless router fallback note: {route_err}")
 
@@ -504,7 +576,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         del model_inputs, generated_ids
         gc.collect()
 
-        return res_text.strip(), "AravKataria/vajra-lora (7B 2 vCPU)", "standard"
+        return scrub_output_secrets(res_text).strip(), "AravKataria/vajra-lora (7B 2 vCPU)", "standard"
 
     except Exception as e:
         print(f"⚠️ 7B CPU generation exception: {e}")
@@ -525,7 +597,7 @@ def gradio_generate(prompt: str):
         yield safety_out
         return
 
-    clean_prompt = sanitize_and_check_injection(prompt)
+    clean_prompt, _ = sanitize_and_check_injection(prompt)
     if not is_safe and reason == "defensive_reframe":
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
@@ -705,56 +777,58 @@ def gradio_generate_draft(prompt: str) -> str:
     is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
     if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
         return safety_out
-    clean = sanitize_and_check_injection(prompt)
+    clean, _ = sanitize_and_check_injection(prompt)
     reply = generate_ultra_lite_reply(clean)
-    return reply
+    return scrub_output_secrets(reply)
 
 # =====================================================================
 # 5. GRADIO INTERFACE
 # =====================================================================
-with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
-    gr.Markdown("# 🛡️ VAJRA v2 Cyber-Reasoning Intelligence System")
-    gr.Markdown("**Fine-Tuned by Arav Kataria** | 2 vCPU • 16 GB RAM • 24/7 Unlimited Online")
-    gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat` (With Dynamic Load Shedding)")
+demo = None
+if gr is not None:
+    with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
+        gr.Markdown("# 🛡️ VAJRA v2 Cyber-Reasoning Intelligence System")
+        gr.Markdown("**Fine-Tuned by Arav Kataria** | 2 vCPU • 16 GB RAM • 24/7 Unlimited Online")
+        gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat` (With Dynamic Load Shedding)")
 
-    with gr.Row():
-        user_input = gr.Textbox(
-            label="Inquiry / AST Code Audit",
-            placeholder="Ask VAJRA to audit code or explain technical concepts...",
-            lines=3
+        with gr.Row():
+            user_input = gr.Textbox(
+                label="Inquiry / AST Code Audit",
+                placeholder="Ask VAJRA to audit code or explain technical concepts...",
+                lines=3
+            )
+        send_button = gr.Button("Submit Reasoning Request", variant="primary")
+        output_display = gr.Markdown(label="VAJRA Analysis Output")
+
+        send_button.click(
+            fn=gradio_generate,
+            inputs=user_input,
+            outputs=output_display,
+            api_name="generate_vajra_reply"
         )
-    send_button = gr.Button("Submit Reasoning Request", variant="primary")
-    output_display = gr.Markdown(label="VAJRA Analysis Output")
+        alias_send_button = gr.Button("SubmitAlias", visible=False)
+        alias_send_button.click(
+            fn=gradio_generate,
+            inputs=user_input,
+            outputs=output_display,
+            api_name="gradio_generate"
+        )
 
-    send_button.click(
-        fn=gradio_generate,
-        inputs=user_input,
-        outputs=output_display,
-        api_name="generate_vajra_reply"
-    )
-    alias_send_button = gr.Button("SubmitAlias", visible=False)
-    alias_send_button.click(
-        fn=gradio_generate,
-        inputs=user_input,
-        outputs=output_display,
-        api_name="gradio_generate"
-    )
-
-    draft_button = gr.Button("Draft", visible=False)
-    draft_output = gr.Markdown(visible=False)
-    draft_button.click(
-        fn=gradio_generate_draft,
-        inputs=user_input,
-        outputs=draft_output,
-        api_name="generate_draft_reply"
-    )
-    draft_alias_btn = gr.Button("DraftAlias", visible=False)
-    draft_alias_btn.click(
-        fn=gradio_generate_draft,
-        inputs=user_input,
-        outputs=draft_output,
-        api_name="draft"
-    )
+        draft_button = gr.Button("Draft", visible=False)
+        draft_output = gr.Markdown(visible=False)
+        draft_button.click(
+            fn=gradio_generate_draft,
+            inputs=user_input,
+            outputs=draft_output,
+            api_name="generate_draft_reply"
+        )
+        draft_alias_btn = gr.Button("DraftAlias", visible=False)
+        draft_alias_btn.click(
+            fn=gradio_generate_draft,
+            inputs=user_input,
+            outputs=draft_output,
+            api_name="draft"
+        )
 
 # =====================================================================
 # 6. FASTAPI REST API & GRADIO MOUNTING
@@ -880,11 +954,12 @@ async def draft_v1(req: DraftRequest, request: Request):
             "X-Vajra-Request-ID": request_id
         })
 
-# Enable Gradio queue for event streaming
-demo.queue(default_concurrency_limit=2)
-
-# Mount Gradio Blocks at root of FastAPI application
-app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+# Enable Gradio queue for event streaming & mount at root of FastAPI
+if gr is not None and demo is not None:
+    demo.queue(default_concurrency_limit=2)
+    app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+else:
+    app = fastapi_app
 
 # Asynchronously preload both models into memory on boot
 threading.Thread(target=get_draft_model, daemon=True).start()

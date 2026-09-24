@@ -5860,7 +5860,40 @@
       return null;
     }
 
+    function sanitizeClientDlpAndPii(rawPrompt) {
+      if (!rawPrompt || typeof rawPrompt !== "string") return { text: rawPrompt, detected: [] };
+      var detected = [];
+      var clean = rawPrompt;
+
+      var clientPiiPatterns = [
+        { type: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+        { type: "CREDIT_CARD", regex: /\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{15,16}\b/g },
+        { type: "PHONE", regex: /(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b/g },
+        { type: "SSN_GOV_ID", regex: /\b\d{3}-\d{2}-\d{4}\b|\b[A-Z]{5}\d{4}[A-Z]{1}\b/g },
+        { type: "API_KEY_OPENAI", regex: /\bsk-[a-zA-Z0-9_\-]{20,}\b/g },
+        { type: "API_KEY_HF", regex: /\bhf_[a-zA-Z0-9]{34,}\b/g },
+        { type: "API_KEY_AWS", regex: /\bAKIA[0-9A-Z]{16}\b/g },
+        { type: "GITHUB_TOKEN", regex: /\bgh[pousr]_[A-Za-z0-9_]{36,}\b/g },
+        { type: "PRIVATE_KEY", regex: /-----BEGIN (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----[\s\S]*?-----END (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----/g }
+      ];
+
+      for (var i = 0; i < clientPiiPatterns.length; i++) {
+        var p = clientPiiPatterns[i];
+        if (p.regex.test(clean)) {
+          detected.push(p.type);
+          clean = clean.replace(p.regex, "[REDACTED_" + p.type + "]");
+        }
+      }
+      return { text: clean, detected: detected };
+    }
+
     async function tryFastLlmInference(userPrompt, sess, extraFiles, onToken, activeReqId) {
+      var dlpResult = sanitizeClientDlpAndPii(userPrompt);
+      if (dlpResult.detected.length > 0) {
+        console.log("🛡️ [VAJRA Client DLP Gatekeeper] Auto-redacted sensitive client data before transmission:", dlpResult.detected);
+        userPrompt = dlpResult.text;
+      }
+
       var contextFiles = null;
       if (extraFiles && Object.keys(extraFiles).length > 0) {
         contextFiles = extraFiles;
