@@ -11,6 +11,7 @@ Validates:
 7. Multi-user concurrent session isolation (zero prompt/response cross-talk).
 """
 
+from __future__ import annotations
 import time
 import uuid
 import re

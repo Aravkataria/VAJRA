@@ -9,12 +9,13 @@ Supported LLM Providers (Automatic Detection & Fallback):
 4. Local Ollama / vLLM instance
 """
 
+from __future__ import annotations
 import os
 import re
 import uuid
 import json
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Tuple
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
