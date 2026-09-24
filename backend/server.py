@@ -106,22 +106,13 @@ def determine_upstream_config():
 # =====================================================================
 TECHNICAL_CONTEXT_REGEX = re.compile(
     r"\b("
-    r"llm|large\s+language\s+model|transformer|neural\s+network|deep\s+learning|machine\s+learning|ai\s+model|"
-    r"pytorch|tensorflow|hugging\s*face|fine-?tun\w*|weights|loss|gradient|backprop\w*|scratch|dataset|"
-    r"python|javascript|typescript|c\+\+|golang|rust|java|html|css|sql|nosql|docker|kubernetes|linux|"
-    r"algorithm|data\s+structure|api|backend|frontend|framework|library|compiler|ast|syntax\s+tree|bytecode|"
-    r"react|vue|angular|node|express|fastapi|django|flask|nextjs|tailwind|git|github|database|query|schema|"
-    r"memory|pointer|buffer|stack|heap|concurrency|async|await|coroutine|socket|network|tcp|udp|http|dns|"
-    r"build|code|coding|develop|programming|script|scripting|debug|debugging|refactor|optimize|architecture|system\s+design|"
     r"penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|"
     r"sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|"
     r"race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|"
     r"forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|"
     r"kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|"
     r"sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|"
-    r"anatomy|medicine|medical|physiology|cellular|molecular|genetics|pharmacology|therapy|"
-    r"math|calculus|algebra|linear\s+algebra|matrix|tensor|vector|statistics|probability|"
-    r"firmware|packet\s+capture|wireshark|software|function|variable|class|object|method|repo|repository"
+    r"data\s+science|machine\s+learning|compiler|ast|syntax\s+tree|bytecode|firmware|packet\s+capture|wireshark"
     r")\b",
     re.IGNORECASE
 )
@@ -146,20 +137,20 @@ DESTRUCTIVE_MALWARE_REGEX = re.compile(
 )
 
 POLICY_REFUSAL_NSFW = (
-    "**[VAJRA Neural Safety Guard]**\n\n"
+    "🛡️ **[VAJRA Neural Safety Guard]**\n\n"
     "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Adult Narrative Intent)**\n\n"
     "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, pornographic, or erotic roleplay falls outside acceptable operational boundaries.\n\n"
     "Technical inquiries, cybersecurity audits, and forensic code analyses remain fully available."
 )
 
 POLICY_REFUSAL_HARDBAN = (
-    "**[VAJRA Content Safety Shield]**\n\n"
+    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
     "**Critical Security Event: Absolute Harm Policy Enforcement**\n\n"
     "This request involves non-consensual sexual violence, abuse, or prohibited safety categories and has been terminated immediately. VAJRA enforces zero-tolerance boundaries against harm and non-consensual content."
 )
 
 DEFENSIVE_REFRAME_MALWARE = (
-    "**[VAJRA Defensive Security Guardrail]**\n\n"
+    "🛡️ **[VAJRA Defensive Security Guardrail]**\n\n"
     "**Policy Notice: Defensive Security Reframing Active**\n\n"
     "VAJRA does not construct weaponized destructive malware, unconstrained ransomware, or wiper payloads. "
     "Below is an architectural breakdown of the mechanism from a defensive analysis and detection standpoint, including AST sink remediation and detection signatures:\n\n"
@@ -333,7 +324,7 @@ async def chat_endpoint(req: ChatRequest, request: Request):
         with urllib.request.urlopen(http_req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             content = scrub_output_secrets(data["choices"][0]["message"]["content"])
-            if not is_safe and reason == "defensive_reframe" and not content.startswith(DEFENSIVE_REFRAME_MALWARE):
+            if not is_safe and reason == "defensive_reframe" and not content.startswith("🛡️"):
                 content = DEFENSIVE_REFRAME_MALWARE + content
             return JSONResponse({
                 "success": True,

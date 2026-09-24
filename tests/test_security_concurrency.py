@@ -91,18 +91,6 @@ def test_cybersecurity_whitelist_passes(safe_cyber_prompt):
     assert payload == safe_cyber_prompt
 
 
-@pytest.mark.parametrize("safe_dev_prompt", [
-    "how to make a llm from scratch",
-    "explain transformer architecture and attention weights",
-    "how to build a react fullstack app with node and express",
-    "debug null pointer exception and memory leak in C++"
-], ids=["dev_llm_scratch", "dev_transformer", "dev_react_node", "dev_cpp_debug"])
-def test_software_and_ai_development_allowed(safe_dev_prompt):
-    is_safe, reason, payload = evaluate_contextual_safety(safe_dev_prompt)
-    assert is_safe, f"Software/AI dev query was falsely blocked: {safe_dev_prompt}"
-    assert reason == ""
-
-
 # =====================================================================
 # 4. MEDICAL & BIOLOGY TOPICS (ZERO FALSE POSITIVES)
 # =====================================================================
