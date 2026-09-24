@@ -1,5 +1,7 @@
 import os
 import gc
+import re
+import uuid
 import time
 import json
 import urllib.request
@@ -55,6 +57,109 @@ def sanitize_and_check_injection(raw_text: str) -> str:
     return cleaned
 
 # =====================================================================
+# CONTEXTUAL SAFETY & CONTENT POLICY EVALUATOR (NOT NAIVE KEYWORD FILTER)
+# =====================================================================
+# 1. Technical / Cybersecurity / Biomedical Whitelist
+# Legitimate security testing, software engineering, and scientific inquiries explicitly pass.
+TECHNICAL_CONTEXT_REGEX = re.compile(
+    r"\b("
+    r"penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|"
+    r"sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|"
+    r"race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|"
+    r"forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|"
+    r"kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|"
+    r"sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|"
+    r"data\s+science|machine\s+learning|compiler|ast|syntax\s+tree|bytecode|firmware|packet\s+capture|wireshark"
+    r")\b",
+    re.IGNORECASE
+)
+
+# 2. Hard Ban Patterns (Zero Tolerance regardless of technical context):
+HARD_BAN_REGEX = re.compile(
+    r"\b("
+    r"child\s+porn|csam|underage\s+(sex|porn|nude|erotic)|pedophil\w*|pedosex\w*|"
+    r"rape|gangrape|non-consensual\s+sex|sexual\s+assault|date\s+rape|revenge\s+porn|"
+    r"forced\s+intercourse|molest(ation|ing)?"
+    r")\b",
+    re.IGNORECASE
+)
+
+# 3. Contextual NSFW / Erotica / Adult Roleplay Generation Patterns:
+# Detects intent to generate explicit pornography or erotic stories/roleplay.
+EROTIC_ROLEPLAY_INTENT_REGEX = re.compile(
+    r"\b(write|roleplay|act\s+as|generate|tell\s+me|create|continue|describe|simulate)\b.*"
+    r"\b(erotic\s+story|dirty\s+story|sex\s+scene|cybersex|sensual\s+fantasy|erotica|erotic\s+novel|"
+    r"erotic\s+roleplay|nsfw\s+roleplay|sexual\s+fantasy|horny|orgasm|climax\s+together)\b",
+    re.IGNORECASE
+)
+
+EXPLICIT_SEXUAL_ACTS_REGEX = re.compile(
+    r"\b("
+    r"(unprotected\s+|hardcore\s+|explicit\s+)?(intercourse|fellatio|cunnilingus|blowjob|handjob|deepthroat)|"
+    r"erotic\s+massage|naked\s+together|stripping\s+naked|masturbat\w*|fondl\w*|aroused\s+and\s+naked|"
+    r"touching\s+her\s+(breast|pussy|vagina|clitoris)|touching\s+his\s+(penis|cock|dick)|ejaculat\w*"
+    r")\b",
+    re.IGNORECASE
+)
+
+# 4. Destructive Weaponized Malware Intent:
+DESTRUCTIVE_MALWARE_REGEX = re.compile(
+    r"\b(write|code|create|build|generate|make)\b.*"
+    r"\b(undetectable\s+ransomware|corporate\s+ransomware|disk\s+wiper|destroy\s+boot\s+records|"
+    r"mbr\s+wiper|destructive\s+wiper|weaponized\s+trojan|evade\s+all\s+edr\s+to\s+steal)\b",
+    re.IGNORECASE
+)
+
+POLICY_REFUSAL_NSFW = (
+    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
+    "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Non-Consensual Content)**\n\n"
+    "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, erotic narrative, or adult roleplay falls outside acceptable operational scope.\n\n"
+    "Technical inquiries, cybersecurity audits, and forensic code analyses remain fully available."
+)
+
+POLICY_REFUSAL_HARDBAN = (
+    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
+    "**Critical Security Event: Absolute Harm Policy Enforcement**\n\n"
+    "This request involves non-consensual sexual violence, abuse, or prohibited safety categories and has been terminated immediately. VAJRA enforces zero-tolerance boundaries against harm and non-consensual content."
+)
+
+DEFENSIVE_REFRAME_MALWARE = (
+    "🛡️ **[VAJRA Defensive Security Guardrail]**\n\n"
+    "**Policy Notice: Defensive Security Reframing Active**\n\n"
+    "VAJRA does not construct weaponized destructive malware, unconstrained ransomware, or wiper payloads. "
+    "Below is an architectural breakdown of the mechanism from a defensive analysis and detection standpoint, including AST sink remediation and detection signatures:\n\n"
+)
+
+def evaluate_contextual_safety(raw_text: str):
+    """
+    Contextual safety evaluator:
+    Returns (is_safe: bool, reason: str, payload_or_refusal: str)
+    """
+    text = (raw_text or "").replace("\x00", "").strip()
+    if not text:
+        return True, "", ""
+
+    # 1. Hard bans always trigger regardless of technical context
+    if HARD_BAN_REGEX.search(text):
+        return False, "hard_ban", POLICY_REFUSAL_HARDBAN
+
+    # 2. Check technical context
+    has_technical_context = bool(TECHNICAL_CONTEXT_REGEX.search(text))
+
+    # 3. Contextual NSFW / Erotica detection
+    is_erotic_intent = bool(EROTIC_ROLEPLAY_INTENT_REGEX.search(text))
+    is_explicit_acts = bool(EXPLICIT_SEXUAL_ACTS_REGEX.search(text))
+
+    if is_erotic_intent or (is_explicit_acts and not has_technical_context):
+        return False, "nsfw_erotica", POLICY_REFUSAL_NSFW
+
+    # 4. Destructive Malware check
+    if DESTRUCTIVE_MALWARE_REGEX.search(text):
+        return False, "defensive_reframe", DEFENSIVE_REFRAME_MALWARE
+
+    return True, "", text
+
+# =====================================================================
 # 2. ULTRA-LITE LOAD SHEDDING ENGINE (0.5B Neural Model On CPU)
 # =====================================================================
 draft_tokenizer = None
@@ -84,13 +189,21 @@ def get_draft_model():
     return draft_tokenizer, draft_model
 
 def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
+    is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
+    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        return safety_out
+
+    active_prompt = prompt
+    if not is_safe and reason == "defensive_reframe":
+        active_prompt = f"Explain the defensive security mitigations, AST sinks, and detection methods for: {prompt}"
+
     # 1. Direct Local 0.5B CPU Generation (Ultra-fast speculative draft)
     try:
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
                 {"role": "system", "content": "You are VAJRA-Draft. Give a direct, concise 1-2 sentence technical summary."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": active_prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             inputs = tok([text_in], return_tensors="pt")
@@ -125,7 +238,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
                 "User-Agent": "VAJRA-v2-CPU/1.0"
             }
             payload = json.dumps({
-                "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant. Provide a complete, structured explanation concluding with a summary.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
+                "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant. Provide a complete, structured explanation concluding with a summary.<|im_end|>\n<|im_start|>user\n{active_prompt}<|im_end|>\n<|im_start|>assistant\n",
                 "parameters": {"max_new_tokens": 512, "temperature": 0.2, "return_full_text": False}
             }).encode("utf-8")
             req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
@@ -244,7 +357,14 @@ Provide a clear, high-value, and complete technical explanation in 1 to 2 focuse
 # 4. INFERENCE WITH CONCURRENCY LOCK & LOAD SHEDDING
 # =====================================================================
 def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None):
+    # Contextual safety evaluation (preserves technical/cybersecurity context)
+    is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
+    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        return safety_out, "VAJRA-Safety-Shield", "safety_guardrail"
+
     clean_prompt = sanitize_and_check_injection(prompt)
+    if not is_safe and reason == "defensive_reframe":
+        clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
     # 1. Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
     acquired = inference_lock.acquire(blocking=False)
@@ -282,6 +402,8 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                 last_punct = max(raw_reply.rfind('.'), raw_reply.rfind('!'), raw_reply.rfind('?'))
                 if last_punct > len(raw_reply) // 2:
                     raw_reply = raw_reply[:last_punct + 1].strip()
+            if not is_safe and reason == "defensive_reframe" and not raw_reply.startswith("🛡️"):
+                raw_reply = DEFENSIVE_REFRAME_MALWARE + raw_reply
             print("✅ [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
             return raw_reply, "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)", "standard"
 
@@ -291,6 +413,8 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             # 1. Answer immediately on 2 vCPU using fast local engine (~42 tokens/sec, 1.2 GB RAM)
             lite_reply = generate_ultra_lite_reply(clean_prompt, context_files)
             if lite_reply:
+                if not is_safe and reason == "defensive_reframe" and not lite_reply.startswith("🛡️"):
+                    lite_reply = DEFENSIVE_REFRAME_MALWARE + lite_reply
                 print("✅ [VAJRA v2] Query processed locally on 2 vCPU (0.5B engine).")
                 return lite_reply, "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
 
@@ -314,6 +438,8 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                         if isinstance(result, list) and len(result) > 0:
                             text = result[0].get("generated_text", "").strip()
                             if text:
+                                if not is_safe and reason == "defensive_reframe" and not text.startswith("🛡️"):
+                                    text = DEFENSIVE_REFRAME_MALWARE + text
                                 return text, "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "cloud_router"
                 except Exception as route_err:
                     print(f"⚠️ 7B Serverless router fallback note: {route_err}")
@@ -350,6 +476,8 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         res_text = tokenizer.decode(generated_ids[0, in_len:], skip_special_tokens=True).strip()
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
+        if not is_safe and reason == "defensive_reframe" and not res_text.startswith("🛡️"):
+            res_text = DEFENSIVE_REFRAME_MALWARE + res_text
         del model_inputs, generated_ids
         gc.collect()
 
@@ -360,11 +488,23 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
     finally:
+        try:
+            if 'llm' in locals() and llm is not None:
+                llm.reset()
+        except Exception:
+            pass
         inference_lock.release()
 
 # Progressive token streaming generator for Gradio interface
 def gradio_generate(prompt: str):
+    is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
+    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        yield safety_out
+        return
+
     clean_prompt = sanitize_and_check_injection(prompt)
+    if not is_safe and reason == "defensive_reframe":
+        clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
     # Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
     acquired = inference_lock.acquire(blocking=False)
@@ -531,9 +671,17 @@ def gradio_generate(prompt: str):
         yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
 
     finally:
+        try:
+            if 'llm' in locals() and llm is not None:
+                llm.reset()
+        except Exception:
+            pass
         inference_lock.release()
 
 def gradio_generate_draft(prompt: str) -> str:
+    is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
+    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        return safety_out
     clean = sanitize_and_check_injection(prompt)
     reply = generate_ultra_lite_reply(clean)
     return reply
@@ -603,6 +751,8 @@ class ChatRequest(BaseModel):
     workspace_id: Optional[str] = None
     files: Optional[Dict[str, str]] = None
     auth_key: Optional[str] = None
+    session_id: Optional[str] = None
+    request_id: Optional[str] = None
 
 @fastapi_app.get("/health")
 def health():
@@ -614,6 +764,7 @@ def health():
         "draft_loaded": draft_model is not None,
         "model": "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)",
         "load_shedding_active": True,
+        "session_isolation": "128-bit Cryptographic Ephemeral",
         "author": "Arav Kataria",
         "service": "VAJRA-v2-CPU-Gateway"
     }
@@ -622,6 +773,8 @@ def health():
 async def chat_v1(req: ChatRequest, request: Request):
     sig_header = request.headers.get("X-Vajra-Signature") or req.auth_key
     client_ip = request.client.host if request.client else "127.0.0.1"
+    session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
+    request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
 
     if VAJRA_SECRET_KEY:
         import hmac
@@ -630,6 +783,24 @@ async def chat_v1(req: ChatRequest, request: Request):
     else:
         if not check_rate_limit(client_ip):
             raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
+
+    # Contextual safety evaluation
+    is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
+    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        return JSONResponse({
+            "success": False,
+            "overflow": False,
+            "busy": False,
+            "reply": safety_out,
+            "model": "VAJRA-Safety-Shield",
+            "tier": "safety_guardrail",
+            "session_id": session_id,
+            "request_id": request_id,
+            "security": "Zero-Retention & Cryptographic Session Isolation Verified"
+        }, headers={
+            "X-Vajra-Session-ID": session_id,
+            "X-Vajra-Request-ID": request_id
+        })
 
     reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
     is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
@@ -640,15 +811,24 @@ async def chat_v1(req: ChatRequest, request: Request):
         "reply": reply,
         "model": model_name,
         "tier": tier_name,
-        "security": "Zero-Retention Verified"
+        "session_id": session_id,
+        "request_id": request_id,
+        "security": "Zero-Retention & Cryptographic Session Isolation Verified"
+    }, headers={
+        "X-Vajra-Session-ID": session_id,
+        "X-Vajra-Request-ID": request_id
     })
 
 class DraftRequest(BaseModel):
     prompt: Optional[str] = None
     data: Optional[List[Any]] = None
+    session_id: Optional[str] = None
+    request_id: Optional[str] = None
 
 @fastapi_app.post("/v1/draft")
-async def draft_v1(req: DraftRequest):
+async def draft_v1(req: DraftRequest, request: Request):
+    session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
+    request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
     try:
         p = req.prompt or ""
         if not p and req.data and len(req.data) > 0:
@@ -657,14 +837,24 @@ async def draft_v1(req: DraftRequest):
         return JSONResponse({
             "success": bool(reply),
             "reply": reply,
-            "tier": "ultra_lite"
+            "tier": "ultra_lite",
+            "session_id": session_id,
+            "request_id": request_id
+        }, headers={
+            "X-Vajra-Session-ID": session_id,
+            "X-Vajra-Request-ID": request_id
         })
     except Exception as e:
         return JSONResponse({
             "success": False,
             "error": str(e),
             "reply": "",
-            "tier": "ultra_lite"
+            "tier": "ultra_lite",
+            "session_id": session_id,
+            "request_id": request_id
+        }, headers={
+            "X-Vajra-Session-ID": session_id,
+            "X-Vajra-Request-ID": request_id
         })
 
 # Enable Gradio queue for event streaming

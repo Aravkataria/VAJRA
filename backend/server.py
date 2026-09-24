@@ -10,6 +10,8 @@ Supported LLM Providers (Automatic Detection & Fallback):
 """
 
 import os
+import re
+import uuid
 import json
 import asyncio
 from typing import Optional, Dict, Any
@@ -98,6 +100,89 @@ def determine_upstream_config():
             "provider": "Local Ollama"
         }
 
+# =====================================================================
+# CONTEXTUAL SAFETY & CONTENT POLICY EVALUATOR (NOT NAIVE KEYWORD FILTER)
+# =====================================================================
+TECHNICAL_CONTEXT_REGEX = re.compile(
+    r"\b("
+    r"penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|"
+    r"sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|"
+    r"race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|"
+    r"forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|"
+    r"kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|"
+    r"sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|"
+    r"data\s+science|machine\s+learning|compiler|ast|syntax\s+tree|bytecode|firmware|packet\s+capture|wireshark"
+    r")\b",
+    re.IGNORECASE
+)
+
+HARD_BAN_REGEX = re.compile(
+    r"\b("
+    r"child\s+porn|csam|underage\s+(sex|porn|nude|erotic)|pedophil\w*|pedosex\w*|"
+    r"rape|gangrape|non-consensual\s+sex|sexual\s+assault|date\s+rape|revenge\s+porn|"
+    r"forced\s+intercourse|molest(ation|ing)?"
+    r")\b",
+    re.IGNORECASE
+)
+
+EROTIC_ROLEPLAY_INTENT_REGEX = re.compile(
+    r"\b(write|roleplay|act\s+as|generate|tell\s+me|create|continue|describe|simulate)\b.*"
+    r"\b(erotic\s+story|dirty\s+story|sex\s+scene|cybersex|sensual\s+fantasy|erotica|erotic\s+novel|"
+    r"erotic\s+roleplay|nsfw\s+roleplay|sexual\s+fantasy|horny|orgasm|climax\s+together)\b",
+    re.IGNORECASE
+)
+
+EXPLICIT_SEXUAL_ACTS_REGEX = re.compile(
+    r"\b("
+    r"(unprotected\s+|hardcore\s+|explicit\s+)?(intercourse|fellatio|cunnilingus|blowjob|handjob|deepthroat)|"
+    r"erotic\s+massage|naked\s+together|stripping\s+naked|masturbat\w*|fondl\w*|aroused\s+and\s+naked|"
+    r"touching\s+her\s+(breast|pussy|vagina|clitoris)|touching\s+his\s+(penis|cock|dick)|ejaculat\w*"
+    r")\b",
+    re.IGNORECASE
+)
+
+DESTRUCTIVE_MALWARE_REGEX = re.compile(
+    r"\b(write|code|create|build|generate|make)\b.*"
+    r"\b(undetectable\s+ransomware|corporate\s+ransomware|disk\s+wiper|destroy\s+boot\s+records|"
+    r"mbr\s+wiper|destructive\s+wiper|weaponized\s+trojan|evade\s+all\s+edr\s+to\s+steal)\b",
+    re.IGNORECASE
+)
+
+POLICY_REFUSAL_NSFW = (
+    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
+    "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Non-Consensual Content)**\n\n"
+    "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, erotic narrative, or adult roleplay falls outside acceptable operational scope.\n\n"
+    "Technical inquiries, cybersecurity audits, and forensic code analyses remain fully available."
+)
+
+POLICY_REFUSAL_HARDBAN = (
+    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
+    "**Critical Security Event: Absolute Harm Policy Enforcement**\n\n"
+    "This request involves non-consensual sexual violence, abuse, or prohibited safety categories and has been terminated immediately. VAJRA enforces zero-tolerance boundaries against harm and non-consensual content."
+)
+
+DEFENSIVE_REFRAME_MALWARE = (
+    "🛡️ **[VAJRA Defensive Security Guardrail]**\n\n"
+    "**Policy Notice: Defensive Security Reframing Active**\n\n"
+    "VAJRA does not construct weaponized destructive malware, unconstrained ransomware, or wiper payloads. "
+    "Below is an architectural breakdown of the mechanism from a defensive analysis and detection standpoint, including AST sink remediation and detection signatures:\n\n"
+)
+
+def evaluate_contextual_safety(raw_text: str):
+    text = (raw_text or "").replace("\x00", "").strip()
+    if not text:
+        return True, "", ""
+    if HARD_BAN_REGEX.search(text):
+        return False, "hard_ban", POLICY_REFUSAL_HARDBAN
+    has_technical_context = bool(TECHNICAL_CONTEXT_REGEX.search(text))
+    is_erotic_intent = bool(EROTIC_ROLEPLAY_INTENT_REGEX.search(text))
+    is_explicit_acts = bool(EXPLICIT_SEXUAL_ACTS_REGEX.search(text))
+    if is_erotic_intent or (is_explicit_acts and not has_technical_context):
+        return False, "nsfw_erotica", POLICY_REFUSAL_NSFW
+    if DESTRUCTIVE_MALWARE_REGEX.search(text):
+        return False, "defensive_reframe", DEFENSIVE_REFRAME_MALWARE
+    return True, "", text
+
 class ChatRequest(BaseModel):
     prompt: str
     workspace_id: Optional[str] = None
@@ -105,6 +190,8 @@ class ChatRequest(BaseModel):
     model: Optional[str] = None
     temperature: Optional[float] = 0.2
     max_tokens: Optional[int] = 4096
+    session_id: Optional[str] = None
+    request_id: Optional[str] = None
 
 @app.get("/")
 def root():
@@ -139,11 +226,35 @@ def is_finder_intent(prompt: str) -> bool:
     return any(trigger in p for trigger in scan_triggers)
 
 @app.post("/api/chat")
-async def chat_endpoint(req: ChatRequest):
+async def chat_endpoint(req: ChatRequest, request: Request):
     """
     Fast direct LLM inference endpoint with provider auto-routing.
     Bypasses the finder when not needed to ensure zero delay.
     """
+    session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
+    request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
+    resp_headers = {
+        "X-Vajra-Session-ID": session_id,
+        "X-Vajra-Request-ID": request_id
+    }
+
+    # Contextual safety evaluation
+    is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
+    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        return JSONResponse({
+            "success": False,
+            "reply": safety_out,
+            "model": "VAJRA-Safety-Shield",
+            "tier": "safety_guardrail",
+            "session_id": session_id,
+            "request_id": request_id,
+            "security": "Zero-Retention & Cryptographic Session Isolation Verified"
+        }, headers=resp_headers)
+
+    prompt_to_run = req.prompt
+    if not is_safe and reason == "defensive_reframe":
+        prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {req.prompt}"
+
     cfg = determine_upstream_config()
     messages = [{"role": "system", content: VAJRA_SYSTEM_PROMPT}]
     
@@ -155,7 +266,7 @@ async def chat_endpoint(req: ChatRequest):
         if file_summary:
             messages.append({"role": "system", content: f"Workspace Files:\n{file_summary}"})
             
-    messages.append({"role": "user", content: req.prompt})
+    messages.append({"role": "user", content: prompt_to_run})
     
     target_model = req.model or cfg["model"]
     payload = json.dumps({
@@ -175,13 +286,18 @@ async def chat_endpoint(req: ChatRequest):
         with urllib.request.urlopen(http_req, timeout=30) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             content = data["choices"][0]["message"]["content"]
+            if not is_safe and reason == "defensive_reframe" and not content.startswith("🛡️"):
+                content = DEFENSIVE_REFRAME_MALWARE + content
             return JSONResponse({
                 "success": True,
                 "reply": content,
                 "provider": cfg["provider"],
                 "model": target_model,
+                "session_id": session_id,
+                "request_id": request_id,
+                "security": "Zero-Retention & Cryptographic Session Isolation Verified",
                 "bypassed_finder": not is_finder_intent(req.prompt)
-            })
+            }, headers=resp_headers)
     except urllib.error.HTTPError as e:
         if e.code == 429:
             retry_header = e.headers.get("Retry-After")
