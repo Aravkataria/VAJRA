@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import sys
 import gc
@@ -33,7 +34,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Tuple
 
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
