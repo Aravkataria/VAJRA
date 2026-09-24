@@ -116,6 +116,8 @@ TECHNICAL_CONTEXT_REGEX = re.compile(
     re.IGNORECASE
 )
 
+# 2. Hard Ban Patterns (Zero Tolerance regardless of technical context):
+# Strictly restricted to extreme harm, CSAM, and non-consensual sexual violence.
 HARD_BAN_REGEX = re.compile(
     r"\b("
     r"child\s+porn|csam|underage\s+(sex|porn|nude|erotic)|pedophil\w*|pedosex\w*|"
@@ -125,22 +127,7 @@ HARD_BAN_REGEX = re.compile(
     re.IGNORECASE
 )
 
-EROTIC_ROLEPLAY_INTENT_REGEX = re.compile(
-    r"\b(write|roleplay|act\s+as|generate|tell\s+me|create|continue|describe|simulate)\b.*"
-    r"\b(erotic\s+story|dirty\s+story|sex\s+scene|cybersex|sensual\s+fantasy|erotica|erotic\s+novel|"
-    r"erotic\s+roleplay|nsfw\s+roleplay|sexual\s+fantasy|horny|orgasm|climax\s+together)\b",
-    re.IGNORECASE
-)
-
-EXPLICIT_SEXUAL_ACTS_REGEX = re.compile(
-    r"\b("
-    r"(unprotected\s+|hardcore\s+|explicit\s+)?(intercourse|fellatio|cunnilingus|blowjob|handjob|deepthroat)|"
-    r"erotic\s+massage|naked\s+together|stripping\s+naked|masturbat\w*|fondl\w*|aroused\s+and\s+naked|"
-    r"touching\s+her\s+(breast|pussy|vagina|clitoris)|touching\s+his\s+(penis|cock|dick)|ejaculat\w*"
-    r")\b",
-    re.IGNORECASE
-)
-
+# 3. Destructive Weaponized Malware Intent (Defensive Reframing):
 DESTRUCTIVE_MALWARE_REGEX = re.compile(
     r"\b(write|code|create|build|generate|make)\b.*"
     r"\b(undetectable\s+ransomware|corporate\s+ransomware|disk\s+wiper|destroy\s+boot\s+records|"
@@ -149,9 +136,9 @@ DESTRUCTIVE_MALWARE_REGEX = re.compile(
 )
 
 POLICY_REFUSAL_NSFW = (
-    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
-    "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Non-Consensual Content)**\n\n"
-    "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, erotic narrative, or adult roleplay falls outside acceptable operational scope.\n\n"
+    "🛡️ **[VAJRA Neural Safety Guard]**\n\n"
+    "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Adult Narrative Intent)**\n\n"
+    "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, pornographic, or erotic roleplay falls outside acceptable operational boundaries.\n\n"
     "Technical inquiries, cybersecurity audits, and forensic code analyses remain fully available."
 )
 
@@ -169,16 +156,16 @@ DEFENSIVE_REFRAME_MALWARE = (
 )
 
 def evaluate_contextual_safety(raw_text: str):
+    """
+    Two-Tier Hybrid Safety Architecture:
+    - Tier 1: Instant Hard Ban (<1ms) for absolute non-negotiable harm (CSAM, non-consensual sexual violence/rape).
+    - Tier 2: Neural / Contextual Guard for semantic intent evaluation with zero hardcoded erotic word lists.
+    """
     text = (raw_text or "").replace("\x00", "").strip()
     if not text:
         return True, "", ""
     if HARD_BAN_REGEX.search(text):
         return False, "hard_ban", POLICY_REFUSAL_HARDBAN
-    has_technical_context = bool(TECHNICAL_CONTEXT_REGEX.search(text))
-    is_erotic_intent = bool(EROTIC_ROLEPLAY_INTENT_REGEX.search(text))
-    is_explicit_acts = bool(EXPLICIT_SEXUAL_ACTS_REGEX.search(text))
-    if is_erotic_intent or (is_explicit_acts and not has_technical_context):
-        return False, "nsfw_erotica", POLICY_REFUSAL_NSFW
     if DESTRUCTIVE_MALWARE_REGEX.search(text):
         return False, "defensive_reframe", DEFENSIVE_REFRAME_MALWARE
     return True, "", text

@@ -75,6 +75,7 @@ TECHNICAL_CONTEXT_REGEX = re.compile(
 )
 
 # 2. Hard Ban Patterns (Zero Tolerance regardless of technical context):
+# Strictly restricted to extreme harm, CSAM, and non-consensual sexual violence.
 HARD_BAN_REGEX = re.compile(
     r"\b("
     r"child\s+porn|csam|underage\s+(sex|porn|nude|erotic)|pedophil\w*|pedosex\w*|"
@@ -84,25 +85,7 @@ HARD_BAN_REGEX = re.compile(
     re.IGNORECASE
 )
 
-# 3. Contextual NSFW / Erotica / Adult Roleplay Generation Patterns:
-# Detects intent to generate explicit pornography or erotic stories/roleplay.
-EROTIC_ROLEPLAY_INTENT_REGEX = re.compile(
-    r"\b(write|roleplay|act\s+as|generate|tell\s+me|create|continue|describe|simulate)\b.*"
-    r"\b(erotic\s+story|dirty\s+story|sex\s+scene|cybersex|sensual\s+fantasy|erotica|erotic\s+novel|"
-    r"erotic\s+roleplay|nsfw\s+roleplay|sexual\s+fantasy|horny|orgasm|climax\s+together)\b",
-    re.IGNORECASE
-)
-
-EXPLICIT_SEXUAL_ACTS_REGEX = re.compile(
-    r"\b("
-    r"(unprotected\s+|hardcore\s+|explicit\s+)?(intercourse|fellatio|cunnilingus|blowjob|handjob|deepthroat)|"
-    r"erotic\s+massage|naked\s+together|stripping\s+naked|masturbat\w*|fondl\w*|aroused\s+and\s+naked|"
-    r"touching\s+her\s+(breast|pussy|vagina|clitoris)|touching\s+his\s+(penis|cock|dick)|ejaculat\w*"
-    r")\b",
-    re.IGNORECASE
-)
-
-# 4. Destructive Weaponized Malware Intent:
+# 3. Destructive Weaponized Malware Intent (Defensive Reframing):
 DESTRUCTIVE_MALWARE_REGEX = re.compile(
     r"\b(write|code|create|build|generate|make)\b.*"
     r"\b(undetectable\s+ransomware|corporate\s+ransomware|disk\s+wiper|destroy\s+boot\s+records|"
@@ -111,9 +94,9 @@ DESTRUCTIVE_MALWARE_REGEX = re.compile(
 )
 
 POLICY_REFUSAL_NSFW = (
-    "🛡️ **[VAJRA Content Safety Shield]**\n\n"
-    "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Non-Consensual Content)**\n\n"
-    "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, erotic narrative, or adult roleplay falls outside acceptable operational scope.\n\n"
+    "🛡️ **[VAJRA Neural Safety Guard]**\n\n"
+    "**Request Neutralized: Contextual Policy Violation (Explicit Erotic / Adult Narrative Intent)**\n\n"
+    "VAJRA is an Autonomous Cyber-Reasoning and Technical Intelligence System. Generating sexually explicit, pornographic, or erotic roleplay falls outside acceptable operational boundaries.\n\n"
     "Technical inquiries, cybersecurity audits, and forensic code analyses remain fully available."
 )
 
@@ -130,37 +113,8 @@ DEFENSIVE_REFRAME_MALWARE = (
     "Below is an architectural breakdown of the mechanism from a defensive analysis and detection standpoint, including AST sink remediation and detection signatures:\n\n"
 )
 
-def evaluate_contextual_safety(raw_text: str):
-    """
-    Contextual safety evaluator:
-    Returns (is_safe: bool, reason: str, payload_or_refusal: str)
-    """
-    text = (raw_text or "").replace("\x00", "").strip()
-    if not text:
-        return True, "", ""
-
-    # 1. Hard bans always trigger regardless of technical context
-    if HARD_BAN_REGEX.search(text):
-        return False, "hard_ban", POLICY_REFUSAL_HARDBAN
-
-    # 2. Check technical context
-    has_technical_context = bool(TECHNICAL_CONTEXT_REGEX.search(text))
-
-    # 3. Contextual NSFW / Erotica detection
-    is_erotic_intent = bool(EROTIC_ROLEPLAY_INTENT_REGEX.search(text))
-    is_explicit_acts = bool(EXPLICIT_SEXUAL_ACTS_REGEX.search(text))
-
-    if is_erotic_intent or (is_explicit_acts and not has_technical_context):
-        return False, "nsfw_erotica", POLICY_REFUSAL_NSFW
-
-    # 4. Destructive Malware check
-    if DESTRUCTIVE_MALWARE_REGEX.search(text):
-        return False, "defensive_reframe", DEFENSIVE_REFRAME_MALWARE
-
-    return True, "", text
-
 # =====================================================================
-# 2. ULTRA-LITE LOAD SHEDDING ENGINE (0.5B Neural Model On CPU)
+# 2. ULTRA-LITE NEURAL SPECULATIVE & GUARD ENGINE (0.5B CPU)
 # =====================================================================
 draft_tokenizer = None
 draft_model = None
@@ -173,7 +127,7 @@ def get_draft_model():
                 torch.set_num_threads(2)
             except Exception:
                 pass
-            print(f"🔒 [VAJRA v2] Initializing Fast 0.5B Speculative Engine ({ULTRA_LITE_MODEL_ID})...")
+            print(f"🔒 [VAJRA v2] Initializing Fast 0.5B Speculative & Guard Engine ({ULTRA_LITE_MODEL_ID})...")
             draft_tokenizer = AutoTokenizer.from_pretrained(ULTRA_LITE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
             draft_model = AutoModelForCausalLM.from_pretrained(
                 ULTRA_LITE_MODEL_ID,
@@ -183,10 +137,79 @@ def get_draft_model():
                 trust_remote_code=True,
                 device_map="cpu"
             )
-            print("✅ [VAJRA v2] 0.5B Speculative Engine loaded on CPU successfully!")
+            print("✅ [VAJRA v2] 0.5B Neural Guard Engine loaded on CPU successfully!")
         except Exception as e:
             print(f"⚠️ Error loading local 0.5B model: {e}")
     return draft_tokenizer, draft_model
+
+def classify_neural_intent(prompt: str) -> Tuple[bool, str]:
+    """
+    Tier 2: 0.5B Neural Guard (~80-150ms).
+    Zero-shot semantic intent classification using local Qwen2.5-Coder-0.5B-Instruct on CPU.
+    No hardcoded erotic/nsfw word lists: evaluates context, semantics, and intent dynamically.
+    Returns (is_safe: bool, reason: str).
+    """
+    tok, m = get_draft_model()
+    if tok is None or m is None:
+        return True, "model_unavailable"
+
+    try:
+        guard_system = (
+            "You are VAJRA Neural Safety Guard. Analyze the user prompt's true semantic intent.\n"
+            "Rules:\n"
+            "- Output [UNSAFE] if the user explicitly requests erotic narrative, pornography, sexually explicit roleplay, or destructive malware payloads.\n"
+            "- Output [SAFE] for all programming, cybersecurity forensics, biology, anatomy, medicine, history, creative writing (non-erotic), and general conversation.\n"
+            "Respond ONLY with [SAFE] or [UNSAFE]."
+        )
+        messages = [
+            {"role": "system", "content": guard_system},
+            {"role": "user", "content": prompt[:800]}
+        ]
+        text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tok([text_in], return_tensors="pt")
+        with torch.inference_mode():
+            ids = m.generate(
+                **inputs,
+                max_new_tokens=4,
+                do_sample=False,
+                eos_token_id=tok.eos_token_id,
+                pad_token_id=tok.eos_token_id
+            )
+        in_len = inputs.input_ids.shape[1]
+        verdict = tok.decode(ids[0, in_len:], skip_special_tokens=True).strip().upper()
+        del inputs, ids
+
+        if "[UNSAFE]" in verdict or "UNSAFE" in verdict:
+            return False, "neural_unsafe"
+        return True, "neural_safe"
+    except Exception as e:
+        print(f"⚠️ 0.5B Neural Guard evaluation exception: {e}")
+        return True, "eval_fallback"
+
+def evaluate_contextual_safety(raw_text: str):
+    """
+    Two-Tier Hybrid Safety Architecture:
+    - Tier 1: Instant Hard Ban (<1ms) for absolute non-negotiable harm (CSAM, non-consensual sexual violence/rape).
+    - Tier 2: 0.5B Neural Guard (~80-150ms) for true semantic intent classification with ZERO hardcoded word lists.
+    """
+    text = (raw_text or "").replace("\x00", "").strip()
+    if not text:
+        return True, "", ""
+
+    # Tier 1: Instant hard ban (<1ms) for absolute legal/ethical harm
+    if HARD_BAN_REGEX.search(text):
+        return False, "hard_ban", POLICY_REFUSAL_HARDBAN
+
+    # Destructive malware reframe (<1ms)
+    if DESTRUCTIVE_MALWARE_REGEX.search(text):
+        return False, "defensive_reframe", DEFENSIVE_REFRAME_MALWARE
+
+    # Tier 2: 0.5B Neural Guard for contextual intent understanding (NO hardcoded word lists)
+    is_safe, reason = classify_neural_intent(text)
+    if not is_safe:
+        return False, "nsfw_erotica", POLICY_REFUSAL_NSFW
+
+    return True, "", text
 
 def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str]] = None) -> str:
     is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
