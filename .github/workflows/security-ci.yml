@@ -1,0 +1,36 @@
+name: VAJRA Security, PII Gatekeeper & Concurrency CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  security-concurrency-tests:
+    name: Security, DLP & Concurrency Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest fastapi pydantic uvicorn httpx
+
+      - name: 🛡️ Run Security & Concurrency Test Suite
+        run: |
+          echo "=== Running VAJRA Security & Concurrency Verification Tests ==="
+          python -m pytest tests/test_security_concurrency.py -v

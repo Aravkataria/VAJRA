@@ -1736,6 +1736,39 @@
       border-color: var(--border-medium);
     }
 
+    .session-privacy-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-muted, #71717a);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+      border-radius: 4px;
+      user-select: none;
+      letter-spacing: 0.01em;
+      transition: all 0.15s ease;
+    }
+
+    .session-privacy-pill:hover {
+      color: var(--text-secondary, #a1a1aa);
+      border-color: var(--border-medium, rgba(255, 255, 255, 0.15));
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    [data-theme="light"] .session-privacy-pill {
+      background: rgba(0, 0, 0, 0.02);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #71717a;
+    }
+
+    [data-theme="light"] .session-privacy-pill:hover {
+      background: rgba(0, 0, 0, 0.04);
+      color: #3f3f46;
+    }
+
     .btn-run-scan {
       background: var(--btn-primary-bg);
       color: var(--btn-primary-text);
@@ -5208,6 +5241,89 @@
       return triggers.some(function(t) { return q.includes(t); });
     }
 
+    /* ─── Cryptographic Ephemeral Session & Request Isolation Guard ─── */
+    function getVajraCryptoSessionId() {
+      var sid = sessionStorage.getItem("vajra_crypto_session_id");
+      if (!sid) {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          sid = "vajra_sess_" + window.crypto.randomUUID();
+        } else {
+          var arr = new Uint8Array(16);
+          if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+            window.crypto.getRandomValues(arr);
+            sid = "vajra_sess_" + Array.from(arr, function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+          } else {
+            sid = "vajra_sess_" + Math.random().toString(36).substring(2, 15) + "_" + Date.now().toString(36);
+          }
+        }
+        sessionStorage.setItem("vajra_crypto_session_id", sid);
+      }
+      return sid;
+    }
+
+    var activeInferenceRequestId = null;
+
+    function generateInferenceRequestId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return "req_" + window.crypto.randomUUID();
+      }
+      return "req_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now().toString(36);
+    }
+
+    /* ─── Contextual Safety & Content Policy Evaluator (Not Naive Keyword Blocking) ─── */
+    var TECHNICAL_CONTEXT_REGEX = /\b(penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|data\s+science|machine\s+learning|compiler|ast|syntax\s+tree|bytecode|firmware|packet\s+capture|wireshark)\b/i;
+
+    var HARD_BAN_REGEX = /\b(child\s+porn|csam|underage\s+(sex|porn|nude|erotic)|pedophil\w*|pedosex\w*|rape|gangrape|non-consensual\s+sex|sexual\s+assault|date\s+rape|revenge\s+porn|forced\s+intercourse|molest(ation|ing)?)\b/i;
+
+    var EROTIC_ROLEPLAY_INTENT_REGEX = /\b(write|roleplay|act\s+as|generate|tell\s+me|create|continue|describe|simulate)\b[\s\S]*?\b(erotic\s+story|dirty\s+story|sex\s+scene|cybersex|sensual\s+fantasy|erotica|erotic\s+novel|erotic\s+roleplay|nsfw\s+roleplay|sexual\s+fantasy|horny|orgasm|climax\s+together)\b/i;
+
+    var EXPLICIT_SEXUAL_ACTS_REGEX = /\b((unprotected\s+|hardcore\s+|explicit\s+)?(intercourse|fellatio|cunnilingus|blowjob|handjob|deepthroat)|erotic\s+massage|naked\s+together|stripping\s+naked|masturbat\w*|fondl\w*|aroused\s+and\s+naked|touching\s+her\s+(breast|pussy|vagina|clitoris)|touching\s+his\s+(penis|cock|dick)|ejaculat\w*)\b/i;
+
+    var DESTRUCTIVE_MALWARE_REGEX = /\b(write|code|create|build|generate|make)\b[\s\S]*?\b(undetectable\s+ransomware|corporate\s+ransomware|disk\s+wiper|destroy\s+boot\s+records|mbr\s+wiper|destructive\s+wiper|weaponized\s+trojan|evade\s+all\s+edr\s+to\s+steal)\b/i;
+
+    function evaluateContextualSafety(rawText) {
+      var text = (rawText || "").replace(/\0/g, "").trim();
+      if (!text) return { isSafe: true, reason: "", result: "" };
+
+      if (HARD_BAN_REGEX.test(text)) {
+        return {
+          isSafe: false,
+          reason: "hard_ban",
+          result: "<div class='safety-shield-alert' style='border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5; color: var(--text-primary);'>" +
+            "<div style='font-weight:700; color:#ef4444; margin-bottom:6px; display:flex; align-items:center; gap:6px;'>🛡️ [VAJRA Content Safety Shield: Policy Violation]</div>" +
+            "<p style='color:var(--text-secondary);'>This request involves prohibited non-consensual content or severe harm boundaries. VAJRA enforces strict zero-tolerance boundaries against harm.</p>" +
+            "</div>"
+        };
+      }
+
+      var hasTechnicalContext = TECHNICAL_CONTEXT_REGEX.test(text);
+      var isEroticIntent = EROTIC_ROLEPLAY_INTENT_REGEX.test(text);
+      var isExplicitActs = EXPLICIT_SEXUAL_ACTS_REGEX.test(text);
+
+      if (isEroticIntent || (isExplicitActs && !hasTechnicalContext)) {
+        return {
+          isSafe: false,
+          reason: "nsfw_erotica",
+          result: "<div class='safety-shield-alert' style='border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.08); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5; color: var(--text-primary);'>" +
+            "<div style='font-weight:700; color:#f59e0b; margin-bottom:6px; display:flex; align-items:center; gap:6px;'>🛡️ [VAJRA Content Safety Shield: Contextual Safety Boundary]</div>" +
+            "<p style='color:var(--text-secondary);'>VAJRA is an Autonomous Cyber-Reasoning and Software Security Intelligence System. Generating sexually explicit, erotic narrative, or adult roleplay content falls outside acceptable operational scope.</p>" +
+            "<p style='margin-top:6px; font-size:0.82rem; color:var(--text-muted);'>Technical software security inquiries, AST audits, and vulnerability research remain fully unrestricted.</p>" +
+            "</div>"
+        };
+      }
+
+      if (DESTRUCTIVE_MALWARE_REGEX.test(text)) {
+        return {
+          isSafe: false,
+          reason: "defensive_reframe",
+          isReframed: true,
+          reframedPrompt: "Provide an architectural analysis of the requested attack mechanism from a defensive security and detection perspective. Detail detection heuristics, AST sinks, and mitigations rather than weaponized payloads."
+        };
+      }
+
+      return { isSafe: true, reason: "", result: text };
+    }
+
     /* ─── ZeroGPU Quota Circuit Breaker (15 Minutes) ─── */
     function isZeroGpuCircuitOpen() {
       try {
@@ -5290,9 +5406,13 @@
       }, 1000);
     }
 
-    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken, firstTokenTimeoutMs) {
+    async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken, firstTokenTimeoutMs, activeReqId) {
       var sTimeout = streamTimeoutMs || 85000;
       var isZeroGpu = (hfEndpoint.indexOf("vajra.hf.space") !== -1 && hfEndpoint.indexOf("vajra-v2") === -1);
+      var reqId = activeReqId || activeInferenceRequestId || generateInferenceRequestId();
+      var sessionHeaders = Object.assign({}, directHeaders || {});
+      sessionHeaders["X-Vajra-Session-ID"] = getVajraCryptoSessionId();
+      sessionHeaders["X-Vajra-Request-ID"] = reqId;
 
       function extractGradioText(rawItem, prevAcc) {
         if (rawItem === null || rawItem === undefined) return prevAcc || "";
@@ -5328,7 +5448,7 @@
         try {
           var callResp = await fetch(hfEndpoint + ep, {
             method: "POST",
-            headers: directHeaders,
+            headers: sessionHeaders,
             body: JSON.stringify({ data: [fullPrompt] }),
             signal: getActiveSignal(10000)
           });
@@ -5340,10 +5460,7 @@
             var callData = await callResp.json();
             var eventId = callData.event_id;
             if (eventId) {
-              var streamHeaders = {};
-              if (directHeaders && directHeaders["Authorization"]) {
-                streamHeaders["Authorization"] = directHeaders["Authorization"];
-              }
+              var streamHeaders = Object.assign({}, sessionHeaders);
               var streamResp = await fetch(hfEndpoint + ep + "/" + eventId, {
                 headers: streamHeaders,
                 signal: getActiveSignal(sTimeout)
@@ -5374,6 +5491,10 @@
                   while (true) {
                     var chunk = await reader.read();
                     if (chunk.done) break;
+                    if (reqId !== activeInferenceRequestId) {
+                      try { reader.cancel(); } catch (e) {}
+                      return { reply: null, superseded: true };
+                    }
                     buffer += decoder.decode(chunk.value, { stream: true });
                     var lines = buffer.split("\n");
                     buffer = lines.pop() || "";
@@ -5543,8 +5664,12 @@
         try {
           var v1ChatResp = await fetch(hfEndpoint + "/v1/chat", {
             method: "POST",
-            headers: directHeaders,
-            body: JSON.stringify({ prompt: fullPrompt }),
+            headers: sessionHeaders,
+            body: JSON.stringify({
+              prompt: fullPrompt,
+              session_id: getVajraCryptoSessionId(),
+              request_id: reqId
+            }),
             signal: getActiveSignal(25000)
           });
           if (v1ChatResp.ok) {
@@ -5563,13 +5688,22 @@
       return null;
     }
 
-    async function tryFastDraftQuery(userPrompt, directHeaders) {
+    async function tryFastDraftQuery(userPrompt, directHeaders, activeReqId) {
+      var reqId = activeReqId || activeInferenceRequestId || generateInferenceRequestId();
+      var draftHeaders = Object.assign({}, directHeaders || {});
+      draftHeaders["X-Vajra-Session-ID"] = getVajraCryptoSessionId();
+      draftHeaders["X-Vajra-Request-ID"] = reqId;
+
       // 1. Direct FastAPI /v1/draft (Clean REST route, bypasses Gradio router conflict, ~1.5s)
       try {
         var v1Resp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/v1/draft", {
           method: "POST",
-          headers: directHeaders,
-          body: JSON.stringify({ prompt: userPrompt }),
+          headers: draftHeaders,
+          body: JSON.stringify({
+            prompt: userPrompt,
+            session_id: getVajraCryptoSessionId(),
+            request_id: reqId
+          }),
           signal: getActiveSignal(12000)
         });
         if (v1Resp.ok) {
@@ -5585,7 +5719,7 @@
         try {
           var callResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + draftEp, {
             method: "POST",
-            headers: directHeaders,
+            headers: draftHeaders,
             body: JSON.stringify({ data: [userPrompt] }),
             signal: getActiveSignal(8000)
           });
@@ -5594,7 +5728,7 @@
             var eventId = callData.event_id;
             if (eventId) {
               var streamResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + draftEp + "/" + eventId, {
-                headers: directHeaders,
+                headers: draftHeaders,
                 signal: getActiveSignal(15000)
               });
               if (streamResp.ok && streamResp.body) {
@@ -5604,6 +5738,10 @@
                 while (true) {
                   var chunk = await reader.read();
                   if (chunk.done) break;
+                  if (reqId !== activeInferenceRequestId) {
+                    try { reader.cancel(); } catch (e) {}
+                    return null;
+                  }
                   buffer += decoder.decode(chunk.value, { stream: true });
                   var lines = buffer.split("\n");
                   buffer = lines.pop() || "";
@@ -5629,7 +5767,7 @@
       return null;
     }
 
-    async function tryDirectHfSpace(userPrompt, contextFiles, onToken) {
+    async function tryDirectHfSpace(userPrompt, contextFiles, onToken, activeReqId) {
       try {
         var fullPrompt = userPrompt;
         if (contextFiles && Object.keys(contextFiles).length > 0) {
@@ -5661,7 +5799,9 @@
             function(chunk) {
               vcpuTokensReceived = true;
               if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
-            }
+            },
+            null,
+            activeReqId
           );
           if (vcpuRes) {
             if (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
@@ -5693,7 +5833,9 @@
               30000,
               function(chunk) {
                 if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA BURST [7B ZeroGPU]");
-              }
+              },
+              null,
+              activeReqId
             );
             if (gpuRes) {
               if (gpuRes.isRateLimited) {
@@ -5714,7 +5856,40 @@
       return null;
     }
 
-    async function tryFastLlmInference(userPrompt, sess, extraFiles, onToken) {
+    function sanitizeClientDlpAndPii(rawPrompt) {
+      if (!rawPrompt || typeof rawPrompt !== "string") return { text: rawPrompt, detected: [] };
+      var detected = [];
+      var clean = rawPrompt;
+
+      var clientPiiPatterns = [
+        { type: "EMAIL", regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+        { type: "CREDIT_CARD", regex: /\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{15,16}\b/g },
+        { type: "PHONE", regex: /(?:\+?\d{1,3}[-.\s]?)?(?:\(\d{2,4}\)|\d{2,4})[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b/g },
+        { type: "SSN_GOV_ID", regex: /\b\d{3}-\d{2}-\d{4}\b|\b[A-Z]{5}\d{4}[A-Z]{1}\b/g },
+        { type: "API_KEY_OPENAI", regex: /\bsk-[a-zA-Z0-9_\-]{20,}\b/g },
+        { type: "API_KEY_HF", regex: /\bhf_[a-zA-Z0-9]{34,}\b/g },
+        { type: "API_KEY_AWS", regex: /\bAKIA[0-9A-Z]{16}\b/g },
+        { type: "GITHUB_TOKEN", regex: /\bgh[pousr]_[A-Za-z0-9_]{36,}\b/g },
+        { type: "PRIVATE_KEY", regex: /-----BEGIN (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----[\s\S]*?-----END (?:RSA|OPENSSH|EC|PGP)? PRIVATE KEY-----/g }
+      ];
+
+      for (var i = 0; i < clientPiiPatterns.length; i++) {
+        var p = clientPiiPatterns[i];
+        if (p.regex.test(clean)) {
+          detected.push(p.type);
+          clean = clean.replace(p.regex, "[REDACTED_" + p.type + "]");
+        }
+      }
+      return { text: clean, detected: detected };
+    }
+
+    async function tryFastLlmInference(userPrompt, sess, extraFiles, onToken, activeReqId) {
+      var dlpResult = sanitizeClientDlpAndPii(userPrompt);
+      if (dlpResult.detected.length > 0) {
+        console.log("🛡️ [VAJRA Client DLP Gatekeeper] Auto-redacted sensitive client data before transmission:", dlpResult.detected);
+        userPrompt = dlpResult.text;
+      }
+
       var contextFiles = null;
       if (extraFiles && Object.keys(extraFiles).length > 0) {
         contextFiles = extraFiles;
@@ -5726,7 +5901,7 @@
 
       // 1. Primary & Overflow Direct Spaces: 2 vCPU Primary -> ZeroGPU Overflow (if 2 vCPU busy)
       try {
-        var directRes = await tryDirectHfSpace(userPrompt, contextFiles, onToken);
+        var directRes = await tryDirectHfSpace(userPrompt, contextFiles, onToken, activeReqId);
         if (directRes && directRes.reply) return directRes;
       } catch (e) {}
 
@@ -5736,12 +5911,16 @@
         files: contextFiles,
         model: "AravKataria/vajra-lora",
         max_tokens: 4096,
-        hf_token: storedHfToken || null
+        hf_token: storedHfToken || null,
+        session_id: getVajraCryptoSessionId(),
+        request_id: activeReqId || activeInferenceRequestId
       });
 
       try {
         var backendHeaders = {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-Vajra-Session-ID": getVajraCryptoSessionId(),
+          "X-Vajra-Request-ID": activeReqId || activeInferenceRequestId
         };
         if (storedHfToken) {
           backendHeaders["X-HF-Token"] = storedHfToken;
@@ -5772,7 +5951,9 @@
         var localResp = await fetch(VAJRA_LOCAL_BACKEND + "/api/chat", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Vajra-Session-ID": getVajraCryptoSessionId(),
+            "X-Vajra-Request-ID": activeReqId || activeInferenceRequestId
           },
           body: payload,
           signal: AbortSignal.timeout(3000)
@@ -6189,6 +6370,18 @@
     }
 
     async function handleCasefileQuery(q, extraFiles) {
+      // 1. Instant Contextual Safety Pre-Flight Evaluator (<1ms instant client guardrail)
+      var safetyCheck = evaluateContextualSafety(q);
+      if (!safetyCheck.isSafe && (safetyCheck.reason === "hard_ban" || safetyCheck.reason === "nsfw_erotica")) {
+        showTypingIndicator();
+        setTimeout(function() {
+          removeTypingIndicator();
+          appendSessionMessage("bot", safetyCheck.result, "VAJRA CONTENT SHIELD");
+          setGenerating(false);
+        }, 120);
+        return;
+      }
+
       // Guard: if a rate-limit cooldown is currently active, block the request
       if (isOnCooldown) {
         var cdEl = document.getElementById("cooldownSeconds");
@@ -6206,6 +6399,12 @@
         }, 400);
         return;
       }
+
+      var thisRequestId = generateInferenceRequestId();
+      activeInferenceRequestId = thisRequestId;
+      var isDefensivelyReframed = (!safetyCheck.isSafe && safetyCheck.reason === "defensive_reframe");
+      var promptToQuery = isDefensivelyReframed ?
+        ("Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: " + q) : q;
 
       activeGenerationAbortController = new AbortController();
       setGenerating(true);
@@ -6386,7 +6585,7 @@
         var pipelinePref = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
 
         if (pipelinePref === "lite") {
-          var liteDraft = await tryFastDraftQuery(q, directHeaders);
+          var liteDraft = await tryFastDraftQuery(promptToQuery, directHeaders, thisRequestId);
           removeTypingIndicator();
           if (liteDraft && liteDraft.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
             typewriter = createStreamTypewriter("Qwen/Qwen2.5-Coder-0.5B-Instruct");
@@ -6409,7 +6608,7 @@
 
         if (pipelinePref !== "deep") {
           // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
-          var draftPromise = tryFastDraftQuery(q, directHeaders).then(function(draftText) {
+          var draftPromise = tryFastDraftQuery(promptToQuery, directHeaders, thisRequestId).then(function(draftText) {
             if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
               return null;
             }
@@ -6432,6 +6631,9 @@
 
         // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
         function handleStreamChunk(chunkText, badge) {
+          if (thisRequestId !== activeInferenceRequestId) {
+            return;
+          }
           if (!chunkText || chunkText.trim().length === 0 || chunkText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
             return;
           }
@@ -6450,9 +6652,14 @@
         }
 
         // Launch Channel B AFTER draft has CPU time: Deep 7B Reasoning
-        var inferenceRes = await tryFastLlmInference(q, sess, chunkedExtraFiles, function(chunk, badge) {
+        var inferenceRes = await tryFastLlmInference(promptToQuery, sess, chunkedExtraFiles, function(chunk, badge) {
           handleStreamChunk(chunk, badge);
-        });
+        }, thisRequestId);
+
+        if (thisRequestId !== activeInferenceRequestId) {
+          console.warn("🛡️ [VAJRA Concurrency Guard] Stale request superseded by newer query; discarded.");
+          return;
+        }
 
         isDeepResolved = true;
         clearTimeout(glassCeilingTimer);
@@ -6499,6 +6706,12 @@
 
           if (inferenceRes.reply) {
             removeTypingIndicator();
+            var finalReply = inferenceRes.reply;
+            if (isDefensivelyReframed && !finalReply.includes("🛡️") && !finalReply.includes("Defensive")) {
+              finalReply = "<div style='border:1px solid rgba(59,130,246,0.3); background:rgba(59,130,246,0.06); padding:10px 14px; border-radius:6px; font-size:0.83rem; margin-bottom:12px; color:var(--text-secondary);'>" +
+                "<b style='color:#60a5fa;'>🛡️ [VAJRA Defensive Guardrail Active]</b> Weaponized exploit generation is converted into architectural vulnerability analysis, detection telemetry, and defensive AST remediation." +
+              "</div>" + finalReply;
+            }
             var badge = "";
             if (inferenceRes.model && !inferenceRes.model.includes("VAJRA Cloud Gateway")) {
               badge = inferenceRes.model;
@@ -6517,7 +6730,7 @@
             }
 
             if (typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
-              typewriter.refineWithVerified(inferenceRes.reply, {
+              typewriter.refineWithVerified(finalReply, {
                 tier: inferenceRes.tier,
                 model: badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
               });
@@ -6526,9 +6739,9 @@
 
             if (!typewriter) {
               typewriter = createStreamTypewriter(badge || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
-              typewriter.onToken(inferenceRes.reply);
+              typewriter.onToken(finalReply);
             }
-            typewriter.finish(inferenceRes.reply, {
+            typewriter.finish(finalReply, {
               tier: inferenceRes.tier,
               model: badge
             });
