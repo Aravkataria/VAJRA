@@ -63,6 +63,7 @@ jobs:
               ui: [],
               perf: [],
               docs: [],
+              tests: [],
               others: []
             };
 
@@ -79,6 +80,8 @@ jobs:
                 categories.perf.push(msg);
               } else if (lower.startsWith("docs") || lower.includes("readme")) {
                 categories.docs.push(msg);
+              } else if (lower.startsWith("test")) {
+                categories.tests.push(msg);
               } else {
                 categories.others.push(msg);
               }
@@ -117,7 +120,10 @@ jobs:
             if (categories.docs.length > 0) {
               changeBreakdown += "#### 📚 Documentation & Guides\n" + categories.docs.map(m => "- " + m).join("\n") + "\n\n";
             }
-            if (categories.others.length > 0 && changeBreakdown === "") {
+            if (categories.tests.length > 0) {
+              changeBreakdown += "#### 🧪 Tests & Quality Assurance\n" + categories.tests.map(m => "- " + m).join("\n") + "\n\n";
+            }
+            if (categories.others.length > 0) {
               changeBreakdown += "#### 🔧 Other Changes\n" + categories.others.map(m => "- " + m).join("\n") + "\n\n";
             }
 
