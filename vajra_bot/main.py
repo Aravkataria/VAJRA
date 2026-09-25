@@ -1,6 +1,10 @@
 """
 VAJRA GitHub Action Main Entrypoint
-CLI and runner invoked during GitHub Actions workflows.
+Full Multi-Stage Architecture:
+  Stage 1: AST & Secret Signatures (Fast Rule Filter)
+  Stage 2: Semantic & Neural Finder (Contextual Sinks)
+  Stage 3: VAJRA LLM Remediation (Patch Generation)
+  Stage 4: AST Self-Verification (Syntax & Secondary Sink Validation)
 Lead Engineer: Arav Kataria
 """
 
@@ -9,6 +13,8 @@ import sys
 import json
 from pathlib import Path
 from vajra_bot.scanner import scan_content, scan_file, Finding
+from vajra_bot.finder import SemanticFinder
+from vajra_bot.remediator import ModelRemediator
 from vajra_bot.reviewer import GitHubReviewer, build_audit_summary_markdown
 
 
@@ -38,12 +44,13 @@ def run_action():
         commit_sha = event_data["pull_request"]["head"]["sha"]
     elif "issue" in event_data and "pull_request" in event_data["issue"]:
         pull_number = event_data["issue"]["number"]
-        # Comment on a PR
         if "comment" in event_data:
             comment_body = event_data["comment"].get("body", "")
             if "@vajra" not in comment_body.lower():
                 print("ℹ️ Comment does not mention @vajra. Skipping.")
                 return
+
+    remediator = ModelRemediator()
 
     if not pull_number:
         # Standalone scan on current directory
@@ -52,7 +59,15 @@ def run_action():
         for p in Path(".").rglob("*"):
             if p.is_file() and not any(part.startswith(".") for part in p.parts):
                 if p.suffix in (".py", ".js", ".ts", ".html", ".env", ".json"):
-                    all_findings.extend(scan_file(p))
+                    # Stage 1: AST & Secret scan
+                    findings = scan_file(p)
+                    # Stage 2: Semantic Finder scan
+                    try:
+                        content = p.read_text(encoding="utf-8", errors="ignore")
+                        findings.extend(SemanticFinder.scan_context(str(p), content))
+                    except Exception:
+                        pass
+                    all_findings.extend(findings)
 
         print(f"✅ Standalone scan complete. Found {len(all_findings)} potential findings.")
         for f in all_findings:
@@ -66,7 +81,7 @@ def run_action():
     reviewer = GitHubReviewer(token=token, repo=repo, pull_number=pull_number, commit_sha=commit_sha)
 
     print(f"⚡ VAJRA Security Auditor initiated for PR #{pull_number} on {repo}...")
-    reviewer.set_commit_status(state="pending", description="VAJRA AST security audit in progress...")
+    reviewer.set_commit_status(state="pending", description="VAJRA Multi-Stage AST & Neural Audit in progress...")
 
     # Fetch changed files from PR
     pr_files = reviewer.get_pr_files()
@@ -84,33 +99,66 @@ def run_action():
         if status == "removed":
             continue
 
-        # If file exists in checked-out workspace, scan full content; otherwise scan patch
         local_path = Path(filename)
         file_findings = []
+        file_content = ""
+
+        # Read content
         if local_path.is_file():
-            file_findings = scan_file(local_path)
+            try:
+                file_content = local_path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                pass
         elif patch:
-            file_findings = scan_content(filename, patch)
+            file_content = patch
 
-        findings.extend(file_findings)
+        # -------------------------------------------------------------
+        # STAGE 1: AST & Secret Signature Rules
+        # -------------------------------------------------------------
+        if file_content:
+            file_findings.extend(scan_content(filename, file_content))
 
-        # Build inline comment suggestions for high/critical findings
+        # -------------------------------------------------------------
+        # STAGE 2: Semantic & Neural Finder
+        # -------------------------------------------------------------
+        if file_content:
+            semantic_findings = SemanticFinder.scan_context(filename, file_content)
+            file_findings.extend(semantic_findings)
+
+        # -------------------------------------------------------------
+        # STAGES 3 & 4: Neural Remediation & AST Self-Verification
+        # -------------------------------------------------------------
         for f in file_findings:
             if f.severity in ("CRITICAL", "HIGH"):
+                # Extract snippet around line
+                snippet_lines = file_content.splitlines()[max(0, f.line - 4): min(len(file_content.splitlines()), f.line + 4)]
+                snippet = "\n".join(snippet_lines)
+
+                # Generate and verify patch
+                verified_patch, is_verified = remediator.generate_verified_remediation(
+                    filename=f.file,
+                    line_number=f.line,
+                    vulnerable_code=snippet,
+                    cwe=f.cwe,
+                    fallback_suggestion=f.suggestion
+                )
+
+                verification_badge = "🛡️ **AST-Verified Patch**" if is_verified else "⚠️ **Suggested Remediation**"
                 comment_text = (
                     f"### ⚡ VAJRA Security Finding: {f.title} ({f.cwe})\n\n"
-                    f"**Severity**: `{f.severity}`\n\n"
-                    f"{f.description}\n"
+                    f"**Severity**: `{f.severity}`  \n"
+                    f"**Verification**: {verification_badge}\n\n"
+                    f"{f.description}\n\n"
+                    f"```suggestion\n{verified_patch}\n```\n"
                 )
-                if f.suggestion:
-                    comment_text += f"\n```suggestion\n{f.suggestion}\n```\n"
 
-                # Check if file has patch line references
                 inline_comments.append({
                     "path": f.file,
                     "line": f.line,
                     "body": comment_text
                 })
+
+        findings.extend(file_findings)
 
     # Build and post summary
     summary_md = build_audit_summary_markdown(findings, len(pr_files))
@@ -118,14 +166,7 @@ def run_action():
     criticals = [f for f in findings if f.severity == "CRITICAL"]
     highs = [f for f in findings if f.severity == "HIGH"]
 
-    review_event = "COMMENT"
-    if criticals:
-        review_event = "REQUEST_CHANGES"
-    elif not highs:
-        review_event = "APPROVE"
-
     try:
-        # Try to post formal PR review; fallback to PR comment if inline line ranges don't align with diff
         reviewer.post_pr_comment(summary_md)
         print("✅ Posted VAJRA Security Audit summary to PR thread.")
     except Exception as e:
@@ -143,10 +184,10 @@ def run_action():
     else:
         reviewer.set_commit_status(
             state="success",
-            description="VAJRA: Security audit passed clean."
+            description="VAJRA: Multi-stage security audit passed clean."
         )
 
-    print("🎉 VAJRA Security Audit completed successfully.")
+    print("🎉 VAJRA Multi-Stage Security Audit completed successfully.")
 
 
 if __name__ == "__main__":
