@@ -874,6 +874,22 @@ class BugReportRequest(BaseModel):
     diagnostics: Optional[Dict[str, Any]] = None
     honeypot: Optional[str] = ""
 
+ACTIVE_REQUESTS_LOCK = threading.Lock()
+ACTIVE_REQUESTS_COUNT = 0
+
+@fastapi_app.get("/api/system/load")
+def get_system_load():
+    with ACTIVE_REQUESTS_LOCK:
+        active = ACTIVE_REQUESTS_COUNT
+    is_busy = active >= 3
+    return {
+        "status": "online",
+        "active_queries": active,
+        "load_level": "busy" if is_busy else ("moderate" if active > 0 else "idle"),
+        "autopilot_allowed": not is_busy,
+        "message": "Real-time user traffic prioritised." if is_busy else "Compute headroom available for VAJRA Autopilot."
+    }
+
 @fastapi_app.get("/health")
 def health():
     return {
@@ -896,24 +912,46 @@ async def chat_v1(req: ChatRequest, request: Request):
     session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
     request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
 
-    if VAJRA_SECRET_KEY:
-        import hmac
-        if not sig_header or not hmac.compare_digest(sig_header.strip(), VAJRA_SECRET_KEY.strip()):
-            raise HTTPException(status_code=403, detail="Forbidden: Invalid VAJRA Security Signature.")
-    else:
-        if not check_rate_limit(client_ip):
-            raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
+    global ACTIVE_REQUESTS_COUNT
+    with ACTIVE_REQUESTS_LOCK:
+        ACTIVE_REQUESTS_COUNT += 1
 
-    # Contextual safety evaluation
-    is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
-    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+    try:
+        if VAJRA_SECRET_KEY:
+            import hmac
+            if not sig_header or not hmac.compare_digest(sig_header.strip(), VAJRA_SECRET_KEY.strip()):
+                raise HTTPException(status_code=403, detail="Forbidden: Invalid VAJRA Security Signature.")
+        else:
+            if not check_rate_limit(client_ip):
+                raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
+
+        # Contextual safety evaluation
+        is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
+        if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+            return JSONResponse({
+                "success": False,
+                "overflow": False,
+                "busy": False,
+                "reply": safety_out,
+                "model": "VAJRA-Safety-Shield",
+                "tier": "safety_guardrail",
+                "session_id": session_id,
+                "request_id": request_id,
+                "security": "Zero-Retention & Cryptographic Session Isolation Verified"
+            }, headers={
+                "X-Vajra-Session-ID": session_id,
+                "X-Vajra-Request-ID": request_id
+            })
+
+        reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
+        is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
         return JSONResponse({
-            "success": False,
-            "overflow": False,
-            "busy": False,
-            "reply": safety_out,
-            "model": "VAJRA-Safety-Shield",
-            "tier": "safety_guardrail",
+            "success": not is_overflow,
+            "overflow": is_overflow,
+            "busy": is_overflow,
+            "reply": reply,
+            "model": model_name,
+            "tier": tier_name,
             "session_id": session_id,
             "request_id": request_id,
             "security": "Zero-Retention & Cryptographic Session Isolation Verified"
@@ -921,23 +959,9 @@ async def chat_v1(req: ChatRequest, request: Request):
             "X-Vajra-Session-ID": session_id,
             "X-Vajra-Request-ID": request_id
         })
-
-    reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
-    is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
-    return JSONResponse({
-        "success": not is_overflow,
-        "overflow": is_overflow,
-        "busy": is_overflow,
-        "reply": reply,
-        "model": model_name,
-        "tier": tier_name,
-        "session_id": session_id,
-        "request_id": request_id,
-        "security": "Zero-Retention & Cryptographic Session Isolation Verified"
-    }, headers={
-        "X-Vajra-Session-ID": session_id,
-        "X-Vajra-Request-ID": request_id
-    })
+    finally:
+        with ACTIVE_REQUESTS_LOCK:
+            ACTIVE_REQUESTS_COUNT = max(0, ACTIVE_REQUESTS_COUNT - 1)
 
 class DraftRequest(BaseModel):
     prompt: Optional[str] = None
@@ -1017,6 +1041,37 @@ async def report_bug_endpoint(req: BugReportRequest, request: Request):
         "success": True,
         "report_id": report_id,
         "message": "Bug report delivered to maintainer."
+    })
+
+@fastapi_app.post("/api/github/webhook")
+async def github_app_webhook(request: Request):
+    """
+    Receives and processes GitHub App webhook events for VAJRA autonomous audits.
+    """
+    event_type = request.headers.get("X-GitHub-Event", "ping")
+    delivery_id = request.headers.get("X-GitHub-Delivery", "N/A")
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if event_type == "ping":
+        return JSONResponse({
+            "success": True,
+            "message": "VAJRA GitHub App Webhook Online",
+            "zen": payload.get("zen", "Defense in depth."),
+            "hook_id": payload.get("hook_id")
+        })
+
+    action = payload.get("action", "")
+    repo_name = payload.get("repository", {}).get("full_name", "unknown")
+    return JSONResponse({
+        "success": True,
+        "event": event_type,
+        "action": action,
+        "repository": repo_name,
+        "delivery": delivery_id,
+        "status": "acknowledged"
     })
 
 # Enable Gradio queue for event streaming & mount at root of FastAPI
