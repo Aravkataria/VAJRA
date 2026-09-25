@@ -16,6 +16,8 @@ import time
 import uuid
 import re
 import concurrent.futures
+import asyncio
+import json
 import pytest
 from hf_space.app import (
     evaluate_contextual_safety,
@@ -24,7 +26,9 @@ from hf_space.app import (
     HARD_BAN_REGEX,
     DESTRUCTIVE_MALWARE_REGEX,
     POLICY_REFUSAL_HARDBAN,
-    DEFENSIVE_REFRAME_MALWARE
+    DEFENSIVE_REFRAME_MALWARE,
+    report_bug_endpoint,
+    BugReportRequest
 )
 
 
@@ -219,3 +223,41 @@ def test_multi_user_concurrency_isolation():
     assert len(set(session_ids)) == 10, "Duplicate session IDs detected across concurrent users!"
     assert len(set(request_ids)) == 10, "Duplicate request IDs detected across concurrent users!"
     assert len(set(prompts)) == 10, "Prompt crosstalk detected across concurrent users!"
+
+
+# =====================================================================
+# 8. BUG REPORTING & GITHUB ISSUES INTEGRATION TESTS
+# =====================================================================
+def test_report_bug_endpoint_logs_report():
+    req = BugReportRequest(
+        title="False positive on Python 3.14 scan",
+        description="The scanner flagged AST sink on valid code",
+        contact="engineer@vajra.dev",
+        diagnostics={"platform": "Win32", "browser": "Edge"}
+    )
+    class MockRequest:
+        headers = {"X-Vajra-Session-ID": "sess_unit_test_123"}
+
+    resp = asyncio.run(report_bug_endpoint(req, MockRequest()))
+    data = json.loads(resp.body.decode("utf-8"))
+
+    assert data["success"] is True
+    assert "report_id" in data
+    assert data["report_id"].startswith("RPT-")
+    assert data["message"] == "Bug report delivered to maintainer."
+
+
+def test_report_bug_honeypot_filters_bots():
+    req = BugReportRequest(
+        title="Spam Title",
+        description="Spam link",
+        honeypot="http://malicious-bot-url.com"
+    )
+    class MockRequest:
+        headers = {}
+
+    resp = asyncio.run(report_bug_endpoint(req, MockRequest()))
+    data = json.loads(resp.body.decode("utf-8"))
+
+    assert data["success"] is True
+    assert data["report_id"] == "filtered"

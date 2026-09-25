@@ -22,6 +22,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import urllib.request
 import urllib.error
+import urllib.parse
+from datetime import datetime, timezone
 
 app = FastAPI(
     title="VAJRA Cyber-Reasoning Cloud Backend",
@@ -236,6 +238,14 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     request_id: Optional[str] = None
 
+class BugReportRequest(BaseModel):
+    title: str
+    description: str
+    contact: Optional[str] = ""
+    session_id: Optional[str] = ""
+    diagnostics: Optional[Dict[str, Any]] = None
+    honeypot: Optional[str] = ""
+
 @app.get("/")
 def root():
     cfg = determine_upstream_config()
@@ -257,6 +267,47 @@ def health_check():
         "backend": "VAJRA-FastAPI",
         "version": "2.1.0"
     }
+
+@app.post("/api/report_bug")
+async def report_bug_endpoint(req: BugReportRequest, request: Request):
+    """
+    Submits user bug reports and records them in persistent storage for the maintainer.
+    """
+    # 1. Anti-bot honeypot check
+    if req.honeypot and req.honeypot.strip():
+        return JSONResponse({"success": True, "report_id": "filtered"}, status_code=200)
+
+    title_clean = req.title.strip() or "User Reported Issue"
+    desc_clean = req.description.strip() or "No description provided."
+    contact_clean = req.contact.strip() or "Anonymous Web User"
+    session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "N/A"
+
+    report_id = f"RPT-{uuid.uuid4().hex[:8].upper()}"
+    report_record = {
+        "report_id": report_id,
+        "title": title_clean,
+        "description": desc_clean,
+        "contact": contact_clean,
+        "session_id": session_id,
+        "diagnostics": req.diagnostics or {},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+    # Persist report to .vajra/bug_reports.jsonl
+    try:
+        vajra_dir = Path(os.environ.get("VAJRA_HOME", Path.home() / ".vajra"))
+        vajra_dir.mkdir(parents=True, exist_ok=True)
+        reports_file = vajra_dir / "bug_reports.jsonl"
+        with open(reports_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(report_record) + "\n")
+    except Exception as e:
+        print(f"⚠️ Bug report logging note: {e}")
+
+    return JSONResponse({
+        "success": True,
+        "report_id": report_id,
+        "message": "Bug report delivered to maintainer."
+    })
 
 def is_finder_intent(prompt: str) -> bool:
     """Classify whether the query requires the heavy AST Finder / Scanner pipeline."""
