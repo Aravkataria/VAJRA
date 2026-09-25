@@ -148,9 +148,9 @@ def create_branch_and_open_pr(
     Uses Git CLI and GitHub API to push the branch and open a real Pull Request.
     """
     try:
-        # Configure Git bot identity (official GitHub App bot email format)
+        # Configure Git bot identity (official GitHub App bot user ID format)
         subprocess.run(["git", "config", "user.name", "vajra-bot[bot]"], check=True)
-        subprocess.run(["git", "config", "user.email", "5075351+vajra-bot[bot]@users.noreply.github.com"], check=True)
+        subprocess.run(["git", "config", "user.email", "333847560+vajra-bot[bot]@users.noreply.github.com"], check=True)
 
         # Checkout new branch
         subprocess.run(["git", "checkout", "-B", branch_name], check=True)
