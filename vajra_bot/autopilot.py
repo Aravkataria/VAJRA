@@ -44,9 +44,10 @@ def check_backend_headroom(backend_url: str) -> Tuple[bool, str]:
             active_queries = data.get("active_queries", 0)
             autopilot_allowed = data.get("autopilot_allowed", True)
 
-            if not autopilot_allowed or active_queries >= 3:
-                return False, f"Live visitor traffic active ({active_queries} ongoing chat sessions). Autopilot yielding to live users."
-            return True, f"Compute headroom available ({active_queries} active queries). Autopilot proceeding."
+            # Strict zero-traffic gatekeeper: Only run when active queries is 0!
+            if active_queries > 0 or not autopilot_allowed:
+                return False, f"Live visitor traffic detected ({active_queries} active query). Autopilot yielding to live users."
+            return True, f"Traffic is zero (server completely idle). Autopilot proceeding."
     except Exception as e:
         # If backend is unreachable or doesn't support load check, allow offline run
         return True, f"Load check bypassed ({e}). Proceeding with off-peak rules."
