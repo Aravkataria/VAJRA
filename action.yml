@@ -1,5 +1,5 @@
 name: 'VAJRA'
-description: 'Autonomous AST Security Auditor and AI Vulnerability Reviewer for Pull Requests'
+description: 'Autonomous AST & Neural Security Auditor and AI Vulnerability Reviewer for Pull Requests'
 author: 'Arav Kataria'
 branding:
   icon: 'shield'
@@ -14,6 +14,22 @@ inputs:
     description: 'Fail the GitHub workflow run if critical vulnerabilities are detected'
     required: false
     default: 'false'
+  vajra_backend_url:
+    description: 'Custom VAJRA API / Hugging Face Space endpoint for neural reasoning'
+    required: false
+    default: 'https://aravkataria-vajra-v2.hf.space'
+  hf_token:
+    description: 'Hugging Face API token for authenticated model access'
+    required: false
+  gemini_api_key:
+    description: 'Gemini API key for neural patch reasoning'
+    required: false
+  groq_api_key:
+    description: 'Groq Cloud API key for ultra-fast Llama/Qwen reasoning'
+    required: false
+  openai_api_key:
+    description: 'OpenAI API key for remediation reasoning'
+    required: false
 
 runs:
   using: 'composite'
@@ -23,11 +39,16 @@ runs:
       with:
         python-version: '3.12'
 
-    - name: ⚡ Run VAJRA Security Auditor
+    - name: ⚡ Run VAJRA Multi-Stage Security Auditor
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_FAIL_ON_CRITICAL: ${{ inputs.fail_on_critical }}
+        VAJRA_BACKEND_URL: ${{ inputs.vajra_backend_url }}
+        HF_TOKEN: ${{ inputs.hf_token }}
+        GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
+        GROQ_API_KEY: ${{ inputs.groq_api_key }}
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
         PYTHONPATH: ${{ github.action_path }}
       run: |
         python -m vajra_bot.main

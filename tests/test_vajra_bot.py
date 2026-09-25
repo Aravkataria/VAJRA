@@ -1,12 +1,23 @@
 """
 Unit Tests for VAJRA Security Auditor Bot
-Verifies AST vulnerability detection, secret hunting, and PR review builders.
+Verifies Multi-Stage Pipeline:
+- Stage 1: AST & Secret Signatures
+- Stage 2: Semantic & Neural Finder
+- Stage 3: LLM Remediation
+- Stage 4: AST Self-Verification
 """
 
 import pytest
 from vajra_bot.scanner import scan_content, Finding
+from vajra_bot.finder import SemanticFinder
+from vajra_bot.verifier import PatchVerifier
+from vajra_bot.remediator import ModelRemediator
 from vajra_bot.reviewer import build_audit_summary_markdown
 
+
+# =============================================================================
+# STAGE 1: AST & SECRET SIGNATURE TESTS
+# =============================================================================
 
 def test_detects_eval_code_injection():
     code = """
@@ -86,6 +97,72 @@ function renderProfile(user) {
     findings = scan_content("profile.js", code)
     assert any(f.cwe == "CWE-79" for f in findings)
 
+
+# =============================================================================
+# STAGE 2: SEMANTIC & NEURAL FINDER TESTS
+# =============================================================================
+
+def test_semantic_finder_detects_debug_mode():
+    code = "app.run(host='0.0.0.0', debug=True)"
+    findings = SemanticFinder.scan_context("server.py", code)
+    assert any(f.cwe == "CWE-489" for f in findings)
+
+
+def test_semantic_finder_detects_path_traversal():
+    code = 'with open(f"/var/data/{user_file}", "r") as f:\n    pass'
+    findings = SemanticFinder.scan_context("storage.py", code)
+    assert any(f.cwe == "CWE-22" for f in findings)
+
+
+def test_semantic_finder_detects_broken_hash():
+    code = "digest = hashlib.md5(password.encode()).hexdigest()"
+    findings = SemanticFinder.scan_context("crypto.py", code)
+    assert any(f.cwe == "CWE-328" for f in findings)
+
+
+# =============================================================================
+# STAGE 4: AST SELF-VERIFICATION TESTS
+# =============================================================================
+
+def test_patch_verifier_accepts_clean_patch():
+    patch = "cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))"
+    is_valid, msg, code = PatchVerifier.verify_patch("db.py", "vulnerable_code", patch, "CWE-89")
+    assert is_valid is True
+    assert "AST-Verified Safe" in msg
+    assert code == patch
+
+
+def test_patch_verifier_rejects_syntax_error():
+    broken_patch = "def broken_func(:\n    pass"
+    is_valid, msg, code = PatchVerifier.verify_patch("script.py", "orig", broken_patch, "CWE-89")
+    assert is_valid is False
+    assert "Syntax verification failed" in msg
+
+
+def test_patch_verifier_rejects_secondary_sink():
+    # Attempting to fix SQLi by using dynamic eval()
+    toxic_patch = "safe_query = eval(user_input)"
+    is_valid, msg, code = PatchVerifier.verify_patch("db.py", "orig", toxic_patch, "CWE-89")
+    assert is_valid is False
+    assert "Introduced new CRITICAL sink" in msg
+
+
+def test_model_remediator_fallback_to_verified_template():
+    remediator = ModelRemediator()
+    # Force offline fallback
+    remediator.groq_key = None
+    remediator.gemini_key = None
+    remediator.vajra_url = ""
+
+    fallback = "cursor.execute('SELECT * FROM t WHERE id = %s', (id,))"
+    patch, verified = remediator.generate_verified_remediation("db.py", 10, "bad_code", "CWE-89", fallback)
+    assert patch == fallback
+    assert verified is True
+
+
+# =============================================================================
+# PR REVIEW FORMATTING TESTS
+# =============================================================================
 
 def test_build_audit_summary_markdown_passed():
     summary = build_audit_summary_markdown([], files_scanned_count=3)
