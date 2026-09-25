@@ -238,3 +238,33 @@ def test_slash_command_fix():
     reply = handle_bot_command("@vajra fix", [finding], 1)
     assert "VAJRA Autonomous Fixes" in reply
     assert "cursor.execute" in reply
+
+
+# =============================================================================
+# AUTOPILOT CONTRIBUTOR TESTS
+# =============================================================================
+
+def test_autopilot_todo_detection(tmp_path):
+    f = tmp_path / "sample.py"
+    f.write_text("# TODO: optimize memory footprint for large embeddings\ndef hello(): pass", encoding="utf-8")
+    from vajra_bot.autopilot import find_unfinished_todos
+    todos = find_unfinished_todos(f)
+    assert len(todos) == 1
+    assert "optimize memory footprint" in todos[0].description
+
+
+def test_autopilot_perf_detection(tmp_path):
+    f = tmp_path / "async_service.py"
+    f.write_text("import time\nasync def poll():\n    time.sleep(5)\n", encoding="utf-8")
+    from vajra_bot.autopilot import find_performance_opportunities
+    perf = find_performance_opportunities(f)
+    assert len(perf) == 1
+    assert "Blocking sleep" in perf[0].title
+
+
+def test_autopilot_backend_load_gatekeeper():
+    from vajra_bot.autopilot import check_backend_headroom
+    # Offline or empty URL allows run
+    can_proceed, reason = check_backend_headroom("")
+    assert can_proceed is True
+    assert "headroom" in reason

@@ -1,0 +1,30 @@
+name: VAJRA Autopilot
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Weekly off-peak run (Monday 3 AM UTC)
+  workflow_dispatch:     # Manual 1-click trigger in GitHub Actions
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  autopilot:
+    name: Autonomous Code Improvements
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⚡ Run VAJRA Autonomous Contributor
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          autopilot: 'true'
+          hf_token: ${{ secrets.HF_TOKEN }}
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          groq_api_key: ${{ secrets.GROQ_API_KEY }}
