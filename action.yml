@@ -1,0 +1,33 @@
+name: 'VAJRA'
+description: 'Autonomous AST Security Auditor and AI Vulnerability Reviewer for Pull Requests'
+author: 'Arav Kataria'
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  github_token:
+    description: 'GitHub token for posting PR reviews and status checks'
+    required: true
+    default: ${{ github.token }}
+  fail_on_critical:
+    description: 'Fail the GitHub workflow run if critical vulnerabilities are detected'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: ⚡ Run VAJRA Security Auditor
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_FAIL_ON_CRITICAL: ${{ inputs.fail_on_critical }}
+        PYTHONPATH: ${{ github.action_path }}
+      run: |
+        python -m vajra_bot.main
