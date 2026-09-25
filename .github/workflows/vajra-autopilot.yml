@@ -5,7 +5,7 @@ on:
     types: [vajra-idle-autopilot]  # Auto-triggered when backend detects zero traffic
   workflow_dispatch:               # Manual 1-click trigger in GitHub Actions
   schedule:
-    - cron: '*/30 * * * *'        # Opportunistic check: wakes up, checks if traffic is zero, runs if idle
+    - cron: '*/30 * * * *'        # Opportunistic check: runs when traffic is idle
 
 permissions:
   contents: write
@@ -22,10 +22,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      # ✅ Generate a genuine vajra-bot[bot] installation token using the App private key
+      - name: Generate VAJRA Bot Token
+        id: vajra-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.VAJRA_APP_ID }}
+          private-key: ${{ secrets.VAJRA_APP_PRIVATE_KEY }}
+
+      # ✅ Checkout again using the genuine bot token so git pushes are attributed to vajra-bot[bot]
+      - name: Re-checkout with Bot Token
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.vajra-token.outputs.token }}
+          fetch-depth: 0
+
       - name: ⚡ Run VAJRA Autonomous Contributor
         uses: ./
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.vajra-token.outputs.token }}
           autopilot: 'true'
           hf_token: ${{ secrets.HF_TOKEN }}
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
