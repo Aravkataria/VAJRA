@@ -1065,13 +1065,20 @@ async def github_app_webhook(request: Request):
 
     action = payload.get("action", "")
     repo_name = payload.get("repository", {}).get("full_name", "unknown")
+
+    try:
+        from vajra_bot.app_auth import handle_github_app_webhook
+        result = handle_github_app_webhook(payload, event_type)
+    except Exception as e:
+        result = {"status": "error", "message": str(e)}
+
     return JSONResponse({
         "success": True,
         "event": event_type,
         "action": action,
         "repository": repo_name,
         "delivery": delivery_id,
-        "status": "acknowledged"
+        "result": result
     })
 
 # Enable Gradio queue for event streaming & mount at root of FastAPI
