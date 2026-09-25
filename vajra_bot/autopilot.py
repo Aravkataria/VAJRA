@@ -23,6 +23,17 @@ from vajra_bot.finder import SemanticFinder
 from vajra_bot.verifier import PatchVerifier
 from vajra_bot.remediator import ModelRemediator
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 
 # =============================================================================
 # 1. LOAD-AWARE BACKEND GATEKEEPER
