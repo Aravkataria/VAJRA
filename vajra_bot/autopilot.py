@@ -267,7 +267,48 @@ def run_autopilot():
     for t in todo_tasks[:3]:
         applied_changes.append(f"- 📝 **Unfinished Task**: `{t.file}` (Line {t.line}) — {t.title}")
 
-    # 4. Compose PR Description
+    # Write audit and contribution ledger to disk so git has files to commit
+    audit_file = Path("VAJRA_SECURITY_AUDIT.md")
+    audit_lines = [
+        "# ⚡ VAJRA Autonomous Security & Quality Audit",
+        "",
+        "> **Automated Code Review & Security Ledger**  ",
+        "> *Conducted by `vajra-bot[bot]` • Zero-Retention Architecture*",
+        "",
+        "### 📊 Scan Metrics",
+        f"- **Security Findings**: {len(security_findings)}",
+        f"- **Performance Opportunities**: {len(perf_tasks)}",
+        f"- **Unfinished Tasks (TODOs)**: {len(todo_tasks)}",
+        "",
+        "### 🔍 Detailed Findings & Remediations",
+        ""
+    ]
+    for f in security_findings:
+        audit_lines.append(f"#### [{f.severity.upper()}] {f.title} ({f.cwe})")
+        audit_lines.append(f"- **File**: `{f.file}` (Line {f.line})")
+        audit_lines.append(f"- **Description**: {f.description}")
+        if f.suggestion:
+            audit_lines.append("- **Remediation Suggestion**:")
+            audit_lines.append("```python")
+            audit_lines.append(f.suggestion)
+            audit_lines.append("```")
+        audit_lines.append("")
+
+    for t in perf_tasks:
+        audit_lines.append(f"#### [PERFORMANCE] {t.title}")
+        audit_lines.append(f"- **File**: `{t.file}` (Line {t.line})")
+        audit_lines.append(f"- **Details**: {t.description}")
+        audit_lines.append("")
+
+    for t in todo_tasks:
+        audit_lines.append(f"#### [TODO] {t.title}")
+        audit_lines.append(f"- **File**: `{t.file}` (Line {t.line})")
+        audit_lines.append(f"- **Details**: {t.description}")
+        audit_lines.append("")
+
+    audit_file.write_text("\n".join(audit_lines), encoding="utf-8")
+    print(f"📝 Wrote autonomous audit report to {audit_file.name}")
+
     pr_body = (
         "## ⚡ VAJRA Autonomous Contributor Review\n"
         "> **Autonomous Code Improvement & Vulnerability Remediation**  \n"
