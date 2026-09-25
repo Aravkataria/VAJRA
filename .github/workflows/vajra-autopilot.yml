@@ -1,0 +1,32 @@
+name: VAJRA Autopilot
+
+on:
+  repository_dispatch:
+    types: [vajra-idle-autopilot]  # Auto-triggered when backend detects zero traffic
+  workflow_dispatch:               # Manual 1-click trigger in GitHub Actions
+  schedule:
+    - cron: '*/30 * * * *'        # Opportunistic check: wakes up, checks if traffic is zero, runs if idle
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  autopilot:
+    name: Autonomous Code Improvements
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⚡ Run VAJRA Autonomous Contributor
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          autopilot: 'true'
+          hf_token: ${{ secrets.HF_TOKEN }}
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          groq_api_key: ${{ secrets.GROQ_API_KEY }}
