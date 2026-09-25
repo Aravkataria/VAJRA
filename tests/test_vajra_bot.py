@@ -186,3 +186,55 @@ def test_build_audit_summary_markdown_critical():
     assert "CWE-89" in summary
     assert "auth.py" in summary
     assert "65/100" in summary
+
+
+# =============================================================================
+# INTERACTIVE SLASH COMMANDS TESTS
+# =============================================================================
+
+def test_slash_command_help():
+    from vajra_bot.commands import handle_bot_command
+    reply = handle_bot_command("@vajra help", [], 2)
+    assert "VAJRA Interactive Commands" in reply
+    assert "@vajra fix" in reply
+    assert "@vajra cvss" in reply
+
+
+def test_slash_command_cvss():
+    from vajra_bot.commands import handle_bot_command
+    finding = Finding(
+        file="db.py",
+        line=10,
+        cwe="CWE-89",
+        severity="CRITICAL",
+        title="SQL Injection",
+        description="Dynamic SQL"
+    )
+    reply = handle_bot_command("@vajra cvss", [finding], 1)
+    assert "CVSS 3.1" in reply
+    assert "9.8" in reply
+    assert "CRITICAL" in reply
+
+
+def test_slash_command_explain():
+    from vajra_bot.commands import handle_bot_command
+    reply = handle_bot_command("@vajra explain CWE-89", [], 1)
+    assert "SQL Injection (SQLi)" in reply
+    assert "Threat Model" in reply
+    assert "parameterized query" in reply.lower()
+
+
+def test_slash_command_fix():
+    from vajra_bot.commands import handle_bot_command
+    finding = Finding(
+        file="db.py",
+        line=10,
+        cwe="CWE-89",
+        severity="CRITICAL",
+        title="SQLi",
+        description="SQL",
+        suggestion="cursor.execute('SELECT * FROM users WHERE id = %s', (id,))"
+    )
+    reply = handle_bot_command("@vajra fix", [finding], 1)
+    assert "VAJRA Autonomous Fixes" in reply
+    assert "cursor.execute" in reply

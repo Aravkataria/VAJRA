@@ -1019,6 +1019,37 @@ async def report_bug_endpoint(req: BugReportRequest, request: Request):
         "message": "Bug report delivered to maintainer."
     })
 
+@fastapi_app.post("/api/github/webhook")
+async def github_app_webhook(request: Request):
+    """
+    Receives and processes GitHub App webhook events for VAJRA autonomous audits.
+    """
+    event_type = request.headers.get("X-GitHub-Event", "ping")
+    delivery_id = request.headers.get("X-GitHub-Delivery", "N/A")
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if event_type == "ping":
+        return JSONResponse({
+            "success": True,
+            "message": "VAJRA GitHub App Webhook Online",
+            "zen": payload.get("zen", "Defense in depth."),
+            "hook_id": payload.get("hook_id")
+        })
+
+    action = payload.get("action", "")
+    repo_name = payload.get("repository", {}).get("full_name", "unknown")
+    return JSONResponse({
+        "success": True,
+        "event": event_type,
+        "action": action,
+        "repository": repo_name,
+        "delivery": delivery_id,
+        "status": "acknowledged"
+    })
+
 # Enable Gradio queue for event streaming & mount at root of FastAPI
 if gr is not None and demo is not None:
     demo.queue(default_concurrency_limit=2)
