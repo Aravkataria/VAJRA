@@ -386,96 +386,96 @@ async def chat_endpoint(req: ChatRequest, request: Request):
 
     try:
         # Contextual safety evaluation
-    is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
-    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
-        return JSONResponse({
-            "success": False,
-            "reply": safety_out,
-            "model": "VAJRA-Safety-Shield",
-            "tier": "safety_guardrail",
-            "session_id": session_id,
-            "request_id": request_id,
-            "security": "Zero-Retention & Cryptographic Session Isolation Verified"
-        }, headers=resp_headers)
-
-    clean_prompt, detected_pii = sanitize_pii_and_secrets(req.prompt)
-    if detected_pii:
-        resp_headers["X-Vajra-DLP-Sanitized"] = "true"
-
-    prompt_to_run = clean_prompt
-    if not is_safe and reason == "defensive_reframe":
-        prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
-
-    cfg = determine_upstream_config()
-    messages = [{"role": "system", content: VAJRA_SYSTEM_PROMPT}]
-    
-    # If workspace files exist, attach relevant excerpts
-    if req.files:
-        file_summary = ""
-        for name, content in list(req.files.items())[:3]:
-            file_summary += f"\n--- File: {name} ---\n{content[:1200]}"
-        if file_summary:
-            messages.append({"role": "system", content: f"Workspace Files:\n{file_summary}"})
-            
-    messages.append({"role": "user", content: prompt_to_run})
-    
-    target_model = req.model or cfg["model"]
-    payload = json.dumps({
-        "model": target_model,
-        "messages": messages,
-        "temperature": req.temperature or 0.2,
-        "max_tokens": req.max_tokens or 4096
-    }).encode("utf-8")
-    
-    try:
-        http_req = urllib.request.Request(
-            cfg["endpoint"],
-            data=payload,
-            headers=cfg["headers"],
-            method="POST"
-        )
-        with urllib.request.urlopen(http_req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            content = scrub_output_secrets(data["choices"][0]["message"]["content"])
-            if not is_safe and reason == "defensive_reframe" and not content.startswith(DEFENSIVE_REFRAME_MALWARE):
-                content = DEFENSIVE_REFRAME_MALWARE + content
-            return JSONResponse({
-                "success": True,
-                "reply": content,
-                "provider": cfg["provider"],
-                "model": target_model,
-                "session_id": session_id,
-                "request_id": request_id,
-                "security": "Zero-Retention & Cryptographic Session Isolation Verified",
-                "bypassed_finder": not is_finder_intent(req.prompt)
-            }, headers=resp_headers)
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            retry_header = e.headers.get("Retry-After")
-            retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
-            wait_min = max(1, round(retry_seconds / 60))
-            wait_text = f"{retry_seconds} seconds" if retry_seconds < 60 else f"~{wait_min} minute{'s' if wait_min > 1 else ''}"
+        is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
+        if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
             return JSONResponse({
                 "success": False,
-                "rate_limited": True,
-                "retry_after": retry_seconds,
-                "reply": f"⚠️ **Inference Limit Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait **{wait_text}** before sending your next chat request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
-            }, status_code=429)
-        return JSONResponse({
-            "success": False,
-            "error": str(e),
-            "fallback": True,
-            "provider": cfg["provider"],
-            "message": "Upstream LLM unavailable; local fallback triggered."
-        }, status_code=502)
-    except Exception as e:
-        return JSONResponse({
-            "success": False,
-            "error": str(e),
-            "fallback": True,
-            "provider": cfg["provider"],
-            "message": "Upstream LLM unavailable; local fallback triggered."
-        }, status_code=502)
+                "reply": safety_out,
+                "model": "VAJRA-Safety-Shield",
+                "tier": "safety_guardrail",
+                "session_id": session_id,
+                "request_id": request_id,
+                "security": "Zero-Retention & Cryptographic Session Isolation Verified"
+            }, headers=resp_headers)
+
+        clean_prompt, detected_pii = sanitize_pii_and_secrets(req.prompt)
+        if detected_pii:
+            resp_headers["X-Vajra-DLP-Sanitized"] = "true"
+
+        prompt_to_run = clean_prompt
+        if not is_safe and reason == "defensive_reframe":
+            prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
+
+        cfg = determine_upstream_config()
+        messages = [{"role": "system", content: VAJRA_SYSTEM_PROMPT}]
+        
+        # If workspace files exist, attach relevant excerpts
+        if req.files:
+            file_summary = ""
+            for name, content in list(req.files.items())[:3]:
+                file_summary += f"\n--- File: {name} ---\n{content[:1200]}"
+            if file_summary:
+                messages.append({"role": "system", content: f"Workspace Files:\n{file_summary}"})
+                
+        messages.append({"role": "user", content: prompt_to_run})
+        
+        target_model = req.model or cfg["model"]
+        payload = json.dumps({
+            "model": target_model,
+            "messages": messages,
+            "temperature": req.temperature or 0.2,
+            "max_tokens": req.max_tokens or 4096
+        }).encode("utf-8")
+        
+        try:
+            http_req = urllib.request.Request(
+                cfg["endpoint"],
+                data=payload,
+                headers=cfg["headers"],
+                method="POST"
+            )
+            with urllib.request.urlopen(http_req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                content = scrub_output_secrets(data["choices"][0]["message"]["content"])
+                if not is_safe and reason == "defensive_reframe" and not content.startswith(DEFENSIVE_REFRAME_MALWARE):
+                    content = DEFENSIVE_REFRAME_MALWARE + content
+                return JSONResponse({
+                    "success": True,
+                    "reply": content,
+                    "provider": cfg["provider"],
+                    "model": target_model,
+                    "session_id": session_id,
+                    "request_id": request_id,
+                    "security": "Zero-Retention & Cryptographic Session Isolation Verified",
+                    "bypassed_finder": not is_finder_intent(req.prompt)
+                }, headers=resp_headers)
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                retry_header = e.headers.get("Retry-After")
+                retry_seconds = int(retry_header) if (retry_header and retry_header.isdigit()) else 120
+                wait_min = max(1, round(retry_seconds / 60))
+                wait_text = f"{retry_seconds} seconds" if retry_seconds < 60 else f"~{wait_min} minute{'s' if wait_min > 1 else ''}"
+                return JSONResponse({
+                    "success": False,
+                    "rate_limited": True,
+                    "retry_after": retry_seconds,
+                    "reply": f"⚠️ **Inference Limit Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait **{wait_text}** before sending your next chat request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
+                }, status_code=429)
+            return JSONResponse({
+                "success": False,
+                "error": str(e),
+                "fallback": True,
+                "provider": cfg["provider"],
+                "message": "Upstream LLM unavailable; local fallback triggered."
+            }, status_code=502)
+        except Exception as e:
+            return JSONResponse({
+                "success": False,
+                "error": str(e),
+                "fallback": True,
+                "provider": cfg["provider"],
+                "message": "Upstream LLM unavailable; local fallback triggered."
+            }, status_code=502)
     finally:
         with ACTIVE_REQUESTS_LOCK:
             ACTIVE_REQUESTS_COUNT = max(0, ACTIVE_REQUESTS_COUNT - 1)

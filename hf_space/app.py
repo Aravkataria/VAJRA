@@ -918,23 +918,40 @@ async def chat_v1(req: ChatRequest, request: Request):
 
     try:
         if VAJRA_SECRET_KEY:
-        import hmac
-        if not sig_header or not hmac.compare_digest(sig_header.strip(), VAJRA_SECRET_KEY.strip()):
-            raise HTTPException(status_code=403, detail="Forbidden: Invalid VAJRA Security Signature.")
-    else:
-        if not check_rate_limit(client_ip):
-            raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
+            import hmac
+            if not sig_header or not hmac.compare_digest(sig_header.strip(), VAJRA_SECRET_KEY.strip()):
+                raise HTTPException(status_code=403, detail="Forbidden: Invalid VAJRA Security Signature.")
+        else:
+            if not check_rate_limit(client_ip):
+                raise HTTPException(status_code=429, detail="Too Many Requests: Rate limit exceeded.")
 
-    # Contextual safety evaluation
-    is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
-    if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+        # Contextual safety evaluation
+        is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
+        if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
+            return JSONResponse({
+                "success": False,
+                "overflow": False,
+                "busy": False,
+                "reply": safety_out,
+                "model": "VAJRA-Safety-Shield",
+                "tier": "safety_guardrail",
+                "session_id": session_id,
+                "request_id": request_id,
+                "security": "Zero-Retention & Cryptographic Session Isolation Verified"
+            }, headers={
+                "X-Vajra-Session-ID": session_id,
+                "X-Vajra-Request-ID": request_id
+            })
+
+        reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
+        is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
         return JSONResponse({
-            "success": False,
-            "overflow": False,
-            "busy": False,
-            "reply": safety_out,
-            "model": "VAJRA-Safety-Shield",
-            "tier": "safety_guardrail",
+            "success": not is_overflow,
+            "overflow": is_overflow,
+            "busy": is_overflow,
+            "reply": reply,
+            "model": model_name,
+            "tier": tier_name,
             "session_id": session_id,
             "request_id": request_id,
             "security": "Zero-Retention & Cryptographic Session Isolation Verified"
@@ -942,23 +959,6 @@ async def chat_v1(req: ChatRequest, request: Request):
             "X-Vajra-Session-ID": session_id,
             "X-Vajra-Request-ID": request_id
         })
-
-    reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
-    is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
-    return JSONResponse({
-        "success": not is_overflow,
-        "overflow": is_overflow,
-        "busy": is_overflow,
-        "reply": reply,
-        "model": model_name,
-        "tier": tier_name,
-        "session_id": session_id,
-        "request_id": request_id,
-        "security": "Zero-Retention & Cryptographic Session Isolation Verified"
-    }, headers={
-        "X-Vajra-Session-ID": session_id,
-        "X-Vajra-Request-ID": request_id
-    })
     finally:
         with ACTIVE_REQUESTS_LOCK:
             ACTIVE_REQUESTS_COUNT = max(0, ACTIVE_REQUESTS_COUNT - 1)

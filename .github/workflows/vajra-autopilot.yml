@@ -1,9 +1,11 @@
 name: VAJRA Autopilot
 
 on:
+  repository_dispatch:
+    types: [vajra-idle-autopilot]  # Auto-triggered when backend detects zero traffic
+  workflow_dispatch:               # Manual 1-click trigger in GitHub Actions
   schedule:
-    - cron: '0 3 * * 1' # Weekly off-peak run (Monday 3 AM UTC)
-  workflow_dispatch:     # Manual 1-click trigger in GitHub Actions
+    - cron: '*/30 * * * *'        # Opportunistic check: wakes up, checks if traffic is zero, runs if idle
 
 permissions:
   contents: write
