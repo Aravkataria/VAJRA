@@ -15,6 +15,7 @@ import re
 import uuid
 import json
 import asyncio
+import threading
 from typing import Optional, Dict, Any, List, Tuple
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -257,6 +258,22 @@ def root():
         "model": cfg["model"]
     }
 
+ACTIVE_REQUESTS_LOCK = threading.Lock()
+ACTIVE_REQUESTS_COUNT = 0
+
+@app.get("/api/system/load")
+def get_system_load():
+    with ACTIVE_REQUESTS_LOCK:
+        active = ACTIVE_REQUESTS_COUNT
+    is_busy = active >= 3
+    return {
+        "status": "online",
+        "active_queries": active,
+        "load_level": "busy" if is_busy else ("moderate" if active > 0 else "idle"),
+        "autopilot_allowed": not is_busy,
+        "message": "Real-time user traffic prioritised." if is_busy else "Compute headroom available for VAJRA Autopilot."
+    }
+
 @app.get("/health")
 def health_check():
     cfg = determine_upstream_config()
@@ -363,7 +380,12 @@ async def chat_endpoint(req: ChatRequest, request: Request):
         "X-Vajra-Request-ID": request_id
     }
 
-    # Contextual safety evaluation
+    global ACTIVE_REQUESTS_COUNT
+    with ACTIVE_REQUESTS_LOCK:
+        ACTIVE_REQUESTS_COUNT += 1
+
+    try:
+        # Contextual safety evaluation
     is_safe, reason, safety_out = evaluate_contextual_safety(req.prompt)
     if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
         return JSONResponse({
@@ -454,6 +476,9 @@ async def chat_endpoint(req: ChatRequest, request: Request):
             "provider": cfg["provider"],
             "message": "Upstream LLM unavailable; local fallback triggered."
         }, status_code=502)
+    finally:
+        with ACTIVE_REQUESTS_LOCK:
+            ACTIVE_REQUESTS_COUNT = max(0, ACTIVE_REQUESTS_COUNT - 1)
 
 if __name__ == "__main__":
     import uvicorn

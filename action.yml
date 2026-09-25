@@ -30,6 +30,10 @@ inputs:
   openai_api_key:
     description: 'OpenAI API key for remediation reasoning'
     required: false
+  autopilot:
+    description: 'Run in Autonomous Contributor mode (fixes issues and opens PRs)'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -51,4 +55,8 @@ runs:
         OPENAI_API_KEY: ${{ inputs.openai_api_key }}
         PYTHONPATH: ${{ github.action_path }}
       run: |
-        python -m vajra_bot.main
+        if [ "${{ inputs.autopilot }}" = "true" ]; then
+          python -m vajra_bot.autopilot
+        else
+          python -m vajra_bot.main
+        fi

@@ -874,6 +874,22 @@ class BugReportRequest(BaseModel):
     diagnostics: Optional[Dict[str, Any]] = None
     honeypot: Optional[str] = ""
 
+ACTIVE_REQUESTS_LOCK = threading.Lock()
+ACTIVE_REQUESTS_COUNT = 0
+
+@fastapi_app.get("/api/system/load")
+def get_system_load():
+    with ACTIVE_REQUESTS_LOCK:
+        active = ACTIVE_REQUESTS_COUNT
+    is_busy = active >= 3
+    return {
+        "status": "online",
+        "active_queries": active,
+        "load_level": "busy" if is_busy else ("moderate" if active > 0 else "idle"),
+        "autopilot_allowed": not is_busy,
+        "message": "Real-time user traffic prioritised." if is_busy else "Compute headroom available for VAJRA Autopilot."
+    }
+
 @fastapi_app.get("/health")
 def health():
     return {
@@ -896,7 +912,12 @@ async def chat_v1(req: ChatRequest, request: Request):
     session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
     request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
 
-    if VAJRA_SECRET_KEY:
+    global ACTIVE_REQUESTS_COUNT
+    with ACTIVE_REQUESTS_LOCK:
+        ACTIVE_REQUESTS_COUNT += 1
+
+    try:
+        if VAJRA_SECRET_KEY:
         import hmac
         if not sig_header or not hmac.compare_digest(sig_header.strip(), VAJRA_SECRET_KEY.strip()):
             raise HTTPException(status_code=403, detail="Forbidden: Invalid VAJRA Security Signature.")
@@ -938,6 +959,9 @@ async def chat_v1(req: ChatRequest, request: Request):
         "X-Vajra-Session-ID": session_id,
         "X-Vajra-Request-ID": request_id
     })
+    finally:
+        with ACTIVE_REQUESTS_LOCK:
+            ACTIVE_REQUESTS_COUNT = max(0, ACTIVE_REQUESTS_COUNT - 1)
 
 class DraftRequest(BaseModel):
     prompt: Optional[str] = None
