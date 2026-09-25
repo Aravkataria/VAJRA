@@ -95,8 +95,13 @@ def run_action():
         status = file_info.get("status", "")
         patch = file_info.get("patch", "")
 
-        # Skip deleted files
+        # Skip deleted files and test fixtures
         if status == "removed":
+            continue
+
+        fn_norm = filename.lower().replace("\\", "/")
+        if any(part in fn_norm for part in ("/tests/", "tests/", "test_", "_test.")):
+            print(f"ℹ️ Skipping test fixture file: {filename}")
             continue
 
         local_path = Path(filename)

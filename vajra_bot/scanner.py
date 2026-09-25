@@ -244,6 +244,11 @@ def scan_content(filename: str, content: str) -> List[Finding]:
     Scans a single file's content using both AST analysis (for Python)
     and regex signature analysis (for secrets and common web sinks).
     """
+    fn_normalized = filename.lower().replace("\\", "/")
+    # Ignore internal scanner definitions
+    if fn_normalized.endswith(("vajra_bot/scanner.py", "vajra_bot/finder.py")):
+        return []
+
     findings: List[Finding] = []
     lines = content.splitlines()
 

@@ -58,6 +58,10 @@ class SemanticFinder:
 
     @staticmethod
     def scan_context(filename: str, content: str) -> List[Finding]:
+        fn_normalized = filename.lower().replace("\\", "/")
+        if fn_normalized.endswith(("vajra_bot/finder.py", "vajra_bot/scanner.py", "vajra_bot/commands.py")):
+            return []
+
         findings: List[Finding] = []
         lines = content.splitlines()
 
