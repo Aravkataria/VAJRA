@@ -160,15 +160,20 @@ def run_action():
 
         findings.extend(file_findings)
 
-    # Build and post summary
-    summary_md = build_audit_summary_markdown(findings, len(pr_files))
+    # Build response: check if triggered by an interactive slash command
+    comment_text = event_data.get("comment", {}).get("body", "")
+    if comment_text and any(k in comment_text.lower() for k in ("fix", "cvss", "explain", "help")):
+        from vajra_bot.commands import handle_bot_command
+        reply_md = handle_bot_command(comment_text, findings, len(pr_files))
+    else:
+        reply_md = build_audit_summary_markdown(findings, len(pr_files))
 
     criticals = [f for f in findings if f.severity == "CRITICAL"]
     highs = [f for f in findings if f.severity == "HIGH"]
 
     try:
-        reviewer.post_pr_comment(summary_md)
-        print("✅ Posted VAJRA Security Audit summary to PR thread.")
+        reviewer.post_pr_comment(reply_md)
+        print("✅ Posted VAJRA response to PR thread.")
     except Exception as e:
         print(f"⚠️ Could not post PR comment: {e}")
 
