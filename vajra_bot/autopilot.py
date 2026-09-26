@@ -423,7 +423,7 @@ def run_autopilot():
         "# VAJRA Autonomous Security & Quality Audit",
         "",
         "> Automated Code Review & Security Ledger",
-        "> Conducted by `vajra-bot[bot]` • Zero-Retention Architecture",
+        "> Conducted by [vajra-bot](https://github.com/apps/vajra-bot) • Zero-Retention Architecture",
         "",
         "### Scan Metrics",
         f"- **Applied Verified Patches**: {len(applied_patches)}",
@@ -462,7 +462,8 @@ def run_autopilot():
     # 5. Open Pull Request with the verified code patches
     pr_body = (
         "## VAJRA Autonomous Security Patch\n"
-        "> Opened automatically by `vajra-bot[bot]`. Code patched through a closed-loop self-verification pipeline.\n\n"
+        "> Opened automatically by [vajra-bot](https://github.com/apps/vajra-bot). Code patched through a closed-loop self-verification pipeline.\n\n"
+
         f"VAJRA Autopilot executed closed-loop remediation and applied **{len(applied_patches)} verified patches**.\n\n"
         "### Verified Code Patches Applied\n" +
         "\n".join(f"- {p}" for p in applied_patches) +
