@@ -265,7 +265,62 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
                     suggestion="Remove verify=False or set verify=True."
                 ))
 
+        # 6. CWE-502: Unsafe YAML Deserialization (yaml.load without safe loader)
+        if func_name == "yaml.load":
+            is_unsafe = True
+            for kw in node.keywords:
+                if kw.arg == "Loader":
+                    val = getattr(kw.value, "attr", getattr(kw.value, "id", ""))
+                    if val in ("SafeLoader", "CSafeLoader", "BaseLoader"):
+                        is_unsafe = False
+            if is_unsafe:
+                self.findings.append(Finding(
+                    file=self.filename,
+                    line=node.lineno,
+                    cwe="CWE-502",
+                    severity="CRITICAL",
+                    title="Unsafe YAML Deserialization (yaml.load)",
+                    description=(
+                        "Calling `yaml.load()` without SafeLoader allows arbitrary Python object execution. "
+                        "Use `yaml.safe_load()` instead."
+                    ),
+                    suggestion="yaml.safe_load(payload)"
+                ))
+
+        # 7. CWE-377: Insecure Temporary File Creation (tempfile.mktemp)
+        if func_name in ("tempfile.mktemp", "mktemp"):
+            self.findings.append(Finding(
+                file=self.filename,
+                line=node.lineno,
+                cwe="CWE-377",
+                severity="HIGH",
+                title="Insecure Temporary File Creation (tempfile.mktemp)",
+                description=(
+                    "`tempfile.mktemp()` is deprecated and creates TOCTOU race conditions. "
+                    "Use `tempfile.NamedTemporaryFile()` instead."
+                ),
+                suggestion="tempfile.NamedTemporaryFile(delete=False).name"
+            ))
+
+        # 8. CWE-22: Archive Path Traversal / Tar Slip (extractall without filter)
+        if func_name.endswith(".extractall") or func_name == "extractall":
+            has_filter = any(kw.arg == "filter" for kw in node.keywords)
+            if not has_filter:
+                self.findings.append(Finding(
+                    file=self.filename,
+                    line=node.lineno,
+                    cwe="CWE-22",
+                    severity="HIGH",
+                    title="Archive Extraction Path Traversal (Tar/Zip Slip)",
+                    description=(
+                        "`extractall()` called without `filter='data'` allows archives to overwrite files outside destination. "
+                        "Add `filter='data'` to prevent path traversal."
+                    ),
+                    suggestion="archive.extractall(path=..., filter='data')"
+                ))
+
         self.generic_visit(node)
+
 
 
 

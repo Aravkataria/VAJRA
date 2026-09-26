@@ -1271,6 +1271,42 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
                         "description": "HTTP request called with verify=False disables TLS certificate checks.",
                         "suggestion": "Remove verify=False or set verify=True."
                     })
+            # 6. Unsafe YAML Deserialization (yaml.load without safe loader)
+            if (isinstance(node.func, _ast.Attribute) and node.func.attr == "load" and
+                  isinstance(node.func.value, _ast.Name) and node.func.value.id == "yaml"):
+                is_unsafe = True
+                for kw in getattr(node, "keywords", []):
+                    if kw.arg == "Loader":
+                        val = getattr(kw.value, "attr", getattr(kw.value, "id", ""))
+                        if val in ("SafeLoader", "CSafeLoader", "BaseLoader"):
+                            is_unsafe = False
+                if is_unsafe:
+                    findings.append({
+                        "file": filename, "line": node.lineno, "cwe": "CWE-502",
+                        "severity": "CRITICAL", "title": "Unsafe YAML Deserialization (yaml.load)",
+                        "description": "yaml.load() without SafeLoader allows arbitrary Python object execution.",
+                        "suggestion": "Replace yaml.load() with yaml.safe_load()."
+                    })
+            # 7. Insecure Temporary File Creation (tempfile.mktemp)
+            elif ((isinstance(node.func, _ast.Attribute) and node.func.attr == "mktemp" and
+                   isinstance(node.func.value, _ast.Name) and node.func.value.id == "tempfile") or
+                  (isinstance(node.func, _ast.Name) and node.func.id == "mktemp")):
+                findings.append({
+                    "file": filename, "line": node.lineno, "cwe": "CWE-377",
+                    "severity": "HIGH", "title": "Insecure Temporary File Creation (tempfile.mktemp)",
+                    "description": "tempfile.mktemp() is deprecated and susceptible to symlink TOCTOU race conditions.",
+                    "suggestion": "Use tempfile.NamedTemporaryFile() or tempfile.mkstemp() instead."
+                })
+            # 8. Archive Path Traversal / Tar Slip (extractall without filter)
+            elif (isinstance(node.func, _ast.Attribute) and node.func.attr == "extractall"):
+                has_filter = any(kw.arg == "filter" for kw in getattr(node, "keywords", []))
+                if not has_filter:
+                    findings.append({
+                        "file": filename, "line": node.lineno, "cwe": "CWE-22",
+                        "severity": "HIGH", "title": "Archive Extraction Path Traversal (Tar/Zip Slip)",
+                        "description": "extractall() called without filter='data' allows archives to overwrite files outside destination.",
+                        "suggestion": "Add filter='data' to extractall() to block relative and absolute traversal paths."
+                    })
     return findings
 
 def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tuple:
@@ -1308,6 +1344,23 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             patched = _re.sub(r'\bpickle\.loads\s*\(', 'json.loads(', original)
             applied.append(f"`{filename}` line {lineno}: `pickle.loads()` -> `json.loads()`")
 
+        elif cwe == "CWE-502" and "yaml.load(" in original:
+            patched = _re.sub(r'yaml\.load\(([^,]+),\s*Loader\s*=\s*(?:yaml\.)?(?:Loader|UnsafeLoader)\)', r'yaml.safe_load(\1)', original)
+            if patched == original:
+                patched = _re.sub(r'yaml\.load\(', 'yaml.safe_load(', original)
+            applied.append(f"`{filename}` line {lineno}: `yaml.load()` -> `yaml.safe_load()`")
+
+        elif cwe == "CWE-377" and "tempfile.mktemp(" in original:
+            patched = _re.sub(r'tempfile\.mktemp\(', 'tempfile.NamedTemporaryFile(delete=False, ', original)
+            if patched.rstrip().endswith(")"):
+                patched = patched.rstrip()[:-1] + ").name\n"
+            applied.append(f"`{filename}` line {lineno}: `tempfile.mktemp()` -> `tempfile.NamedTemporaryFile(delete=False, ...).name`")
+
+        elif cwe == "CWE-22" and ".extractall(" in original:
+            if "filter=" not in original:
+                patched = _re.sub(r'(\.extractall\s*\([^)]*)\)', r"\1, filter='data')", original)
+                applied.append(f"`{filename}` line {lineno}: added `filter='data'` to `extractall()` (Tar/Zip Slip protection)")
+
         elif cwe == "CWE-489" and _re.search(r'\bdebug\s*=\s*True\b', original):
             # Cleanly replace debug=True with debug=False without adding an inline comment inside argument list
             patched = _re.sub(r'\bdebug\s*=\s*True\b', 'debug=False', original)
@@ -1316,6 +1369,7 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
         elif cwe == "CWE-295" and _re.search(r'\bverify\s*=\s*False\b', original):
             patched = _re.sub(r'\bverify\s*=\s*False\b', 'verify=True', original)
             applied.append(f"`{filename}` line {lineno}: `verify=False` -> `verify=True`")
+
 
         if patched is not None and patched != original:
             lines[lineno - 1] = patched

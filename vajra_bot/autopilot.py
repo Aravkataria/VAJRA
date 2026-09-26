@@ -178,35 +178,50 @@ def apply_surgical_patch(file_path: Path, finding: Finding) -> Tuple[bool, str]:
 
     # 3. CWE-78: os.system() -> subprocess.run(..., shell=False)
     elif cwe == "CWE-78" and "os.system(" in original:
-        match = re.search(r'os\.system\((.+)\)', original.rstrip())
-        arg = match.group(1) if match else "cmd"
-        patched = (
-            f"{pad}import subprocess\n"
-            f"{pad}subprocess.run({arg}, shell=False, check=True)\n"
-        )
+        patched = re.sub(r'\bos\.system\s*\((.*?)\)', r'subprocess.run(\1, shell=False, check=True)', original)
 
-    # 4. CWE-94: Built-in eval() -> ast.literal_eval() (standalone direct call only)
+    # 4. CWE-94: Built-in eval() -> ast.literal_eval()
     elif cwe == "CWE-94" and re.search(r'(?<!\.)\beval\s*\(', original):
-        match = re.search(r'(?<!\.)eval\((.+)\)', original.rstrip())
-        arg = match.group(1) if match else "expr"
-        patched = (
-            f"{pad}import ast\n"
-            f"{pad}ast.literal_eval({arg})\n"
-        )
+        patched = re.sub(r'(?<!\.)\beval\s*\(', 'ast.literal_eval(', original)
 
     # 5. CWE-502: pickle.loads() -> json.loads()
     elif cwe == "CWE-502" and "pickle.loads(" in original:
-        patched = (
-            f"{pad}import json\n"
-            f"{pad}json.loads(data)\n"
-        )
+        patched = re.sub(r'\bpickle\.loads\s*\(', 'json.loads(', original)
+
+    # 6. CWE-502: yaml.load() -> yaml.safe_load()
+    elif cwe == "CWE-502" and "yaml.load(" in original:
+        patched = re.sub(r'yaml\.load\(([^,]+),\s*Loader\s*=\s*(?:yaml\.)?(?:Loader|UnsafeLoader)\)', r'yaml.safe_load(\1)', original)
+        if patched == original:
+            patched = re.sub(r'yaml\.load\(', 'yaml.safe_load(', original)
+
+    # 7. CWE-377: tempfile.mktemp() -> tempfile.NamedTemporaryFile(delete=False, ...).name
+    elif cwe == "CWE-377" and "tempfile.mktemp(" in original:
+        patched = re.sub(r'tempfile\.mktemp\(', 'tempfile.NamedTemporaryFile(delete=False, ', original)
+        if patched.rstrip().endswith(")"):
+            patched = patched.rstrip()[:-1] + ").name\n"
+
+    # 8. CWE-22: extractall() -> extractall(..., filter='data')
+    elif cwe == "CWE-22" and ".extractall(" in original:
+        if "filter=" not in original:
+            patched = re.sub(r'(\.extractall\s*\([^)]*)\)', r"\1, filter='data')", original)
 
     if patched is None or patched == original:
         return False, "No automated deterministic patch available."
 
     candidate_lines = list(lines)
     candidate_lines[lineno - 1] = patched
-    candidate_content = "".join(candidate_lines)
+
+    # Ensure required standard library imports are present at top of file
+    needed_imports = []
+    if "ast.literal_eval" in patched and "import ast" not in content:
+        needed_imports.append("import ast\n")
+    if "json.loads" in patched and "import json" not in content:
+        needed_imports.append("import json\n")
+    if "subprocess.run" in patched and "import subprocess" not in content:
+        needed_imports.append("import subprocess\n")
+
+    candidate_content = "".join(needed_imports) + "".join(candidate_lines)
+
 
     # STRICT PRE-COMMIT VERIFICATION GATE:
     # 1. Syntax check
