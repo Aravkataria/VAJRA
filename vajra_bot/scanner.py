@@ -236,7 +236,37 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
                         suggestion="cursor.execute('SELECT * FROM users WHERE username = %s', (username,))"
                     ))
 
+        # 5. CWE-489: Active Debug Flag in Production (debug=True)
+        for kw in node.keywords:
+            if kw.arg == "debug" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
+                self.findings.append(Finding(
+                    file=self.filename,
+                    line=node.lineno,
+                    cwe="CWE-489",
+                    severity="HIGH",
+                    title="Active Debug Flag in Production",
+                    description=(
+                        f"Function `{func_name}()` called with `debug=True` enables debug mode or devtools in production. "
+                        "Set `debug=False` before deploying."
+                    ),
+                    suggestion="Set debug=False before deploying to production."
+                ))
+            elif kw.arg == "verify" and isinstance(kw.value, ast.Constant) and kw.value.value is False:
+                self.findings.append(Finding(
+                    file=self.filename,
+                    line=node.lineno,
+                    cwe="CWE-295",
+                    severity="HIGH",
+                    title="TLS Certificate Verification Disabled",
+                    description=(
+                        f"Call `{func_name}()` disables TLS certificate verification (`verify=False`). "
+                        "Remove `verify=False` to prevent man-in-the-middle attacks."
+                    ),
+                    suggestion="Remove verify=False or set verify=True."
+                ))
+
         self.generic_visit(node)
+
 
 
 def scan_content(filename: str, content: str) -> List[Finding]:
