@@ -1473,32 +1473,6 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             lines[lineno - 1] = patched
             patched_lines.add(lineno)
 
-    new_content = "".join(lines)
-
-    # Higher-level structural optimizations for functions:
-    if any(f.get("cwe") == "PERF-102" for f in findings):
-        old_pattern = r'def aggregate_large_event_stream\(self,\s*raw_chunks:\s*List\[str\]\)\s*->\s*str:\s*combined_payload\s*=\s*""\s*for chunk in raw_chunks:\s*combined_payload\s*[\+=]+\s*chunk\.strip\(\)\s*\+\s*"\\n"\s*return combined_payload'
-        new_func = 'def aggregate_large_event_stream(self, raw_chunks: List[str]) -> str:\n        return "".join(chunk.strip() + "\\n" for chunk in raw_chunks)'
-        if _re.search(old_pattern, new_content):
-            new_content = _re.sub(old_pattern, lambda m: new_func, new_content)
-            applied.append(f"`{filename}`: refactored `aggregate_large_event_stream` to O(N) `''.join(...)` generator")
-
-    if any(f.get("cwe") == "PERF-103" for f in findings):
-        old_dedup_pattern = r'def deduplicate_records\(self,\s*new_records:\s*List\[Dict\[str,\s*Any\]\]\)\s*->\s*List\[Dict\[str,\s*Any\]\]:[\s\S]*?return unique_results'
-        new_dedup = '''def deduplicate_records(self, new_records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        seen_ids = {existing.get("event_id") for existing in self.processed_records if "event_id" in existing}
-        unique_results = []
-        for item in new_records:
-            eid = item.get("event_id")
-            if eid not in seen_ids:
-                seen_ids.add(eid)
-                unique_results.append(item)
-                self.processed_records.append(item)
-        return unique_results'''
-        if _re.search(old_dedup_pattern, new_content):
-            new_content = _re.sub(old_dedup_pattern, lambda m: new_dedup, new_content)
-            applied.append(f"`{filename}`: optimized `deduplicate_records` from O(N*M) nested loop to O(1) set-based hash lookup")
-
     if not applied:
         return content, []
 

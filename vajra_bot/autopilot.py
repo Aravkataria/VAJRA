@@ -235,25 +235,6 @@ def apply_surgical_patch(file_path: Path, finding: Finding) -> Tuple[bool, str]:
 
     candidate_content = "".join(needed_imports) + "".join(candidate_lines)
 
-    # Function-level structural performance optimizations:
-    old_agg_pattern = r'def aggregate_large_event_stream\(self,\s*raw_chunks:\s*List\[str\]\)\s*->\s*str:\s*combined_payload\s*=\s*""\s*for chunk in raw_chunks:\s*combined_payload\s*[\+=]+\s*chunk\.strip\(\)\s*\+\s*"\\n"\s*return combined_payload'
-    new_agg_func = 'def aggregate_large_event_stream(self, raw_chunks: List[str]) -> str:\n        return "".join(chunk.strip() + "\\n" for chunk in raw_chunks)'
-    if re.search(old_agg_pattern, candidate_content):
-        candidate_content = re.sub(old_agg_pattern, lambda m: new_agg_func, candidate_content)
-
-    old_dedup_pattern = r'def deduplicate_records\(self,\s*new_records:\s*List\[Dict\[str,\s*Any\]\]\)\s*->\s*List\[Dict\[str,\s*Any\]\]:[\s\S]*?return unique_results'
-    new_dedup_func = '''def deduplicate_records(self, new_records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        seen_ids = {existing.get("event_id") for existing in self.processed_records if "event_id" in existing}
-        unique_results = []
-        for item in new_records:
-            eid = item.get("event_id")
-            if eid not in seen_ids:
-                seen_ids.add(eid)
-                unique_results.append(item)
-                self.processed_records.append(item)
-        return unique_results'''
-    if re.search(old_dedup_pattern, candidate_content):
-        candidate_content = re.sub(old_dedup_pattern, lambda m: new_dedup_func, candidate_content)
 
 
 
