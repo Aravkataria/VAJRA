@@ -1742,25 +1742,40 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         print(f"[VAJRA Autopilot] Zero code patches verified across {files_scanned} files. Skipping branch and PR creation (no empty PRs).")
         return
 
-    # 4. Create or Reset dedicated branch: vajra/auto-security-patches
+    # 4. Check for existing open PR and Create or Rebase branch: vajra/auto-security-patches
     branch_name = "vajra/auto-security-patches"
-    ref_check = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/git/ref/heads/{branch_name}")
-    if ref_check and isinstance(ref_check, dict) and "ref" in ref_check:
-        # Branch exists: delete and recreate to guarantee it starts fresh from current base_sha
-        _vajra_api_delete(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}")
-        print(f"[VAJRA Autopilot] Cleaned old branch {branch_name}")
+    owner = repo.split("/")[0]
+    existing_prs = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/pulls?head={owner}:{branch_name}&state=open")
+    has_open_pr = bool(existing_prs and isinstance(existing_prs, list) and len(existing_prs) > 0)
+    open_pr_number = existing_prs[0].get("number") if has_open_pr else None
 
-    create_ref = _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
-        "ref": f"refs/heads/{branch_name}",
-        "sha": base_sha
-    })
-    if not create_ref:
-        # Fallback to PATCH if delete was restricted
-        _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}", {
-            "sha": base_sha,
-            "force": True
+    ref_check = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/git/ref/heads/{branch_name}")
+    branch_exists = bool(ref_check and isinstance(ref_check, dict) and "ref" in ref_check)
+
+    if branch_exists:
+        if has_open_pr:
+            # Automatic Rebase & Re-sync: Reset/rebase the PR branch cleanly onto base_sha using force PATCH.
+            # This keeps the PR OPEN while instantly eliminating all 'behind main' commits!
+            _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}", {
+                "sha": base_sha,
+                "force": True
+            })
+            print(f"[VAJRA Autopilot] Automatically rebased open PR #{open_pr_number} branch {branch_name} onto {base_sha[:8]} (0 behind)")
+        else:
+            # Stale branch without open PR: delete and recreate fresh
+            _vajra_api_delete(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}")
+            print(f"[VAJRA Autopilot] Cleaned stale branch {branch_name}")
+            _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
+                "ref": f"refs/heads/{branch_name}",
+                "sha": base_sha
+            })
+    else:
+        # Branch does not exist: create fresh from base_sha
+        _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": base_sha
         })
-    print(f"[VAJRA Autopilot] Branch {branch_name} aligned to {base_sha[:8]}")
+        print(f"[VAJRA Autopilot] Created branch {branch_name} from {base_sha[:8]}")
 
 
     import base64 as _b64
@@ -1805,7 +1820,6 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
     pr_body = (
         "## VAJRA Autonomous Security Patch\n"
         "> Opened automatically by [vajra-bot](https://github.com/apps/vajra-bot) on installation. No workflow YAML required in this repository.\n\n"
-
         f"VAJRA scanned **{files_scanned}** source files on `{default_branch}` and found "
         f"**{len(all_findings)} vulnerabilities** ({len(critical)} Critical, {len(high)} High, {len(medium)} Medium).\n\n"
         "### Code Patches Applied\n"
@@ -1822,12 +1836,9 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         "- Engineered by [Arav Kataria](https://github.com/Aravkataria)*"
     )
 
-    owner = repo.split("/")[0]
-    existing_prs = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/pulls?head={owner}:{branch_name}&state=open")
-    if existing_prs and isinstance(existing_prs, list) and len(existing_prs) > 0:
-        pr_number = existing_prs[0].get("number")
-        print(f"[VAJRA Autopilot] Open PR #{pr_number} already exists for {branch_name}. Updating PR description.")
-        _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/pulls/{pr_number}", {
+    if has_open_pr:
+        print(f"[VAJRA Autopilot] Open PR #{open_pr_number} already exists for {branch_name}. Updating PR description.")
+        _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/pulls/{open_pr_number}", {
             "body": pr_body
         })
     else:
