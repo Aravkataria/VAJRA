@@ -236,6 +236,16 @@ def apply_surgical_patch(file_path: Path, finding: Finding) -> Tuple[bool, str]:
 # 4. CLOSED-LOOP AUTONOMOUS ITERATOR
 # =============================================================================
 
+def get_bot_env() -> dict:
+    """Returns an isolated environment dict for git commits that never pollutes local git config."""
+    env = os.environ.copy()
+    env["GIT_AUTHOR_NAME"] = "vajra-bot[bot]"
+    env["GIT_AUTHOR_EMAIL"] = "333847560+vajra-bot[bot]@users.noreply.github.com"
+    env["GIT_COMMITTER_NAME"] = "vajra-bot[bot]"
+    env["GIT_COMMITTER_EMAIL"] = "333847560+vajra-bot[bot]@users.noreply.github.com"
+    return env
+
+
 def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> Tuple[List[str], List[Finding]]:
     """
     Executes a continuous self-healing closed loop:
@@ -251,13 +261,19 @@ def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> 
 
     print(f"\n🔁 Starting Continuous Closed-Loop Remediation Engine on '{branch_name}'...")
 
-    # Configure Git bot identity
+    # 1. Enforce strict branch isolation: bot only ever operates on vajra/auto-security-patches
     try:
-        subprocess.run(["git", "config", "user.name", "vajra-bot[bot]"], check=True)
-        subprocess.run(["git", "config", "user.email", "333847560+vajra-bot[bot]@users.noreply.github.com"], check=True)
         subprocess.run(["git", "checkout", "-B", branch_name], check=True)
+        current_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
+        if current_branch in ("main", "master"):
+            print(f"🛑 Security Guard: VAJRA Bot is strictly forbidden from committing directly to '{current_branch}'. Aborting.")
+            return [], []
     except Exception as e:
         print(f"⚠️ Git branch initialization note: {e}")
+        return [], []
+
+    bot_env = get_bot_env()
+
 
     while True:
         round_num += 1
@@ -305,7 +321,7 @@ def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> 
                 try:
                     subprocess.run(["git", "add", str(p)], check=True)
                     commit_msg = f"fix(security): auto-patch {f.title} in {p.name} [vajra-bot]"
-                    subprocess.run(["git", "commit", "-m", commit_msg], check=True, capture_output=True)
+                    subprocess.run(["git", "commit", "-m", commit_msg], env=bot_env, check=True, capture_output=True)
                     applied_patches_ledger.append(f"`{f.file}` line {f.line}: {f.title} ({f.cwe})")
                     patched_in_this_round += 1
                 except Exception as ce:
@@ -424,7 +440,7 @@ def run_autopilot():
 
     try:
         subprocess.run(["git", "add", "VAJRA_SECURITY_AUDIT.md"], check=True)
-        subprocess.run(["git", "commit", "-m", "feat(security): autonomous VAJRA security audit report [vajra-bot]"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "feat(security): autonomous VAJRA security audit report [vajra-bot]"], env=get_bot_env(), check=True, capture_output=True)
     except Exception:
         pass
 
