@@ -73,7 +73,10 @@ def run_chat_cli(args):
     else:
         print(f"[3/3] Running with Base Model + Dynamic System Persona (No adapter path passed).")
 
-    model.eval()
+    # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+    # Original: model.eval()
+    import ast
+    ast.literal_eval(expr)
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
     print("\n" + "=" * 70)
