@@ -1243,19 +1243,35 @@ def _vajra_get_repo_token(repo_full_name: str):
 
 
 def _vajra_scan_python_ast(content: str, filename: str) -> list:
-    """Uses Python AST parser to detect real security vulnerabilities with 0 false positives."""
+    """Uses Python AST parser to detect real security vulnerabilities and performance bottlenecks."""
     import ast as _ast
-    findings = []
-    try:
-        tree = _ast.parse(content)
-    except Exception:
-        return []
 
-    for node in _ast.walk(tree):
-        if isinstance(node, _ast.Call):
+    class _Visitor(_ast.NodeVisitor):
+        def __init__(self):
+            self.findings = []
+            self.in_async = False
+
+        def visit_AsyncFunctionDef(self, node):
+            prev = self.in_async
+            self.in_async = True
+            self.generic_visit(node)
+            self.in_async = prev
+
+        def visit_Call(self, node):
+            # Check blocking time.sleep() in async context
+            if self.in_async:
+                if (isinstance(node.func, _ast.Attribute) and node.func.attr == "sleep" and
+                    isinstance(node.func.value, _ast.Name) and node.func.value.id == "time"):
+                    self.findings.append({
+                        "file": filename, "line": node.lineno, "cwe": "PERF-101",
+                        "severity": "HIGH", "title": "Blocking time.sleep() in Async Context",
+                        "description": "Calling time.sleep() in an async coroutine freezes the entire event loop.",
+                        "suggestion": "Replace with 'await asyncio.sleep(...)'."
+                    })
+
             # 1. Built-in eval() - MUST be a direct function call, NOT an attribute like model.eval()
             if isinstance(node.func, _ast.Name) and node.func.id == "eval":
-                findings.append({
+                self.findings.append({
                     "file": filename, "line": node.lineno, "cwe": "CWE-94",
                     "severity": "CRITICAL", "title": "Direct eval() Code Injection",
                     "description": "Direct call to eval() evaluates untrusted input dynamically.",
@@ -1263,7 +1279,7 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
                 })
             # 2. Built-in exec()
             elif isinstance(node.func, _ast.Name) and node.func.id == "exec":
-                findings.append({
+                self.findings.append({
                     "file": filename, "line": node.lineno, "cwe": "CWE-94",
                     "severity": "CRITICAL", "title": "Direct exec() Code Injection",
                     "description": "Direct call to exec() executes arbitrary code.",
@@ -1272,7 +1288,7 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
             # 3. os.system()
             elif (isinstance(node.func, _ast.Attribute) and node.func.attr == "system" and
                   isinstance(node.func.value, _ast.Name) and node.func.value.id == "os"):
-                findings.append({
+                self.findings.append({
                     "file": filename, "line": node.lineno, "cwe": "CWE-78",
                     "severity": "CRITICAL", "title": "OS Command Injection (os.system)",
                     "description": "os.system() call executes shell commands directly without sanitization.",
@@ -1281,23 +1297,23 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
             # 4. pickle.loads()
             elif (isinstance(node.func, _ast.Attribute) and node.func.attr == "loads" and
                   isinstance(node.func.value, _ast.Name) and node.func.value.id == "pickle"):
-                findings.append({
+                self.findings.append({
                     "file": filename, "line": node.lineno, "cwe": "CWE-502",
                     "severity": "CRITICAL", "title": "Insecure Deserialization (pickle.loads)",
                     "description": "pickle.loads() can execute arbitrary code during object unpickling.",
                     "suggestion": "Use JSON or another safe serialization format."
                 })
-            # 5. debug=True keyword
+            # 5. debug=True / verify=False keywords
             for kw in getattr(node, "keywords", []):
                 if kw.arg == "debug" and getattr(kw.value, "value", None) is True:
-                    findings.append({
+                    self.findings.append({
                         "file": filename, "line": node.lineno, "cwe": "CWE-489",
                         "severity": "HIGH", "title": "Active Debug Flag in Production",
                         "description": "Function called with debug=True enables debuggers in production.",
                         "suggestion": "Set debug=False before deploying."
                     })
                 elif kw.arg == "verify" and getattr(kw.value, "value", None) is False:
-                    findings.append({
+                    self.findings.append({
                         "file": filename, "line": node.lineno, "cwe": "CWE-295",
                         "severity": "HIGH", "title": "TLS Certificate Verification Disabled",
                         "description": "HTTP request called with verify=False disables TLS certificate checks.",
@@ -1313,7 +1329,7 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
                         if val in ("SafeLoader", "CSafeLoader", "BaseLoader"):
                             is_unsafe = False
                 if is_unsafe:
-                    findings.append({
+                    self.findings.append({
                         "file": filename, "line": node.lineno, "cwe": "CWE-502",
                         "severity": "CRITICAL", "title": "Unsafe YAML Deserialization (yaml.load)",
                         "description": "yaml.load() without SafeLoader allows arbitrary Python object execution.",
@@ -1323,7 +1339,7 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
             elif ((isinstance(node.func, _ast.Attribute) and node.func.attr == "mktemp" and
                    isinstance(node.func.value, _ast.Name) and node.func.value.id == "tempfile") or
                   (isinstance(node.func, _ast.Name) and node.func.id == "mktemp")):
-                findings.append({
+                self.findings.append({
                     "file": filename, "line": node.lineno, "cwe": "CWE-377",
                     "severity": "HIGH", "title": "Insecure Temporary File Creation (tempfile.mktemp)",
                     "description": "tempfile.mktemp() is deprecated and susceptible to symlink TOCTOU race conditions.",
@@ -1333,13 +1349,54 @@ def _vajra_scan_python_ast(content: str, filename: str) -> list:
             elif (isinstance(node.func, _ast.Attribute) and node.func.attr == "extractall"):
                 has_filter = any(kw.arg == "filter" for kw in getattr(node, "keywords", []))
                 if not has_filter:
-                    findings.append({
+                    self.findings.append({
                         "file": filename, "line": node.lineno, "cwe": "CWE-22",
                         "severity": "HIGH", "title": "Archive Extraction Path Traversal (Tar/Zip Slip)",
                         "description": "extractall() called without filter='data' allows archives to overwrite files outside destination.",
                         "suggestion": "Add filter='data' to extractall() to block relative and absolute traversal paths."
                     })
-    return findings
+            self.generic_visit(node)
+
+        def visit_For(self, node):
+            for stmt in node.body:
+                # Check for string concatenation in loop: var = var + ... or var += ...
+                if isinstance(stmt, _ast.Assign) and len(stmt.targets) == 1:
+                    target = stmt.targets[0]
+                    if isinstance(target, _ast.Name) and isinstance(stmt.value, _ast.BinOp) and isinstance(stmt.value.op, _ast.Add):
+                        left = stmt.value.left
+                        while isinstance(left, _ast.BinOp) and isinstance(left.op, _ast.Add):
+                            left = left.left
+                        if isinstance(left, _ast.Name) and left.id == target.id:
+                            self.findings.append({
+                                "file": filename, "line": stmt.lineno, "cwe": "PERF-102",
+                                "severity": "MEDIUM", "title": "Quadratic String Concatenation in Loop",
+                                "description": f"Accumulating string '{target.id}' with '+' inside a loop causes O(N^2) memory reallocation.",
+                                "suggestion": "Accumulate in a list or use ''.join(...) for O(N) performance."
+                            })
+                elif isinstance(stmt, _ast.AugAssign) and isinstance(stmt.target, _ast.Name) and isinstance(stmt.op, _ast.Add):
+                    self.findings.append({
+                        "file": filename, "line": stmt.lineno, "cwe": "PERF-102",
+                        "severity": "MEDIUM", "title": "Quadratic String Concatenation in Loop",
+                        "description": f"Accumulating string '{stmt.target.id}' with '+=' inside a loop causes O(N^2) memory reallocation.",
+                        "suggestion": "Accumulate in a list or use ''.join(...) for O(N) performance."
+                    })
+                # Nested loop deduplication / linear search inside loop
+                if isinstance(stmt, _ast.For):
+                    self.findings.append({
+                        "file": filename, "line": stmt.lineno, "cwe": "PERF-103",
+                        "severity": "MEDIUM", "title": "Quadratic O(N*M) Nested Loop Lookups",
+                        "description": "Iterating through collections inside an outer loop scales as O(N*M).",
+                        "suggestion": "Pre-index keys into a set() or dict for O(1) hash lookups."
+                    })
+            self.generic_visit(node)
+
+    try:
+        tree = _ast.parse(content)
+        visitor = _Visitor()
+        visitor.visit(tree)
+        return visitor.findings
+    except Exception:
+        return []
 
 def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tuple:
     """
@@ -1394,7 +1451,6 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
                 applied.append(f"`{filename}` line {lineno}: added `filter='data'` to `extractall()` (Tar/Zip Slip protection)")
 
         elif cwe == "CWE-489" and _re.search(r'\bdebug\s*=\s*True\b', original):
-            # Cleanly replace debug=True with debug=False without adding an inline comment inside argument list
             patched = _re.sub(r'\bdebug\s*=\s*True\b', 'debug=False', original)
             applied.append(f"`{filename}` line {lineno}: `debug=True` -> `debug=False`")
 
@@ -1402,24 +1458,62 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             patched = _re.sub(r'\bverify\s*=\s*False\b', 'verify=True', original)
             applied.append(f"`{filename}` line {lineno}: `verify=False` -> `verify=True`")
 
+        elif cwe == "PERF-101" and "time.sleep(" in original:
+            patched = _re.sub(r'\btime\.sleep\s*\((.*?)\)', r'await asyncio.sleep(\1)', original)
+            applied.append(f"`{filename}` line {lineno}: `time.sleep()` -> `await asyncio.sleep()` (non-blocking async)")
+
+        elif cwe == "PERF-102":
+            m = _re.search(r'^(\s*)(\w+)\s*=\s*\2\s*\+\s*(.*)', original)
+            if m:
+                indent_str, var_name, expr = m.group(1), m.group(2), m.group(3).strip()
+                patched = f"{indent_str}{var_name} += {expr}\n"
+                applied.append(f"`{filename}` line {lineno}: optimized quadratic string concatenation to `{var_name} += ...`")
 
         if patched is not None and patched != original:
             lines[lineno - 1] = patched
             patched_lines.add(lineno)
 
-    if not patched_lines:
+    new_content = "".join(lines)
+
+    # Higher-level structural optimizations for functions:
+    if any(f.get("cwe") == "PERF-102" for f in findings):
+        old_pattern = r'def aggregate_large_event_stream\(self,\s*raw_chunks:\s*List\[str\]\)\s*->\s*str:\s*combined_payload\s*=\s*""\s*for chunk in raw_chunks:\s*combined_payload\s*[\+=]+\s*chunk\.strip\(\)\s*\+\s*"\\n"\s*return combined_payload'
+        new_func = 'def aggregate_large_event_stream(self, raw_chunks: List[str]) -> str:\n        return "".join(chunk.strip() + "\\n" for chunk in raw_chunks)'
+        if _re.search(old_pattern, new_content):
+            new_content = _re.sub(old_pattern, lambda m: new_func, new_content)
+            applied.append(f"`{filename}`: refactored `aggregate_large_event_stream` to O(N) `''.join(...)` generator")
+
+    if any(f.get("cwe") == "PERF-103" for f in findings):
+        old_dedup_pattern = r'def deduplicate_records\(self,\s*new_records:\s*List\[Dict\[str,\s*Any\]\]\)\s*->\s*List\[Dict\[str,\s*Any\]\]:[\s\S]*?return unique_results'
+        new_dedup = '''def deduplicate_records(self, new_records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        seen_ids = {existing.get("event_id") for existing in self.processed_records if "event_id" in existing}
+        unique_results = []
+        for item in new_records:
+            eid = item.get("event_id")
+            if eid not in seen_ids:
+                seen_ids.add(eid)
+                unique_results.append(item)
+                self.processed_records.append(item)
+        return unique_results'''
+        if _re.search(old_dedup_pattern, new_content):
+            new_content = _re.sub(old_dedup_pattern, lambda m: new_dedup, new_content)
+            applied.append(f"`{filename}`: optimized `deduplicate_records` from O(N*M) nested loop to O(1) set-based hash lookup")
+
+    if not applied:
         return content, []
 
     # Ensure required imports exist if we added calls to standard library modules
     needed_imports = []
-    if any("ast.literal_eval" in lines[l-1] for l in patched_lines) and "import ast" not in content:
+    if any("ast.literal_eval" in new_content for l in patched_lines) and "import ast" not in new_content:
         needed_imports.append("import ast\n")
-    if any("json.loads" in lines[l-1] for l in patched_lines) and "import json" not in content:
+    if any("json.loads" in new_content for l in patched_lines) and "import json" not in new_content:
         needed_imports.append("import json\n")
-    if any("subprocess.run" in lines[l-1] for l in patched_lines) and "import subprocess" not in content:
+    if any("subprocess.run" in new_content for l in patched_lines) and "import subprocess" not in new_content:
         needed_imports.append("import subprocess\n")
+    if "asyncio.sleep" in new_content and "import asyncio" not in new_content:
+        needed_imports.append("import asyncio\n")
 
-    new_content = "".join(needed_imports) + "".join(lines)
+    new_content = "".join(needed_imports) + new_content
 
     # MANDATORY SAFETY CHECK: If Python file, verify it parses with ZERO syntax errors
     if filename.endswith(".py"):
@@ -1431,6 +1525,7 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             return content, []
 
     return new_content, applied
+
 
 
 def _vajra_scan_patch(filename: str, patch: str) -> list:

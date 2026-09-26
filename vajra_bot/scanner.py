@@ -127,6 +127,53 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
         self.filename = filename
         self.source_lines = source_lines
         self.findings: List[Finding] = []
+        self.in_async = False
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        prev = self.in_async
+        self.in_async = True
+        self.generic_visit(node)
+        self.in_async = prev
+
+    def visit_For(self, node: ast.For):
+        for stmt in node.body:
+            if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+                target = stmt.targets[0]
+                if isinstance(target, ast.Name) and isinstance(stmt.value, ast.BinOp) and isinstance(stmt.value.op, ast.Add):
+                    left = stmt.value.left
+                    while isinstance(left, ast.BinOp) and isinstance(left.op, ast.Add):
+                        left = left.left
+                    if isinstance(left, ast.Name) and left.id == target.id:
+                        self.findings.append(Finding(
+                            file=self.filename,
+                            line=stmt.lineno,
+                            cwe="PERF-102",
+                            severity="MEDIUM",
+                            title="Quadratic String Concatenation in Loop",
+                            description=f"Accumulating string '{target.id}' with '+' in a loop causes O(N^2) memory reallocation.",
+                            suggestion="Use ''.join(...) instead."
+                        ))
+            elif isinstance(stmt, ast.AugAssign) and isinstance(stmt.target, ast.Name) and isinstance(stmt.op, ast.Add):
+                self.findings.append(Finding(
+                    file=self.filename,
+                    line=stmt.lineno,
+                    cwe="PERF-102",
+                    severity="MEDIUM",
+                    title="Quadratic String Concatenation in Loop",
+                    description=f"Accumulating string '{stmt.target.id}' with '+=' in a loop causes O(N^2) memory reallocation.",
+                    suggestion="Use ''.join(...) instead."
+                ))
+            if isinstance(stmt, ast.For):
+                self.findings.append(Finding(
+                    file=self.filename,
+                    line=stmt.lineno,
+                    cwe="PERF-103",
+                    severity="MEDIUM",
+                    title="Quadratic O(N*M) Nested Loop Lookups",
+                    description="Iterating through collections inside an outer loop scales as O(N*M).",
+                    suggestion="Pre-index keys into a set() or dict for O(1) hash lookups."
+                ))
+        self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call):
         func_name = ""
@@ -137,6 +184,19 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
             if isinstance(node.func.value, ast.Name):
                 val_name = node.func.value.id
             func_name = f"{val_name}.{node.func.attr}" if val_name else node.func.attr
+
+        # 0. PERF-101: Blocking time.sleep() in async context
+        if self.in_async and func_name in ("time.sleep", "sleep"):
+            self.findings.append(Finding(
+                file=self.filename,
+                line=node.lineno,
+                cwe="PERF-101",
+                severity="HIGH",
+                title="Blocking time.sleep() in Async Context",
+                description="Calling synchronous time.sleep() in an async coroutine freezes the event loop.",
+                suggestion="await asyncio.sleep(...)"
+            ))
+
 
         # 1. CWE-94 / CWE-95: eval() and exec() - Must be a direct built-in call, NOT an attribute method like model.eval()
         if isinstance(node.func, ast.Name) and node.func.id in ("eval", "exec"):
