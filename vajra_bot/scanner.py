@@ -138,8 +138,8 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
                 val_name = node.func.value.id
             func_name = f"{val_name}.{node.func.attr}" if val_name else node.func.attr
 
-        # 1. CWE-94 / CWE-95: eval() and exec()
-        if func_name in ("eval", "exec"):
+        # 1. CWE-94 / CWE-95: eval() and exec() - Must be a direct built-in call, NOT an attribute method like model.eval()
+        if isinstance(node.func, ast.Name) and node.func.id in ("eval", "exec"):
             if node.args and not isinstance(node.args[0], ast.Constant):
                 line_no = node.lineno
                 self.findings.append(Finding(
@@ -149,7 +149,7 @@ class PythonASTSecurityVisitor(ast.NodeVisitor):
                     severity="CRITICAL",
                     title="Dynamic Code Execution Sink (eval / exec)",
                     description=(
-                        f"Direct invocation of `{func_name}()` with dynamic arguments allows arbitrary "
+                        f"Direct invocation of `{node.func.id}()` with dynamic arguments allows arbitrary "
                         "remote code execution (RCE). Use `ast.literal_eval()` or structured parsers."
                     ),
                     suggestion=(
@@ -245,8 +245,11 @@ def scan_content(filename: str, content: str) -> List[Finding]:
     and regex signature analysis (for secrets and common web sinks).
     """
     fn_normalized = filename.lower().replace("\\", "/")
-    # Ignore internal scanner definitions
-    if fn_normalized.endswith(("vajra_bot/scanner.py", "vajra_bot/finder.py")):
+    # Ignore internal scanner definitions, rules, and intentional test fixtures
+    if (fn_normalized.endswith(("vajra_bot/scanner.py", "vajra_bot/finder.py", "vajra_bot/commands.py"))
+            or "/tests/" in fn_normalized or fn_normalized.startswith("tests/")
+            or "/benchmarks/" in fn_normalized or fn_normalized.startswith("benchmarks/")
+            or fn_normalized.endswith(("_test.py", ".min.js"))):
         return []
 
     findings: List[Finding] = []
