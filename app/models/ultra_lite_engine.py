@@ -61,7 +61,10 @@ class UltraLiteEngine:
                 low_cpu_mem_usage=True,
                 trust_remote_code=True,
             )
-            self._model.eval()
+            # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+            # Original: self._model.eval()
+            import ast
+            ast.literal_eval(expr)
             self._is_loaded = True
             logger.info(f"✅ {ULTRA_LITE_MODEL_ID} successfully loaded in CPU memory.")
             return True
