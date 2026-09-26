@@ -1188,6 +1188,28 @@ def _vajra_api_put(token: str, url: str, data: dict) -> Any:
         print(f"[VAJRA] PUT {url} failed: {e}")
         return None
 
+def _vajra_api_patch(token: str, url: str, data: dict) -> Any:
+    """Generic authenticated PATCH to GitHub API."""
+    import urllib.error
+    encoded = json.dumps(data).encode("utf-8")
+    req = urllib.request.Request(url, data=encoded, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "VAJRA-Bot-App",
+        "Content-Type": "application/json"
+    }, method="PATCH")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as he:
+        err_msg = he.read().decode("utf-8", errors="ignore")
+        print(f"[VAJRA] PATCH {url} HTTP {he.code}: {he.reason} - {err_msg}")
+        return None
+    except Exception as e:
+        print(f"[VAJRA] PATCH {url} failed: {e}")
+        return None
+
 def _vajra_scan_python_ast(content: str, filename: str) -> list:
     """Uses Python AST parser to detect real security vulnerabilities with 0 false positives."""
     import ast as _ast
@@ -1272,33 +1294,18 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             continue
 
         original = lines[lineno - 1]
-        indent = len(original) - len(original.lstrip())
-        pad = " " * indent
         patched = None
 
         if cwe == "CWE-78" and "os.system(" in original:
-            match = _re.search(r'os\.system\((.+)\)', original.rstrip())
-            arg = match.group(1) if match else "cmd"
-            patched = (
-                f"{pad}import subprocess\n"
-                f"{pad}subprocess.run({arg}, shell=False, check=True)\n"
-            )
+            patched = _re.sub(r'\bos\.system\s*\((.*?)\)', r'subprocess.run(\1, shell=False, check=True)', original)
             applied.append(f"`{filename}` line {lineno}: `os.system()` -> `subprocess.run(..., shell=False)`")
 
         elif cwe == "CWE-94" and _re.search(r'(?<!\.)\beval\s*\(', original):
-            match = _re.search(r'(?<!\.)eval\((.+)\)', original.rstrip())
-            arg = match.group(1) if match else "expr"
-            patched = (
-                f"{pad}import ast\n"
-                f"{pad}ast.literal_eval({arg})\n"
-            )
+            patched = _re.sub(r'(?<!\.)\beval\s*\(', 'ast.literal_eval(', original)
             applied.append(f"`{filename}` line {lineno}: `eval()` -> `ast.literal_eval()`")
 
         elif cwe == "CWE-502" and "pickle.loads(" in original:
-            patched = (
-                f"{pad}import json\n"
-                f"{pad}json.loads(data)\n"
-            )
+            patched = _re.sub(r'\bpickle\.loads\s*\(', 'json.loads(', original)
             applied.append(f"`{filename}` line {lineno}: `pickle.loads()` -> `json.loads()`")
 
         elif cwe == "CWE-489" and _re.search(r'\bdebug\s*=\s*True\b', original):
@@ -1310,11 +1317,23 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             patched = _re.sub(r'\bverify\s*=\s*False\b', 'verify=True', original)
             applied.append(f"`{filename}` line {lineno}: `verify=False` -> `verify=True`")
 
-        if patched is not None:
+        if patched is not None and patched != original:
             lines[lineno - 1] = patched
             patched_lines.add(lineno)
 
-    new_content = "".join(lines)
+    if not patched_lines:
+        return content, []
+
+    # Ensure required imports exist if we added calls to standard library modules
+    needed_imports = []
+    if any("ast.literal_eval" in lines[l-1] for l in patched_lines) and "import ast" not in content:
+        needed_imports.append("import ast\n")
+    if any("json.loads" in lines[l-1] for l in patched_lines) and "import json" not in content:
+        needed_imports.append("import json\n")
+    if any("subprocess.run" in lines[l-1] for l in patched_lines) and "import subprocess" not in content:
+        needed_imports.append("import subprocess\n")
+
+    new_content = "".join(needed_imports) + "".join(lines)
 
     # MANDATORY SAFETY CHECK: If Python file, verify it parses with ZERO syntax errors
     if filename.endswith(".py"):
@@ -1326,6 +1345,7 @@ def _vajra_apply_code_patches(content: str, findings: list, filename: str) -> tu
             return content, []
 
     return new_content, applied
+
 
 def _vajra_scan_patch(filename: str, patch: str) -> list:
     """
@@ -1562,24 +1582,28 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
     audit_md_lines += ["---", "*Powered by [VAJRA Security Auditor](https://github.com/apps/vajra-bot)*"]
     audit_content = "\n".join(audit_md_lines)
 
-    # 3. Create or Reset branch for patches
-    branch_name = "vajra/auto-security-patches"
-    try:
-        del_req = urllib.request.Request(
-            f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}",
-            headers={"Authorization": f"Bearer {token}", "User-Agent": "VAJRA-Bot-App"},
-            method="DELETE"
-        )
-        urllib.request.urlopen(del_req, timeout=10)
-    except Exception:
-        pass
+    # 3. Code Patches Gate: Only proceed with branch & PR if verified code patches exist
+    if not patched_files:
+        print(f"[VAJRA Autopilot] Zero code patches verified across {files_scanned} files. Skipping branch and PR creation (no empty PRs).")
+        return
 
-    ref_result = _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
-        "ref": f"refs/heads/{branch_name}",
-        "sha": base_sha
-    })
-    if not ref_result:
-        print(f"[VAJRA Autopilot] Notice: branch {branch_name} already exists or creation returned: {ref_result}")
+    # 4. Create or Reset dedicated branch: vajra/auto-security-patches
+    branch_name = "vajra/auto-security-patches"
+    ref_check = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/git/ref/heads/{branch_name}")
+    if ref_check and isinstance(ref_check, dict) and "ref" in ref_check:
+        # Branch exists: reset to base_sha cleanly without deleting
+        _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}", {
+            "sha": base_sha,
+            "force": True
+        })
+        print(f"[VAJRA Autopilot] Reset existing branch {branch_name} to {base_sha[:8]}")
+    else:
+        # Create branch pointing to base_sha
+        _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": base_sha
+        })
+        print(f"[VAJRA Autopilot] Created branch {branch_name} from {base_sha[:8]}")
 
     import base64 as _b64
     bot_committer = {
@@ -1587,7 +1611,7 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         "email": "333847560+vajra-bot[bot]@users.noreply.github.com"
     }
 
-    # 4. Commit each patched source file (fetching fresh SHA from branch before PUT)
+    # 5. Commit each patched source file (fetching fresh SHA from branch before PUT)
     for file_path, patched_content in patched_files.items():
         existing = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/contents/{file_path}?ref={branch_name}")
         put_payload = {
@@ -1605,7 +1629,7 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         else:
             print(f"[VAJRA Autopilot] Warning: failed to commit patch for {file_path}")
 
-    # 5. Commit audit report
+    # 6. Commit audit report alongside code patches
     existing_audit = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/contents/VAJRA_SECURITY_AUDIT.md?ref={branch_name}")
     audit_payload = {
         "message": "feat(security): autonomous VAJRA security audit report [vajra-bot]",
@@ -1618,8 +1642,8 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         audit_payload["sha"] = existing_audit["sha"]
     _vajra_api_put(token, f"https://api.github.com/repos/{repo}/contents/VAJRA_SECURITY_AUDIT.md", audit_payload)
 
-    # 6. Open Pull Request
-    patch_list = "\n".join(f"- {desc}" for desc in all_patch_descriptions) if all_patch_descriptions else "- No auto-patchable sinks found (manual remediation required per audit report)"
+    # 7. Open or Update Pull Request with the verified code patches
+    patch_list = "\n".join(f"- {desc}" for desc in all_patch_descriptions)
     pr_body = (
         "## VAJRA Autonomous Security Patch\n"
         "> Opened automatically by `vajra-bot[bot]` on installation. No workflow YAML required in this repository.\n\n"
@@ -1627,12 +1651,11 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         f"**{len(all_findings)} vulnerabilities** ({len(critical)} Critical, {len(high)} High, {len(medium)} Medium).\n\n"
         "### Code Patches Applied\n"
         f"{patch_list}\n\n"
-        "Each patched line is marked with a `# VAJRA-PATCH [CWE-XX]` comment. "
-        "The original vulnerable line is preserved as a comment directly above for comparison.\n\n"
+        "All patches have been verified through an AST compilation safety gate with zero syntax errors.\n\n"
         "### Also Included\n"
         "- `VAJRA_SECURITY_AUDIT.md` - Full CWE report with file locations, severity, and remediation guidance\n\n"
         "### Review Checklist\n"
-        "1. Review each `# VAJRA-PATCH` change in the diff\n"
+        "1. Review each verified change in the diff\n"
         "2. Run your test suite to verify no regressions\n"
         "3. Merge this PR to apply the security fixes\n\n"
         "---\n"
@@ -1640,14 +1663,24 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
         "- Engineered by [Arav Kataria](https://github.com/Aravkataria)*"
     )
 
-    pr_result = _vajra_api_post(token, f"https://api.github.com/repos/{repo}/pulls", {
-        "title": f"[VAJRA] {len(all_findings)} Security Vulnerabilities - Autonomous Patch ({len(patched_files)} files fixed)",
-        "head": branch_name,
-        "base": default_branch,
-        "body": pr_body
-    })
-    if pr_result:
-        print(f"[VAJRA Autopilot] Opened PR #{pr_result.get('number')}: {pr_result.get('html_url')}")
+    owner = repo.split("/")[0]
+    existing_prs = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/pulls?head={owner}:{branch_name}&state=open")
+    if existing_prs and isinstance(existing_prs, list) and len(existing_prs) > 0:
+        pr_number = existing_prs[0].get("number")
+        print(f"[VAJRA Autopilot] Open PR #{pr_number} already exists for {branch_name}. Updating PR description.")
+        _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/pulls/{pr_number}", {
+            "body": pr_body
+        })
+    else:
+        pr_result = _vajra_api_post(token, f"https://api.github.com/repos/{repo}/pulls", {
+            "title": f"[VAJRA] {len(all_findings)} Security Vulnerabilities - Autonomous Patch ({len(patched_files)} files fixed)",
+            "head": branch_name,
+            "base": default_branch,
+            "body": pr_body
+        })
+        if pr_result:
+            print(f"[VAJRA Autopilot] Opened PR #{pr_result.get('number')}: {pr_result.get('html_url')}")
+
 
 
 @fastapi_app.post("/api/github/webhook")
