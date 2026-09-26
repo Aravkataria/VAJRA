@@ -1819,8 +1819,57 @@ async def github_app_webhook(request: Request):
             "repos": repos_to_scan
         }
 
-    # Handle Pull Request events — run security audit on changed files
+    # Handle Push events — trigger full repo scan+patch on every commit to default branch
+    elif event_type == "push":
+        # Only react to commits pushed directly to the default branch (not bot branches)
+        repo_info = payload.get("repository", {})
+        default_branch = repo_info.get("default_branch", "main")
+        pushed_ref = payload.get("ref", "")
+        # Skip if this push is on vajra bot branch (prevent infinite loop)
+        if pushed_ref in (f"refs/heads/{default_branch}",) and "vajra" not in pushed_ref.split("/")[-1].lower():
+            commits = payload.get("commits", [])
+            if commits:
+                print(f"[VAJRA Webhook] Push detected: {len(commits)} commit(s) to {default_branch} in {repo_name}. Triggering autonomous scan.")
+                threading.Thread(
+                    target=_vajra_scan_full_repo,
+                    args=(token, repo_name),
+                    daemon=True
+                ).start()
+                result = {
+                    "status": "scanning",
+                    "message": f"Push-triggered autonomous scan started for {repo_name} ({len(commits)} commit(s) on {default_branch}).",
+                    "commits": len(commits)
+                }
+            else:
+                result = {"status": "skipped", "reason": "Push contained no commits."}
+        else:
+            result = {"status": "skipped", "reason": f"Push to non-default or bot branch '{pushed_ref}' ignored."}
+
+    # Handle Pull Request MERGE events — scan again when a PR is merged into default branch
+    elif event_type == "pull_request" and action == "closed":
+        pr = payload.get("pull_request", {})
+        was_merged = pr.get("merged", False)
+        head_ref = pr.get("head", {}).get("ref", "")
+        # Only scan on merge, and not when our own bot PRs are merged (prevent loop)
+        if was_merged and "vajra" not in head_ref.lower():
+            pull_number = pr.get("number")
+            print(f"[VAJRA Webhook] PR #{pull_number} merged into {repo_name}. Triggering autonomous scan on updated codebase.")
+            threading.Thread(
+                target=_vajra_scan_full_repo,
+                args=(token, repo_name),
+                daemon=True
+            ).start()
+            result = {
+                "status": "scanning",
+                "message": f"Merge-triggered autonomous scan started for {repo_name} after PR #{pull_number} merged.",
+                "pr": pull_number
+            }
+        else:
+            result = {"status": "skipped", "reason": "PR closed without merge, or merge was from bot branch."}
+
+    # Handle Pull Request OPEN/SYNC events — run security audit on changed files only
     elif event_type == "pull_request" and action in ("opened", "synchronize", "reopened"):
+
         pr = payload.get("pull_request", {})
         pull_number = pr.get("number")
         commit_sha = pr.get("head", {}).get("sha", "")
