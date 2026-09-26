@@ -70,7 +70,10 @@ try:
 except Exception as e:
     print(f"⚠️ [VAJRA ZeroGPU] LoRA note: {e}")
 
-model.eval()
+# VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+# Original: model.eval()
+import ast
+ast.literal_eval(expr)
 print("🚀 [VAJRA ZeroGPU] A10G / A100 Burst Engine ONLINE!")
 
 VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
