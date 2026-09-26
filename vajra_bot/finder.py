@@ -15,7 +15,7 @@ SEMANTIC_PATTERNS = [
         "CWE-489",
         "HIGH",
         "Active Debug Mode Enabled in Production Code",
-        "Running with `debug=True` leaks interactive debuggers, stack traces, and environment variables. Set debug=False.",
+        "Running with `debug=False  # VAJRA-PATCH [CWE-489]: disabled in production` leaks interactive debuggers, stack traces, and environment variables. Set debug=False.",
         "debug = False"
     ),
     (
@@ -23,7 +23,7 @@ SEMANTIC_PATTERNS = [
         "CWE-295",
         "HIGH",
         "Disabled TLS/SSL Certificate Verification",
-        "Disabling certificate verification (`verify=False`) makes HTTP requests vulnerable to Man-in-the-Middle (MitM) attacks.",
+        "Disabling certificate verification (`verify=True  # VAJRA-PATCH [CWE-295]: TLS verification enabled`) makes HTTP requests vulnerable to Man-in-the-Middle (MitM) attacks.",
         "verify=True"
     ),
     (
