@@ -454,7 +454,10 @@ def load_cpu_model():
         except Exception as peft_err:
             print(f"⚠️ [VAJRA v2] Base model active (LoRA note: {peft_err})")
 
-        model.eval()
+        # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+        # Original: model.eval()
+        import ast
+        ast.literal_eval(expr)
         print("🚀 [VAJRA v2] 2 vCPU Engine ONLINE!")
     except Exception as err:
         print(f"❌ [VAJRA v2] CPU Model load error: {err}")
