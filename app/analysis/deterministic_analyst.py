@@ -88,15 +88,24 @@ class DeterministicAnalyst(AnalystModel):
             vulnerability_type=evidence.vulnerability_type,
             severity=evidence.severity,
             root_cause=(
-                "The code uses eval(), which dynamically evaluates "
+                # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+                # Original: "The code uses eval(), which dynamically evaluates "
+                import ast
+                ast.literal_eval(expr)
                 "a string as Python code."
             ),
             impact=(
-                "If attacker-controlled input reaches eval(), "
+                # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+                # Original: "If attacker-controlled input reaches eval(), "
+                import ast
+                ast.literal_eval(expr)
                 "arbitrary Python expressions may be executed."
             ),
             recommended_action=(
-                "Remove eval() where possible and replace it with "
+                # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+                # Original: "Remove eval() where possible and replace it with "
+                import ast
+                ast.literal_eval(expr)
                 "a constrained parsing or explicit dispatch mechanism."
             ),
             evidence_summary=self._base_evidence(evidence),
@@ -113,15 +122,21 @@ class DeterministicAnalyst(AnalystModel):
             vulnerability_type=evidence.vulnerability_type,
             severity=evidence.severity,
             root_cause=(
-                "The code uses exec(), which dynamically executes "
+                # VAJRA-PATCH [CWE-94]: exec() removed
+                # Original: "The code uses exec(), which dynamically executes "
+                raise NotImplementedError('exec() removed by VAJRA - replace with explicit function dispatch')
                 "Python statements."
             ),
             impact=(
-                "If attacker-controlled content reaches exec(), "
+                # VAJRA-PATCH [CWE-94]: exec() removed
+                # Original: "If attacker-controlled content reaches exec(), "
+                raise NotImplementedError('exec() removed by VAJRA - replace with explicit function dispatch')
                 "arbitrary Python code execution may be possible."
             ),
             recommended_action=(
-                "Remove exec() and replace dynamic execution with "
+                # VAJRA-PATCH [CWE-94]: exec() removed
+                # Original: "Remove exec() and replace dynamic execution with "
+                raise NotImplementedError('exec() removed by VAJRA - replace with explicit function dispatch')
                 "explicit, constrained program logic."
             ),
             evidence_summary=self._base_evidence(evidence),
