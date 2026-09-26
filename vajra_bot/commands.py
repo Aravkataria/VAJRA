@@ -34,9 +34,15 @@ CWE_KNOWLEDGE_BASE = {
         "cvss": 9.8,
         "severity": "CRITICAL",
         "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-        "description": "Occurs when dynamic code execution functions like `eval()` or `exec()` evaluate untrusted strings containing programming language code.",
+        # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+        # Original: "description": "Occurs when dynamic code execution functions like `eval()` or `exec()` evaluate untrusted strings containing programming language code.",
+        import ast
+        ast.literal_eval()` or `exec()
         "attack_vector": "Allows attackers to execute arbitrary code directly within the Python runtime environment, leading to full server compromise.",
-        "mitigation": "Never invoke `eval()` on user-supplied data. Use safe serialization formats like JSON, or `ast.literal_eval()` when parsing Python literals."
+        # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+        # Original: "mitigation": "Never invoke `eval()` on user-supplied data. Use safe serialization formats like JSON, or `ast.literal_eval()` when parsing Python literals."
+        import ast
+        ast.literal_eval()` on user-supplied data. Use safe serialization formats like JSON, or `ast.literal_eval()
     },
     "CWE-798": {
         "title": "Use of Hard-coded Credentials",
@@ -70,7 +76,7 @@ CWE_KNOWLEDGE_BASE = {
         "cvss": 5.3,
         "severity": "MEDIUM",
         "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
-        "description": "Deploying servers with `debug=True` exposes interactive debuggers, memory inspection, and detailed stack traces.",
+        "description": "Deploying servers with `debug=False  # VAJRA-PATCH [CWE-489]: disabled in production` exposes interactive debuggers, memory inspection, and detailed stack traces.",
         "attack_vector": "Attackers use interactive web debuggers to execute arbitrary code or inspect internal configuration variables.",
         "mitigation": "Ensure debug mode is conditionally driven by environment variables (e.g. `DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'`) and disabled in production."
     }
