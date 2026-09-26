@@ -1210,6 +1210,38 @@ def _vajra_api_patch(token: str, url: str, data: dict) -> Any:
         print(f"[VAJRA] PATCH {url} failed: {e}")
         return None
 
+def _vajra_api_delete(token: str, url: str) -> bool:
+    """Generic authenticated DELETE to GitHub API."""
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "VAJRA-Bot-App"
+    }, method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return resp.status in (200, 204)
+    except Exception as e:
+        print(f"[VAJRA] DELETE {url} failed: {e}")
+        return False
+
+def _vajra_get_repo_token(repo_full_name: str):
+    """Obtain an installation access token for any repository the App is installed on."""
+    private_key = os.environ.get("GITHUB_APP_PRIVATE_KEY", "").strip()
+    app_id = os.environ.get("GITHUB_APP_ID", "5075351").strip()
+    if not private_key:
+        print("[VAJRA] GITHUB_APP_PRIVATE_KEY missing.")
+        return None
+    jwt_token = _vajra_generate_jwt(app_id, private_key)
+    if not jwt_token:
+        return None
+    inst_data = _vajra_api_get(jwt_token, f"https://api.github.com/repos/{repo_full_name}/installation")
+    if not inst_data or not isinstance(inst_data, dict) or "id" not in inst_data:
+        print(f"[VAJRA] No installation found for repo {repo_full_name}")
+        return None
+    return _vajra_get_installation_token(inst_data["id"], jwt_token)
+
+
 def _vajra_scan_python_ast(content: str, filename: str) -> list:
     """Uses Python AST parser to detect real security vulnerabilities with 0 false positives."""
     import ast as _ast
@@ -1645,19 +1677,22 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
     branch_name = "vajra/auto-security-patches"
     ref_check = _vajra_api_get(token, f"https://api.github.com/repos/{repo}/git/ref/heads/{branch_name}")
     if ref_check and isinstance(ref_check, dict) and "ref" in ref_check:
-        # Branch exists: reset to base_sha cleanly without deleting
+        # Branch exists: delete and recreate to guarantee it starts fresh from current base_sha
+        _vajra_api_delete(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}")
+        print(f"[VAJRA Autopilot] Cleaned old branch {branch_name}")
+
+    create_ref = _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
+        "ref": f"refs/heads/{branch_name}",
+        "sha": base_sha
+    })
+    if not create_ref:
+        # Fallback to PATCH if delete was restricted
         _vajra_api_patch(token, f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}", {
             "sha": base_sha,
             "force": True
         })
-        print(f"[VAJRA Autopilot] Reset existing branch {branch_name} to {base_sha[:8]}")
-    else:
-        # Create branch pointing to base_sha
-        _vajra_api_post(token, f"https://api.github.com/repos/{repo}/git/refs", {
-            "ref": f"refs/heads/{branch_name}",
-            "sha": base_sha
-        })
-        print(f"[VAJRA Autopilot] Created branch {branch_name} from {base_sha[:8]}")
+    print(f"[VAJRA Autopilot] Branch {branch_name} aligned to {base_sha[:8]}")
+
 
     import base64 as _b64
     bot_committer = {
@@ -1738,6 +1773,24 @@ def _vajra_scan_full_repo(token: str, repo: str) -> None:
 
 
 
+WEBHOOK_LOGS = []
+
+@fastapi_app.get("/api/github/webhook/logs")
+async def get_webhook_logs():
+    """Retrieve recent webhook event delivery history for debugging."""
+    return JSONResponse({"total": len(WEBHOOK_LOGS), "recent": WEBHOOK_LOGS[-30:]})
+
+@fastapi_app.api_route("/api/scan", methods=["GET", "POST"])
+async def trigger_manual_scan(repo: str):
+    """Trigger on-demand VAJRA security scan on any repository where the App is installed."""
+    if not repo or "/" not in repo:
+        return JSONResponse({"success": False, "error": "Query param 'repo' must be 'owner/repo'."}, status_code=400)
+    token = _vajra_get_repo_token(repo)
+    if not token:
+        return JSONResponse({"success": False, "error": f"VAJRA App is not installed on '{repo}' or GitHub credentials missing."}, status_code=400)
+    threading.Thread(target=_vajra_scan_full_repo, args=(token, repo), daemon=True).start()
+    return JSONResponse({"success": True, "message": f"Autonomous scan triggered for {repo} in background."})
+
 @fastapi_app.post("/api/github/webhook")
 async def github_app_webhook(request: Request):
     """
@@ -1763,15 +1816,14 @@ async def github_app_webhook(request: Request):
     action = payload.get("action", "")
     repo_name = payload.get("repository", {}).get("full_name", "unknown")
 
-    # Infinite Loop Guard: Skip all events triggered by bot accounts
+    # Infinite Loop Guard: Skip only events triggered by vajra-bot itself
     sender = payload.get("sender", {})
-    sender_type = sender.get("type", "")
     sender_login = sender.get("login", "")
-    if sender_type == "Bot" or sender_login.endswith("[bot]"):
+    if sender_login in ("vajra-bot", "vajra-bot[bot]"):
         return JSONResponse({
             "success": True,
             "event": event_type,
-            "result": {"status": "skipped", "reason": f"Ignoring bot-triggered event from '{sender_login}'."}
+            "result": {"status": "skipped", "reason": f"Ignoring self-triggered event from '{sender_login}'."}
         })
 
     private_key = os.environ.get("GITHUB_APP_PRIVATE_KEY", "").strip()
@@ -1784,13 +1836,19 @@ async def github_app_webhook(request: Request):
             "result": {"status": "error", "reason": "GITHUB_APP_PRIVATE_KEY not set in Space secrets."}
         })
 
-    installation_id = payload.get("installation", {}).get("id")
-    if not installation_id:
-        return JSONResponse({"success": True, "event": event_type, "result": {"status": "skipped", "reason": "No installation ID"}})
-
     jwt_token = _vajra_generate_jwt(app_id, private_key)
     if not jwt_token:
         return JSONResponse({"success": False, "result": {"status": "error", "reason": "JWT signing failed"}})
+
+    # Find installation ID (from payload or query GitHub App API dynamically)
+    installation_id = payload.get("installation", {}).get("id")
+    if not installation_id and repo_name != "unknown":
+        inst_data = _vajra_api_get(jwt_token, f"https://api.github.com/repos/{repo_name}/installation")
+        if inst_data and isinstance(inst_data, dict) and "id" in inst_data:
+            installation_id = inst_data["id"]
+
+    if not installation_id:
+        return JSONResponse({"success": True, "event": event_type, "result": {"status": "skipped", "reason": f"No installation found for '{repo_name}'"}})
 
     token = _vajra_get_installation_token(installation_id, jwt_token)
     if not token:
@@ -1821,38 +1879,38 @@ async def github_app_webhook(request: Request):
 
     # Handle Push events — trigger full repo scan+patch on every commit to default branch
     elif event_type == "push":
-        # Only react to commits pushed directly to the default branch (not bot branches)
         repo_info = payload.get("repository", {})
         default_branch = repo_info.get("default_branch", "main")
         pushed_ref = payload.get("ref", "")
-        # Skip if this push is on vajra bot branch (prevent infinite loop)
-        if pushed_ref in (f"refs/heads/{default_branch}",) and "vajra" not in pushed_ref.split("/")[-1].lower():
-            commits = payload.get("commits", [])
-            if commits:
-                print(f"[VAJRA Webhook] Push detected: {len(commits)} commit(s) to {default_branch} in {repo_name}. Triggering autonomous scan.")
-                threading.Thread(
-                    target=_vajra_scan_full_repo,
-                    args=(token, repo_name),
-                    daemon=True
-                ).start()
-                result = {
-                    "status": "scanning",
-                    "message": f"Push-triggered autonomous scan started for {repo_name} ({len(commits)} commit(s) on {default_branch}).",
-                    "commits": len(commits)
-                }
-            else:
-                result = {"status": "skipped", "reason": "Push contained no commits."}
+        is_deleted = payload.get("deleted", False)
+        # Skip if branch was deleted or if push is on a vajra bot branch
+        if not is_deleted and pushed_ref in (f"refs/heads/{default_branch}",) and "vajra" not in pushed_ref.split("/")[-1].lower():
+            print(f"[VAJRA Webhook] Push to {default_branch} in {repo_name}. Triggering autonomous scan.")
+            threading.Thread(
+                target=_vajra_scan_full_repo,
+                args=(token, repo_name),
+                daemon=True
+            ).start()
+            result = {
+                "status": "scanning",
+                "message": f"Push-triggered autonomous scan started for {repo_name} on {default_branch}."
+            }
         else:
             result = {"status": "skipped", "reason": f"Push to non-default or bot branch '{pushed_ref}' ignored."}
 
-    # Handle Pull Request MERGE events — scan again when a PR is merged into default branch
+    # Handle Pull Request MERGE events — clean up or scan again
     elif event_type == "pull_request" and action == "closed":
         pr = payload.get("pull_request", {})
         was_merged = pr.get("merged", False)
         head_ref = pr.get("head", {}).get("ref", "")
-        # Only scan on merge, and not when our own bot PRs are merged (prevent loop)
-        if was_merged and "vajra" not in head_ref.lower():
-            pull_number = pr.get("number")
+        pull_number = pr.get("number")
+
+        # When vajra's own PR was merged, delete the merged branch so it doesn't linger behind main!
+        if was_merged and "vajra" in head_ref.lower():
+            print(f"[VAJRA Webhook] Bot PR #{pull_number} merged in {repo_name}. Deleting merged branch {head_ref}.")
+            _vajra_api_delete(token, f"https://api.github.com/repos/{repo_name}/git/refs/heads/{head_ref}")
+            result = {"status": "cleaned", "message": f"Cleaned up merged bot branch {head_ref}."}
+        elif was_merged:
             print(f"[VAJRA Webhook] PR #{pull_number} merged into {repo_name}. Triggering autonomous scan on updated codebase.")
             threading.Thread(
                 target=_vajra_scan_full_repo,
@@ -1865,7 +1923,7 @@ async def github_app_webhook(request: Request):
                 "pr": pull_number
             }
         else:
-            result = {"status": "skipped", "reason": "PR closed without merge, or merge was from bot branch."}
+            result = {"status": "skipped", "reason": "PR closed without merge."}
 
     # Handle Pull Request OPEN/SYNC events — run security audit on changed files only
     elif event_type == "pull_request" and action in ("opened", "synchronize", "reopened"):
@@ -1931,6 +1989,18 @@ async def github_app_webhook(request: Request):
             _vajra_post_comment(token, repo_name, issue_number, reply)
             result = {"status": "replied", "command": comment_body[:50]}
 
+    # Record delivery into diagnostics log
+    WEBHOOK_LOGS.append({
+        "time": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "event": event_type,
+        "action": action,
+        "repo": repo_name,
+        "sender": sender_login,
+        "result": result
+    })
+    if len(WEBHOOK_LOGS) > 100:
+        WEBHOOK_LOGS.pop(0)
+
     return JSONResponse({
         "success": True,
         "event": event_type,
@@ -1939,6 +2009,7 @@ async def github_app_webhook(request: Request):
         "delivery": delivery_id,
         "result": result
     })
+
 
 # Enable Gradio queue for event streaming & mount at root of FastAPI
 if gr is not None and demo is not None:
