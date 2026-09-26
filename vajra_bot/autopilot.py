@@ -83,14 +83,14 @@ class AutopilotTask:
 
 
 def is_scannable_file(path: Path) -> bool:
-    """Filters out tests, fixtures, build artifacts, and scanner definitions."""
+    """Filters out tests, fixtures, docs, build artifacts, and scanner definitions."""
     p_str = str(path).lower().replace("\\", "/")
     if any(skip in p_str for skip in [
-        "/tests/", "/fixtures/", "/benchmarks/", "/node_modules/",
+        "/tests/", "/fixtures/", "/benchmarks/", "/docs/", "/node_modules/",
         "/__pycache__/", "/.git/", "/venv/", "/env/", "site-packages"
     ]):
         return False
-    if p_str.startswith(("tests/", "fixtures/", "benchmarks/")):
+    if p_str.startswith(("tests/", "fixtures/", "benchmarks/", "docs/")):
         return False
     if p_str.endswith(("_test.py", ".min.js", "vajra_bot/scanner.py", "vajra_bot/finder.py", "vajra_bot/commands.py")):
         return False
