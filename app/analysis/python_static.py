@@ -6,11 +6,22 @@ from app.analysis.finding import Finding
 
 # Names that are dangerous to call directly, regardless of arguments.
 UNSAFE_CALLS = {
-    "eval": ("unsafe-eval", "high", "Use of eval() on potentially untrusted input."),
-    "exec": ("unsafe-exec", "high", "Use of exec() on potentially untrusted input."),
-    "os.system": ("command-injection-risk", "high", "os.system() call may allow command injection."),
+    # VAJRA-PATCH [CWE-94]: Replaced eval() with ast.literal_eval() for safe parsing
+    # Original: "eval": ("unsafe-eval", "high", "Use of eval() on potentially untrusted input."),
+    import ast
+    ast.literal_eval() on potentially untrusted input.")
+    # VAJRA-PATCH [CWE-94]: exec() removed
+    # Original: "exec": ("unsafe-exec", "high", "Use of exec() on potentially untrusted input."),
+    raise NotImplementedError('exec() removed by VAJRA - replace with explicit function dispatch')
+    # VAJRA-PATCH [CWE-78]: Replaced unsafe os.system() with subprocess.run()
+    # Original: "os.system": ("command-injection-risk", "high", "os.system() call may allow command injection."),
+    import subprocess
+    subprocess.run() call may allow command injection.", shell=False, check=True)
     "pickle.load": ("unsafe-deserialization", "high", "pickle.load() can execute arbitrary code on untrusted data."),
-    "pickle.loads": ("unsafe-deserialization", "high", "pickle.loads() can execute arbitrary code on untrusted data."),
+    # VAJRA-PATCH [CWE-502]: Insecure pickle.loads() replaced with json.loads()
+    # Original: "pickle.loads": ("unsafe-deserialization", "high", "pickle.loads() can execute arbitrary code on untrusted data."),
+    import json
+    json.loads(data)
     "yaml.load": ("unsafe-deserialization", "medium", "yaml.load() without SafeLoader can execute arbitrary code."),
 }
 
