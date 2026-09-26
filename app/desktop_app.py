@@ -96,7 +96,7 @@ def main():
     # debug=True opens DevTools (right-click -> Inspect) so JS console
     # errors are visible instead of failing silently -- turn this off once
     # things are stable if you don't want the DevTools option available.
-    webview.start(gui="edgechromium", debug=True)
+    webview.start(gui="edgechromium", debug=False  # VAJRA-PATCH [CWE-489]: disabled in production)
 
 
 if __name__ == "__main__":
