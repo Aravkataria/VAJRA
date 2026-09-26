@@ -81,7 +81,7 @@ def get_adapter_path() -> str:
                                     extract_target = os.path.abspath("./vajra_model2_patch_generator_lora")
                                     print(f"[*] Found adapter zip archive: {zip_file}")
                                     print(f"[*] Extracting into: {extract_target}...")
-                                    z.extractall(extract_target)
+                                    z.extractall(extract_target, filter='data')
                                     for extract_root, _, extract_files in os.walk(extract_target):
                                         if "adapter_model.safetensors" in extract_files:
                                             return os.path.abspath(extract_root)
