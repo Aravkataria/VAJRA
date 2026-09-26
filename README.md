@@ -36,7 +36,7 @@
 | Windows | [Download VAJRA-Setup.exe](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Setup.exe) — NSIS setup wizard | `irm https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.ps1 | iex` |
 | macOS | [Download VAJRA-macOS.dmg](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-macOS.dmg) — Apple Silicon DMG | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash` |
 | Linux | [Download VAJRA-Linux.AppImage](https://github.com/Aravkataria/VAJRA/releases/latest/download/VAJRA-Linux.AppImage) — universal AppImage | `curl -fsSL https://raw.githubusercontent.com/Aravkataria/VAJRA/main/scripts/install.sh | bash` |
-
+ https://github.com/apps/vajra-bot
 ---
 
 ## Executive Summary
