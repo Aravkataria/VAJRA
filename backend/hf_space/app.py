@@ -1,4 +1,3 @@
-# VAJRA v2 Core Engine
 from __future__ import annotations
 import os
 import sys
