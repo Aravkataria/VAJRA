@@ -825,7 +825,7 @@ def gradio_generate(prompt: str):
                     last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
                     if last_p > len(accumulated) // 2:
                         accumulated = accumulated[:last_p + 1].strip()
-                        yield accumulated
+                yield accumulated
                 return
 
             # Non-streaming fallback if stream=True produced no tokens
