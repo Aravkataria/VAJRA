@@ -14,6 +14,7 @@ import os
 import re
 import uuid
 import json
+import html
 import asyncio
 import threading
 from typing import Optional, Dict, Any, List, Tuple
@@ -46,7 +47,8 @@ VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Softwa
 Operational Directives:
 1. Identity: Specialized fine-tuned Qwen2.5-Coder model (Transformer architecture, Alibaba Cloud base), fine-tuned by Arav Kataria for autonomous vulnerability triage, zero-regression patch generation, and formal invariant verification.
 2. Direct Assistance: Answer coding questions, security architecture inquiries, project planning, and vulnerability analysis concisely, authoritatively, and accurately.
-3. Speed & Precision: Deliver direct, high-value answers without unnecessary preamble."""
+3. Speed & Precision: Deliver direct, high-value answers without unnecessary preamble.
+4. Live Internet & Verified Citations: When real-time context or verified live web sources are provided, ground your answer in those factual sources. Cite reference domains/URLs using markdown links format [Source Name](URL) and list all verified sources under a '### References & Sources' section at the end of the response."""
 
 # Provider Environment Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -103,6 +105,170 @@ def determine_upstream_config():
             "model": DEFAULT_MODEL,
             "provider": "Local Ollama"
         }
+
+# =====================================================================
+# LIVE INTERNET SEARCH & REAL-TIME WEB GROUNDING ENGINE
+# =====================================================================
+SEARCH_TRIGGER_REGEX = re.compile(
+    r"\b("
+    r"search(\s+the)?\s+web|look\s+up|latest|news|today|recent|current\s+events?|"
+    r"cve-\d{4}-\d+|vulnerability\s+report|zero-?day|security\s+advisory|"
+    r"release\s+notes?|changelog|version\s+\d+|who\s+won|score|price|stock|"
+    r"weather|president|prime\s+minister|ceo\s+of|founded|who\s+is|"
+    r"what\s+happened|documentation\s+for|official\s+docs|github\s+repo\s+of|"
+    r"2024|2025|2026|newest|patch\s+notes|in\s+the\s+wild"
+    r")\b",
+    re.IGNORECASE
+)
+
+def should_search_live_web(prompt: str) -> Tuple[bool, str]:
+    """Detects whether prompt seeks real-time facts or current internet documentation."""
+    p = (prompt or "").strip()
+    if not p:
+        return False, ""
+
+    explicit_match = re.search(r"^(?:/(?:search|web|browse|lookup|internet)\s+|search(?:\s+the)?\s+web\s+for|search\s+for|look\s+up|google)\s+(.+)$", p, re.IGNORECASE)
+    if explicit_match:
+        return True, explicit_match.group(1).strip()
+
+    if SEARCH_TRIGGER_REGEX.search(p):
+        clean_q = re.sub(r"^(please\s+|can\s+you\s+|vajra\s+|tell\s+me\s+)", "", p, flags=re.IGNORECASE).strip()
+        return True, clean_q[:180]
+
+    return False, ""
+
+def vajra_search_duckduckgo_lite(query: str, max_results: int = 4) -> List[Dict[str, str]]:
+    """Zero-credential, privacy-preserving live internet retrieval using DuckDuckGo Lite."""
+    results = []
+    try:
+        encoded_q = urllib.parse.urlencode({"q": query})
+        url = "https://lite.duckduckgo.com/lite/"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        }
+        data = encoded_q.encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+
+        with urllib.request.urlopen(req, timeout=5) as response:
+            raw_html = response.read().decode("utf-8", errors="replace")
+
+        for tag_match in re.finditer(r"<a\b([^>]*\bclass=['\"]result-link['\"][^>]*)>(.*?)</a>", raw_html, re.IGNORECASE):
+            attrs = tag_match.group(1)
+            title_html = tag_match.group(2)
+            href_m = re.search(r"href=['\"]([^'\"]+)['\"]", attrs, re.IGNORECASE)
+            if not href_m:
+                continue
+            target_url = href_m.group(1)
+            clean_title = re.sub(r"<[^>]+>", "", html.unescape(title_html)).strip()
+
+            if "uddg=" in target_url:
+                m = re.search(r"uddg=([^&]+)", target_url)
+                if m:
+                    target_url = urllib.parse.unquote(m.group(1))
+
+            end_pos = tag_match.end()
+            snippet_m = re.search(r"<td\b[^>]*class=['\"]result-snippet['\"][^>]*>([\s\S]*?)</td>", raw_html[end_pos:end_pos+1500], re.IGNORECASE)
+            clean_snippet = re.sub(r"<[^>]+>", "", html.unescape(snippet_m.group(1))).strip() if snippet_m else ""
+
+            if clean_title and target_url.startswith("http"):
+                results.append({
+                    "title": clean_title,
+                    "url": target_url,
+                    "snippet": clean_snippet,
+                    "source": urllib.parse.urlparse(target_url).netloc
+                })
+                if len(results) >= max_results:
+                    break
+    except Exception as e:
+        print(f"[WARN] DuckDuckGo search note: {e}")
+
+    return results
+
+def vajra_search_wikipedia(query: str, max_results: int = 2) -> List[Dict[str, str]]:
+    """Instant factual fallback via Wikipedia REST API."""
+    results = []
+    try:
+        clean_q = re.sub(r"[^\w\s-]", "", query).strip()
+        encoded = urllib.parse.quote(clean_q)
+        url = f"https://en.wikipedia.org/w/api.php?action=opensearch&search={encoded}&limit={max_results}&namespace=0&format=json"
+        headers = {"User-Agent": "VAJRA-Cyber-Reasoning/2.1 (contact@vajra-ai.org)"}
+        req = urllib.request.Request(url, headers=headers)
+
+        with urllib.request.urlopen(req, timeout=4) as response:
+            data = json.loads(response.read().decode("utf-8", errors="replace"))
+
+        if len(data) >= 4:
+            titles = data[1]
+            snippets = data[2]
+            urls = data[3]
+            for t, s, u in zip(titles, snippets, urls):
+                snippet = s if s else f"Wikipedia article for {t}."
+                results.append({
+                    "title": t,
+                    "url": u,
+                    "snippet": snippet,
+                    "source": "Wikipedia"
+                })
+    except Exception as e:
+        print(f"[WARN] Wikipedia search note: {e}")
+
+    return results
+
+def vajra_live_web_search(query: str, max_results: int = 4) -> List[Dict[str, str]]:
+    """Unified hybrid live search pipeline combining DDG Lite with Wikipedia fallback."""
+    q = (query or "").strip()
+    if not q:
+        return []
+
+    results = vajra_search_duckduckgo_lite(q, max_results=max_results)
+
+    if len(results) < 2:
+        wiki_results = vajra_search_wikipedia(q, max_results=2)
+        existing_urls = {r["url"] for r in results}
+        for wr in wiki_results:
+            if wr["url"] not in existing_urls:
+                results.append(wr)
+
+    return results[:max_results]
+
+def format_web_context_for_prompt(results: List[Dict[str, str]]) -> str:
+    """Formats verified live web search results for LLM prompt ingestion."""
+    if not results:
+        return ""
+
+    lines = [
+        "[VAJRA Live Web Retrieval Context]",
+        "The following verified real-time sources were retrieved from the live internet for this query:",
+        ""
+    ]
+    for idx, r in enumerate(results, 1):
+        lines.append(f"Source [{idx}]: {r['title']}")
+        lines.append(f"URL: {r['url']}")
+        lines.append(f"Snippet: {r['snippet']}")
+        lines.append("")
+
+    lines.append("Directives:")
+    lines.append("1. Answer accurately using the live web facts above.")
+    lines.append("2. When citing facts, mention the source name with markdown link [Source Name](URL).")
+    lines.append("3. At the end of your response, always provide a dedicated '### References & Sources' section listing the reference websites with clickable links.")
+    return "\n".join(lines)
+
+def ensure_citations_in_reply(reply: str, sources: List[Dict[str, str]]) -> str:
+    """Ensures verified reference site links are present in the final reply."""
+    if not sources or not reply:
+        return reply
+
+    has_links = any(s["url"].lower() in reply.lower() for s in sources)
+    if has_links and "### References" in reply:
+        return reply
+
+    ref_section = "\n\n### References & Sources\n"
+    for s in sources:
+        ref_section += f"- [{s['title']}]({s['url']})\n"
+
+    return reply.rstrip() + ref_section
 
 # =====================================================================
 # CONTEXTUAL SAFETY & CONTENT POLICY EVALUATOR (NOT NAIVE KEYWORD FILTER)
@@ -247,6 +413,13 @@ class ChatRequest(BaseModel):
     max_tokens: Optional[int] = 4096
     session_id: Optional[str] = None
     request_id: Optional[str] = None
+    enable_web_search: Optional[bool] = True
+
+class SearchRequest(BaseModel):
+    query: str
+    max_results: Optional[int] = 4
+    session_id: Optional[str] = None
+    request_id: Optional[str] = None
 
 class BugReportRequest(BaseModel):
     title: str
@@ -384,9 +557,10 @@ def is_finder_intent(prompt: str) -> bool:
     return any(trigger in p for trigger in scan_triggers)
 
 @app.post("/api/chat")
+@app.post("/v1/chat")
 async def chat_endpoint(req: ChatRequest, request: Request):
     """
-    Fast direct LLM inference endpoint with provider auto-routing.
+    Fast direct LLM inference endpoint with provider auto-routing and live web search.
     Bypasses the finder when not needed to ensure zero delay.
     """
     session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
@@ -422,8 +596,22 @@ async def chat_endpoint(req: ChatRequest, request: Request):
         if not is_safe and reason == "defensive_reframe":
             prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
+        # Live Web Search & Grounding
+        web_sources = []
+        enable_search = True if req.enable_web_search is None else req.enable_web_search
+        if enable_search:
+            should_s, clean_q = should_search_live_web(prompt_to_run)
+            if should_s:
+                print(f" [VAJRA Backend] Live web search triggered for: '{clean_q}'")
+                web_sources = await asyncio.to_thread(vajra_live_web_search, clean_q, 3)
+
+        web_context = format_web_context_for_prompt(web_sources) if web_sources else ""
+        system_content = VAJRA_SYSTEM_PROMPT
+        if web_context:
+            system_content += f"\n\n{web_context}"
+
         cfg = determine_upstream_config()
-        messages = [{"role": "system", content: VAJRA_SYSTEM_PROMPT}]
+        messages = [{"role": "system", "content": system_content}]
         
         # If workspace files exist, attach relevant excerpts
         if req.files:
@@ -431,9 +619,9 @@ async def chat_endpoint(req: ChatRequest, request: Request):
             for name, content in list(req.files.items())[:3]:
                 file_summary += f"\n--- File: {name} ---\n{content[:1200]}"
             if file_summary:
-                messages.append({"role": "system", content: f"Workspace Files:\n{file_summary}"})
+                messages.append({"role": "system", "content": f"Workspace Files:\n{file_summary}"})
                 
-        messages.append({"role": "user", content: prompt_to_run})
+        messages.append({"role": "user", "content": prompt_to_run})
         
         target_model = req.model or cfg["model"]
         payload = json.dumps({
@@ -455,11 +643,14 @@ async def chat_endpoint(req: ChatRequest, request: Request):
                 content = scrub_output_secrets(data["choices"][0]["message"]["content"])
                 if not is_safe and reason == "defensive_reframe" and not content.startswith(DEFENSIVE_REFRAME_MALWARE):
                     content = DEFENSIVE_REFRAME_MALWARE + content
+                if web_sources:
+                    content = ensure_citations_in_reply(content, web_sources)
                 return JSONResponse({
                     "success": True,
                     "reply": content,
                     "provider": cfg["provider"],
                     "model": target_model,
+                    "sources": web_sources,
                     "session_id": session_id,
                     "request_id": request_id,
                     "security": "Zero-Retention & Cryptographic Session Isolation Verified",
@@ -495,6 +686,37 @@ async def chat_endpoint(req: ChatRequest, request: Request):
     finally:
         with ACTIVE_REQUESTS_LOCK:
             ACTIVE_REQUESTS_COUNT = max(0, ACTIVE_REQUESTS_COUNT - 1)
+
+@app.post("/v1/search")
+@app.post("/api/search")
+async def search_endpoint(req: SearchRequest, request: Request):
+    """
+    Direct live web retrieval endpoint returning canonical URLs and snippets.
+    """
+    session_id = req.session_id or request.headers.get("X-Vajra-Session-ID") or "ephemeral-isolated"
+    request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
+    try:
+        clean_q = (req.query or "").strip()
+        results = await asyncio.to_thread(vajra_live_web_search, clean_q, req.max_results or 4)
+        return JSONResponse({
+            "success": True,
+            "query": clean_q,
+            "count": len(results),
+            "results": results,
+            "session_id": session_id,
+            "request_id": request_id
+        }, headers={
+            "X-Vajra-Session-ID": session_id,
+            "X-Vajra-Request-ID": request_id
+        })
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "results": [],
+            "session_id": session_id,
+            "request_id": request_id
+        }, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn

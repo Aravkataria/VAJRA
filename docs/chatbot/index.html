@@ -4768,6 +4768,7 @@
       });
 
       // 4. Headers
+      text = text.replace(/^### (References.*$)/gim, "<h4 style='margin:1.1rem 0 0.4rem 0; font-weight:700; color:#38bdf8; border-bottom:1px solid rgba(56,189,248,0.25); padding-bottom:4px; font-size:0.95rem; font-family:JetBrains Mono,monospace;'>$1</h4>");
       text = text.replace(/^### (.*$)/gim, "<h4 style='margin:0.75rem 0 0.25rem 0; font-weight:700; color:var(--text-primary);'>$1</h4>");
       text = text.replace(/^## (.*$)/gim, "<h3 style='margin:0.85rem 0 0.35rem 0; font-weight:700; color:var(--text-primary);'>$1</h3>");
       text = text.replace(/^# (.*$)/gim, "<h2 style='margin:1rem 0 0.5rem 0; font-weight:700; color:var(--text-primary);'>$1</h2>");
@@ -4775,6 +4776,11 @@
       // 5. Bold & Italic
       text = text.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
       text = text.replace(/(^|[^\*])\*([^*]+)\*([^\*]|$)/g, "$1<i>$2</i>$3");
+
+      // 5b. Markdown links [text](url) -> clickable hyperlink opening in new tab
+      text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, function(match, linkText, url) {
+        return "<a href='" + url + "' target='_blank' rel='noopener noreferrer' style='color:#38bdf8; text-decoration:underline; font-weight:500;' class='vajra-ref-link'>" + linkText + "</a>";
+      });
 
       // 6. Bullet lists
       text = text.replace(/^[*-]\s+(.*$)/gim, "<li style='margin-left:1.2rem; list-style-type:disc;'>$1</li>");
@@ -5373,11 +5379,11 @@
       } catch (e) {}
     }
 
-    /* ─── Multi-Factor Query Complexity Classifier ─── */
+    /* --- Multi-Factor Query Complexity Classifier --- */
     function classifyQueryComplexity(fullPrompt) {
       if (!fullPrompt) return false;
       if (fullPrompt.length > 350) return true;
-      var complexTriggers = /\b(audit|scan|ast|taint|sink|exploit|cwe-\d+|patch|disassembl|decompile|decompil|decompilation|invariant|symbolic|formal proof|vulnerability|schrodinger|schrödinger|heisenberg|quantum|wave\s+equation|taylor\s+series|calculus|derivative|integral|eigen|laplace|fourier|matrix|differential\s+equation|physics|mechanics|thermodynamics|relativity|hamiltonian|einstein|maxwell)\b/i;
+      var complexTriggers = /\b(audit|scan|ast|taint|sink|exploit|cwe-\d+|patch|disassembl|decompile|decompil|decompilation|invariant|symbolic|formal proof|vulnerability|schrodinger|schrödinger|heisenberg|quantum|wave\s+equation|taylor\s+series|calculus|derivative|integral|eigen|laplace|fourier|matrix|differential\s+equation|physics|mechanics|thermodynamics|relativity|hamiltonian|einstein|maxwell|search|look\s+up|latest|news|today|recent|current\s+events?|cve-\d+|vulnerability\s+report|release\s+notes?|changelog|version\s+\d+|who\s+won|weather|president|prime\s+minister|ceo\s+of|founded|who\s+is|what\s+happened)\b/i;
       return complexTriggers.test(fullPrompt);
     }
 
@@ -5703,7 +5709,8 @@
             body: JSON.stringify({
               prompt: fullPrompt,
               session_id: getVajraCryptoSessionId(),
-              request_id: reqId
+              request_id: reqId,
+              enable_web_search: true
             }),
             signal: getActiveSignal(25000)
           });
@@ -5870,7 +5877,8 @@
               body: JSON.stringify({
                 prompt: fullPrompt,
                 session_id: getVajraCryptoSessionId(),
-                request_id: activeReqId
+                request_id: activeReqId,
+                enable_web_search: true
               }),
               signal: getActiveSignal(25000)
             });
@@ -5979,7 +5987,8 @@
         max_tokens: 4096,
         hf_token: storedHfToken || null,
         session_id: getVajraCryptoSessionId(),
-        request_id: activeReqId || activeInferenceRequestId
+        request_id: activeReqId || activeInferenceRequestId,
+        enable_web_search: true
       });
 
       try {
