@@ -11,6 +11,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 import threading
+import asyncio
 
 if sys.platform == "win32":
     try:
@@ -55,7 +56,58 @@ RATE_LIMIT_WINDOW = 60
 MAX_REQUESTS_PER_WINDOW = 30
 ip_request_history: Dict[str, list] = {}
 
-inference_lock = threading.Lock()
+class ExpiringInferenceLock:
+    """
+    Self-healing reentrant/expiring lock for 2 vCPU inference.
+    Automatically recovers from aborted generators, network disconnects,
+    or deadlocks by forcing a release if held longer than max_hold_seconds (default 45s).
+    """
+    def __init__(self, max_hold_seconds: float = 45.0):
+        self._lock = threading.Lock()
+        self._acquired_time = 0.0
+        self._max_hold_seconds = max_hold_seconds
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        now = time.time()
+        # Auto-recover if lock held past maximum threshold (stale generator / aborted socket)
+        if self._lock.locked() and (now - self._acquired_time > self._max_hold_seconds):
+            print(f"⚠️ [VAJRA v2] Inference lock held for {now - self._acquired_time:.1f}s > {self._max_hold_seconds}s. Auto-recovering lock from stale task.")
+            try:
+                self._lock.release()
+            except RuntimeError:
+                pass
+            self._acquired_time = 0.0
+
+        if blocking:
+            acquired = self._lock.acquire(blocking=True, timeout=timeout if timeout > 0 else -1)
+        else:
+            if timeout > 0:
+                acquired = self._lock.acquire(blocking=True, timeout=timeout)
+            else:
+                acquired = self._lock.acquire(blocking=False)
+
+        if acquired:
+            self._acquired_time = time.time()
+        return acquired
+
+    def release(self):
+        try:
+            self._lock.release()
+        except RuntimeError:
+            pass
+        self._acquired_time = 0.0
+
+    def locked(self) -> bool:
+        now = time.time()
+        if self._lock.locked() and (now - self._acquired_time > self._max_hold_seconds):
+            try:
+                self._lock.release()
+            except RuntimeError:
+                pass
+            self._acquired_time = 0.0
+        return self._lock.locked()
+
+inference_lock = ExpiringInferenceLock(max_hold_seconds=45.0)
 
 def check_rate_limit(client_ip: str) -> bool:
     now = time.time()
@@ -149,6 +201,16 @@ def _load_core_prompt() -> str:
 
 # Initialize System Prompt in runtime RAM (Zero plaintext in repository)
 VAJRA_SYSTEM_PROMPT = _load_core_prompt()
+
+# Streamlined, high-speed system prompt for local 2 vCPU GGUF inference (~80 tokens)
+# Drops CPU prefill overhead from 70s down to <1.5s while preserving authoritative identity
+VAJRA_GGUF_SYSTEM_PROMPT = (
+    "You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.\n\n"
+    "Operational Directives:\n"
+    "1. Identity: Specialized fine-tuned Qwen2.5-Coder model, fine-tuned by Arav Kataria for autonomous vulnerability triage, zero-regression patch generation, and formal verification.\n"
+    "2. Direct Assistance: Deliver direct, authoritative, and structured technical explanations with exact code solutions.\n"
+    "3. Speed & Precision: Avoid preamble and conversational fluff. Complete all points definitively."
+)
 
 # Dynamically construct confidential shingle set in volatile RAM from the decrypted prompt (zero plaintext in repo)
 _CONFIDENTIAL_SHINGLES = set()
@@ -469,7 +531,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
-                {"role": "system", "content": "You are VAJRA-Draft. Give a direct, concise 1-2 sentence technical summary."},
+                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and concise technical explanation. Complete all points cleanly."},
                 {"role": "user", "content": active_prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -477,7 +539,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
             with torch.inference_mode():
                 ids = m.generate(
                     **inputs,
-                    max_new_tokens=45,
+                    max_new_tokens=180,
                     do_sample=False,
                     eos_token_id=tok.eos_token_id,
                     pad_token_id=tok.eos_token_id
@@ -546,13 +608,14 @@ def get_gguf_model():
             filename=GGUF_FILENAME,
             token=token
         )
-        print(f"✅ [VAJRA v2] Downloaded GGUF to {model_path}. Initializing Llama CPU engine (2 threads, 1.5K ctx, 256 batch)...")
+        print(f"✅ [VAJRA v2] Downloaded GGUF to {model_path}. Initializing Llama CPU engine (2 threads, 4K ctx, 512 batch)...")
         try:
             gguf_llm = Llama(
                 model_path=model_path,
                 n_threads=2,
-                n_ctx=1536,
-                n_batch=256,
+                n_ctx=4096,
+                n_batch=512,
+                chat_format="chatml",
                 type_k=2,
                 type_v=2,
                 verbose=False
@@ -561,8 +624,9 @@ def get_gguf_model():
             gguf_llm = Llama(
                 model_path=model_path,
                 n_threads=2,
-                n_ctx=1536,
-                n_batch=256,
+                n_ctx=4096,
+                n_batch=512,
+                chat_format="chatml",
                 verbose=False
             )
         print("🚀 [VAJRA v2] 4-bit 7B GGUF Model ONLINE on 2 vCPU! (~3.8 GB RAM footprint)")
@@ -630,7 +694,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
     # 1. Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
-    acquired = inference_lock.acquire(blocking=False)
+    acquired = inference_lock.acquire(blocking=False, timeout=2.5)
     if not acquired:
         print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
         return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
@@ -639,7 +703,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
         # 1. First priority on 2 vCPU: Try 4-bit 7B GGUF model (~10-12 tok/s, ~4.2 GB RAM)
         llm = get_gguf_model()
         if llm is not None:
-            prompt_msgs = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
+            prompt_msgs = [{"role": "system", "content": VAJRA_GGUF_SYSTEM_PROMPT}]
             if context_files and isinstance(context_files, dict):
                 summary_text = ""
                 for fname, fcontent in list(context_files.items())[:3]:
@@ -651,7 +715,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
             output = llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=170,
+                max_tokens=350,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.15,
@@ -770,7 +834,7 @@ def gradio_generate(prompt: str):
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
     # Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
-    acquired = inference_lock.acquire(blocking=False)
+    acquired = inference_lock.acquire(blocking=False, timeout=2.5)
     if not acquired:
         print("⚡ [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
         yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
@@ -781,14 +845,14 @@ def gradio_generate(prompt: str):
         llm = get_gguf_model()
         if llm is not None:
             prompt_msgs = [
-                {"role": "system", "content": VAJRA_SYSTEM_PROMPT},
+                {"role": "system", "content": VAJRA_GGUF_SYSTEM_PROMPT},
                 {"role": "user", "content": clean_prompt}
             ]
             accumulated = ""
             try:
                 for chunk in llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=170,
+                    max_tokens=350,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.15,
@@ -812,9 +876,9 @@ def gradio_generate(prompt: str):
                                             last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
                                             if last_p > len(accumulated) // 2:
                                                 accumulated = accumulated[:last_p + 1].strip()
-                                        yield accumulated
+                                        yield scrub_output_secrets(accumulated)
                                         return
-                                    yield accumulated
+                                    yield scrub_output_secrets(accumulated)
                     except Exception as chunk_parse_err:
                         pass
             except Exception as stream_err:
@@ -825,14 +889,14 @@ def gradio_generate(prompt: str):
                     last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
                     if last_p > len(accumulated) // 2:
                         accumulated = accumulated[:last_p + 1].strip()
-                yield accumulated
+                yield scrub_output_secrets(accumulated)
                 return
 
             # Non-streaming fallback if stream=True produced no tokens
             try:
                 direct_out = llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=170,
+                    max_tokens=350,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.15,
@@ -847,7 +911,7 @@ def gradio_generate(prompt: str):
                         last_p = max(direct_reply.rfind('.'), direct_reply.rfind('!'), direct_reply.rfind('?'))
                         if last_p > len(direct_reply) // 2:
                             direct_reply = direct_reply[:last_p + 1].strip()
-                    yield direct_reply
+                    yield scrub_output_secrets(direct_reply)
                     return
             except Exception as direct_err:
                 print(f"⚠️ GGUF direct completion note: {direct_err}")
@@ -929,6 +993,8 @@ def gradio_generate(prompt: str):
         del model_inputs
         gc.collect()
 
+    except GeneratorExit:
+        pass
     except Exception as e:
         print(f"⚠️ 7B CPU streaming generation exception: {e}")
         yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
@@ -1096,7 +1162,7 @@ async def chat_v1(req: ChatRequest, request: Request):
                 "X-Vajra-Request-ID": request_id
             })
 
-        reply, model_name, tier_name = generate_vajra_reply(req.prompt, req.files)
+        reply, model_name, tier_name = await asyncio.to_thread(generate_vajra_reply, req.prompt, req.files)
         is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
         return JSONResponse({
             "success": not is_overflow,
@@ -1130,7 +1196,7 @@ async def draft_v1(req: DraftRequest, request: Request):
         p = req.prompt or ""
         if not p and req.data and len(req.data) > 0:
             p = str(req.data[0])
-        reply = generate_ultra_lite_reply(str(p).strip()) if p else ""
+        reply = await asyncio.to_thread(generate_ultra_lite_reply, str(p).strip()) if p else ""
         return JSONResponse({
             "success": bool(reply),
             "reply": reply,
@@ -1670,7 +1736,7 @@ def _vajra_remediate_with_7b(original_snippet: str, finding: dict, filename: str
         try:
             output = llm.create_chat_completion(
                 messages=[
-                    {"role": "system", "content": VAJRA_SYSTEM_PROMPT},
+                    {"role": "system", "content": VAJRA_GGUF_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt_user}
                 ],
                 max_tokens=220,

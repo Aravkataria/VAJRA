@@ -5477,7 +5477,7 @@
             method: "POST",
             headers: sessionHeaders,
             body: JSON.stringify({ data: [fullPrompt] }),
-            signal: getActiveSignal(10000)
+            signal: getActiveSignal(35000)
           });
           if (callResp.status === 429) {
             if (isZeroGpu) tripZeroGpuCircuit();
@@ -5544,7 +5544,12 @@
                         try {
                           var payload = JSON.parse(line.substring(5).trim());
                           if (Array.isArray(payload) && payload.length > 0 && payload[0] !== undefined) {
-                            latestText = extractGradioText(payload[0], latestText);
+                            var candidateChunk = extractGradioText(payload[0], latestText);
+                            if (candidateChunk && candidateChunk.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+                              try { reader.cancel(); } catch (e) {}
+                              return { reply: "[VAJRA_SYSTEM_BUSY_OVERFLOW]", isBusy: true };
+                            }
+                            latestText = candidateChunk;
                             if (!receivedFirstToken && latestText.trim().length > 0) {
                               receivedFirstToken = true;
                               streamProducedTokens = true;
@@ -5824,8 +5829,10 @@
             directHeaders,
             55000,
             function(chunk) {
-              vcpuTokensReceived = true;
-              if (onToken && chunk && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
+              if (chunk && chunk.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+                vcpuTokensReceived = true;
+                if (onToken && chunk.trim().length > 0) onToken(chunk, "VAJRA AUDIT [2 vCPU Engine]");
+              }
             },
             null,
             activeReqId
@@ -5838,7 +5845,7 @@
                 model: "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
               };
             }
-            if (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
+            if (vcpuRes.isBusy || (vcpuRes.reply && vcpuRes.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1)) {
               vcpuBusy = true;
             }
           } else {
@@ -5846,6 +5853,35 @@
           }
         } catch (vcpuErr) {
           vcpuFailed = true;
+        }
+
+        // 1b. Fast REST Fallback on 2 vCPU: Try /v1/chat on 2 vCPU before escalating to ZeroGPU
+        if (!vcpuTokensReceived && (vcpuBusy || vcpuFailed)) {
+          try {
+            var v1ChatResp = await fetch(VAJRA_HF_SPACE_URL.replace(/\/$/, "") + "/v1/chat", {
+              method: "POST",
+              headers: Object.assign({}, directHeaders, {
+                "X-Vajra-Session-ID": getVajraCryptoSessionId(),
+                "X-Vajra-Request-ID": activeReqId
+              }),
+              body: JSON.stringify({
+                prompt: fullPrompt,
+                session_id: getVajraCryptoSessionId(),
+                request_id: activeReqId
+              }),
+              signal: getActiveSignal(25000)
+            });
+            if (v1ChatResp.ok) {
+              var v1ChatData = await v1ChatResp.json();
+              if (v1ChatData && v1ChatData.reply && !v1ChatData.busy && !v1ChatData.overflow && v1ChatData.reply.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+                return {
+                  reply: String(v1ChatData.reply).trim(),
+                  tier: "standard",
+                  model: v1ChatData.model || "AravKataria/vajra-7b-gguf (4-bit 2 vCPU)"
+                };
+              }
+            }
+          } catch (v1Err) {}
         }
 
         // 2. TRUE LAST RESORT: ZeroGPU A10G Burst (only if 2 vCPU is busy or unreachable AND no tokens were received)
@@ -6610,11 +6646,12 @@
         var draftReplyText = null;
 
         var pipelinePref = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
+        var isComplexQuery = classifyQueryComplexity(promptToQuery) || (chunkedExtraFiles && Object.keys(chunkedExtraFiles).length > 0);
 
-        if (pipelinePref === "lite") {
+        if (pipelinePref === "lite" || (!isComplexQuery && pipelinePref !== "deep" && promptToQuery.length < 150)) {
           var liteDraft = await tryFastDraftQuery(promptToQuery, directHeaders, thisRequestId);
-          removeTypingIndicator();
           if (liteDraft && liteDraft.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
+            removeTypingIndicator();
             typewriter = createStreamTypewriter("Qwen/Qwen2.5-Coder-0.5B-Instruct");
             if (typewriter) typewriter.finish(liteDraft, { tier: "lite", model: "Qwen/Qwen2.5-Coder-0.5B-Instruct" });
             return;
