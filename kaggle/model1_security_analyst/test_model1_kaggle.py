@@ -370,7 +370,7 @@ class Model1LiveInferenceRunner:
             )
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
-            print("  * [✓] VAJRA Model 1 PyTorch weights imported successfully into GPU memory!")
+            print("  * [] VAJRA Model 1 PyTorch weights imported successfully into GPU memory!")
         except Exception as e:
             raise RuntimeError(f"[-] Failed to load VAJRA Model 1 weights from {model_dir}: {e}")
 

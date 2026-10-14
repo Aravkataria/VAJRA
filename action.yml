@@ -43,7 +43,7 @@ runs:
       with:
         python-version: '3.12'
 
-    - name: ⚡ Run VAJRA Multi-Stage Security Auditor
+    - name:  Run VAJRA Multi-Stage Security Auditor
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}

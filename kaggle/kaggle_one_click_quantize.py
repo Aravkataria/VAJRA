@@ -5,9 +5,9 @@ Uses /tmp for high-capacity 70+ GB storage so Kaggle never runs out of disk spac
 """
 
 KAGGLE_CODE = '''# ==============================================================================
-# 🚀 VAJRA 7B GGUF 4-BIT QUANTIZATION FOR KAGGLE
+#  VAJRA 7B GGUF 4-BIT QUANTIZATION FOR KAGGLE
 # ==============================================================================
-# 📌 Instructions for Kaggle:
+#  Instructions for Kaggle:
 # 1. In the right sidebar: Settings -> Internet -> Turn ON!
 # 2. Accelerator: None (CPU, 30 GB RAM) or GPU T4 x2 / P100 (Free)
 # 3. Paste this cell and click "Run".
@@ -36,10 +36,10 @@ if not HF_TOKEN:
         pass
 
 if not HF_TOKEN:
-    HF_TOKEN = getpass("🔑 Enter your Hugging Face Access Token (WRITE permissions): ").strip()
+    HF_TOKEN = getpass(" Enter your Hugging Face Access Token (WRITE permissions): ").strip()
 
 login(token=HF_TOKEN)
-print("✅ Authenticated with Hugging Face!")
+print("[OK] Authenticated with Hugging Face!")
 
 BASE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 LORA_MODEL = "AravKataria/vajra-lora"
@@ -121,40 +121,40 @@ for idx, sf in enumerate(safetensor_files, 1):
     del shard, new_shard
     gc.collect()
 
-print(f"✅ LoRA weights merged successfully into {MERGED_DIR}!")
+print(f"[OK] LoRA weights merged successfully into {MERGED_DIR}!")
 
 # Free memory before llama.cpp build
 del lora_state, lora_a_map, lora_b_map
 gc.collect()
 
 # 6. Fast Build llama-quantize in /tmp
-print("⚙️ Building llama-quantize tool...")
+print(" Building llama-quantize tool...")
 !git clone https://github.com/ggerganov/llama.cpp.git {LLAMA_DIR}
 !cd {LLAMA_DIR} && cmake -B build -DGGML_BUILD_TESTS=OFF -DGGML_BUILD_EXAMPLES=OFF && cmake --build build --target llama-quantize -j$(nproc)
 !pip install -q -r {LLAMA_DIR}/requirements.txt
 
 # 7. Convert to intermediate FP16 GGUF in /tmp
-print("📦 Converting merged checkpoint to intermediate FP16 GGUF...")
+print(" Converting merged checkpoint to intermediate FP16 GGUF...")
 !python {LLAMA_DIR}/convert_hf_to_gguf.py {MERGED_DIR} --outtype f16 --outfile {F16_GGUF}
 
 # IMMEDIATELY delete merged safetensors directory to free 15 GB of disk space before quantizing
-print("🧹 Removing raw safetensors shards to free disk...")
+print(" Removing raw safetensors shards to free disk...")
 shutil.rmtree(MERGED_DIR, ignore_errors=True)
 
 # 8. Quantize to 4-bit Q4_K_M (~4.2 GB) directly into /kaggle/working
-print("⚡ Quantizing to 4-bit Q4_K_M (~4.2 GB)...")
+print(" Quantizing to 4-bit Q4_K_M (~4.2 GB)...")
 !{LLAMA_DIR}/build/bin/llama-quantize {F16_GGUF} {FINAL_GGUF} Q4_K_M
 
 # Delete intermediate 15 GB F16 GGUF file
 !rm -f {F16_GGUF}
 !rm -rf {LLAMA_DIR}
 
-print("✅ Quantization complete! Final model ready:")
+print("[OK] Quantization complete! Final model ready:")
 !ls -lh {FINAL_GGUF}
 
 # 9. Upload Quantized GGUF Model to Hugging Face
 DEST_REPO = "AravKataria/vajra-7b-gguf"
-print(f"🚀 Uploading vajra-7b-q4_k_m.gguf to Hugging Face ({DEST_REPO})...")
+print(f" Uploading vajra-7b-q4_k_m.gguf to Hugging Face ({DEST_REPO})...")
 api = HfApi(token=HF_TOKEN)
 api.create_repo(repo_id=DEST_REPO, repo_type="model", exist_ok=True)
 api.upload_file(
@@ -166,8 +166,8 @@ api.upload_file(
 )
 
 print("\\n" + "="*65)
-print("🎉 SUCCESS! Compressed VAJRA 7B GGUF Model is live on Hugging Face:")
-print(f"👉 https://huggingface.co/{DEST_REPO}")
+print(" SUCCESS! Compressed VAJRA 7B GGUF Model is live on Hugging Face:")
+print(f" https://huggingface.co/{DEST_REPO}")
 print("="*65)
 '''
 

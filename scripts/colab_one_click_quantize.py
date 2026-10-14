@@ -6,7 +6,7 @@ Takes ~4 minutes total. 100% Free. Uses 0 MB of your home internet data.
 """
 
 COLAB_CELL_CODE = '''# ==============================================================================
-# 🚀 1-CLICK VAJRA 7B GGUF QUANTIZATION (FREE GOOGLE COLAB)
+#  1-CLICK VAJRA 7B GGUF QUANTIZATION (FREE GOOGLE COLAB)
 # ==============================================================================
 # 1. Click "Runtime" -> "Change runtime type" -> Select "T4 GPU" (Free)
 # 2. Run this cell. Enter your Hugging Face Token (with WRITE permissions) when prompted.
@@ -23,7 +23,7 @@ from transformers import AutoTokenizer
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 if not HF_TOKEN:
-    HF_TOKEN = getpass("🔑 Enter Hugging Face Access Token (WRITE permissions): ").strip()
+    HF_TOKEN = getpass(" Enter Hugging Face Access Token (WRITE permissions): ").strip()
 login(token=HF_TOKEN)
 
 BASE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
@@ -100,26 +100,26 @@ for idx, sf in enumerate(safetensor_files, 1):
     del shard, new_shard
     gc.collect()
 
-print(f"✅ LoRA weights merged successfully into {MERGED_DIR}!")
+print(f"[OK] LoRA weights merged successfully into {MERGED_DIR}!")
 
 # Free memory before building llama.cpp
 del lora_state, lora_a_map, lora_b_map
 gc.collect()
 
-print("⚙️ Building llama.cpp tools...")
+print(" Building llama.cpp tools...")
 !git clone https://github.com/ggerganov/llama.cpp.git
 !cd llama.cpp && cmake -B build && cmake --build build --config Release -j$(nproc)
 !pip install -q -r llama.cpp/requirements.txt
 
-print("📦 Converting merged checkpoint to intermediate FP16 GGUF...")
+print(" Converting merged checkpoint to intermediate FP16 GGUF...")
 !python llama.cpp/convert_hf_to_gguf.py ./vajra_merged_7b --outtype f16 --outfile vajra-7b-f16.gguf
 
-print("⚡ Quantizing to 4-bit Q4_K_M (~4.2 GB)...")
+print(" Quantizing to 4-bit Q4_K_M (~4.2 GB)...")
 !./llama.cpp/build/bin/llama-quantize vajra-7b-f16.gguf vajra-7b-q4_k_m.gguf Q4_K_M
 !rm -f vajra-7b-f16.gguf
 
 DEST_REPO = "AravKataria/vajra-7b-gguf"
-print(f"🚀 Uploading vajra-7b-q4_k_m.gguf to Hugging Face ({DEST_REPO})...")
+print(f" Uploading vajra-7b-q4_k_m.gguf to Hugging Face ({DEST_REPO})...")
 api = HfApi(token=HF_TOKEN)
 api.create_repo(repo_id=DEST_REPO, repo_type="model", exist_ok=True)
 api.upload_file(
@@ -131,8 +131,8 @@ api.upload_file(
 )
 
 print("\\n" + "="*65)
-print("🎉 SUCCESS! Compressed VAJRA 7B GGUF Model is live on Hugging Face:")
-print(f"👉 https://huggingface.co/{DEST_REPO}")
+print(" SUCCESS! Compressed VAJRA 7B GGUF Model is live on Hugging Face:")
+print(f" https://huggingface.co/{DEST_REPO}")
 print("="*65)
 '''
 

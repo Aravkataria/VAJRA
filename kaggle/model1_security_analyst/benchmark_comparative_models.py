@@ -279,7 +279,7 @@ class VajraModel1Evaluator(BaseEvaluator):
             )
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
-            print("  * [✓] Successfully loaded VAJRA Model 1 PyTorch weights into GPU memory!")
+            print("  * [] Successfully loaded VAJRA Model 1 PyTorch weights into GPU memory!")
         except Exception as e:
             raise RuntimeError(f"[-] Failed to load VAJRA Model 1 weights from {found_dir}: {e}")
 
@@ -335,7 +335,7 @@ class LiveHuggingFaceEvaluator(BaseEvaluator):
             )
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
-            print(f"  * [✓] Successfully loaded '{self.model_id}'!")
+            print(f"  * [] Successfully loaded '{self.model_id}'!")
         except Exception as e:
             raise RuntimeError(f"[-] Failed to download / load Hugging Face model '{self.model_id}': {e}")
 

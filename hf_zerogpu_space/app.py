@@ -47,13 +47,13 @@ def sanitize_and_check_injection(raw_text: str) -> str:
 # =====================================================================
 # 2. MODULE-SCOPE ZERO-GPU MODEL LOADING (bfloat16 on A10G / A100)
 # =====================================================================
-print(f"🔒 [VAJRA ZeroGPU] Loading tokenizer from {LORA_MODEL_ID}...")
+print(f" [VAJRA ZeroGPU] Loading tokenizer from {LORA_MODEL_ID}...")
 try:
     tokenizer = AutoTokenizer.from_pretrained(LORA_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
 except Exception:
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID, token=HF_TOKEN, trust_remote_code=True)
 
-print(f"🔒 [VAJRA ZeroGPU] Loading foundation model {BASE_MODEL_ID} in bfloat16...")
+print(f" [VAJRA ZeroGPU] Loading foundation model {BASE_MODEL_ID} in bfloat16...")
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_ID,
     token=HF_TOKEN,
@@ -63,15 +63,15 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 
-print(f"🔒 [VAJRA ZeroGPU] Attaching LoRA adapter from {LORA_MODEL_ID}...")
+print(f" [VAJRA ZeroGPU] Attaching LoRA adapter from {LORA_MODEL_ID}...")
 try:
     model = PeftModel.from_pretrained(model, LORA_MODEL_ID, token=HF_TOKEN)
-    print("✅ [VAJRA ZeroGPU] Fine-tuned LoRA adapter attached successfully!")
+    print("[OK] [VAJRA ZeroGPU] Fine-tuned LoRA adapter attached successfully!")
 except Exception as e:
-    print(f"⚠️ [VAJRA ZeroGPU] LoRA note: {e}")
+    print(f"[WARN] [VAJRA ZeroGPU] LoRA note: {e}")
 
 model.eval()
-print("🚀 [VAJRA ZeroGPU] A10G / A100 Burst Engine ONLINE!")
+print(" [VAJRA ZeroGPU] A10G / A100 Burst Engine ONLINE!")
 
 VAJRA_SYSTEM_PROMPT = """You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.
 Answer software security, code auditing, AST verification, threat modeling, and general technical questions thoroughly, authoritatively, and completely. Provide well-structured explanations around 250 to 320 words that naturally conclude without trailing off mid-sentence."""
@@ -81,7 +81,7 @@ Answer software security, code auditing, AST verification, threat modeling, and 
 # =====================================================================
 @spaces.GPU(duration=25)
 def generate_vajra_reply(prompt: str) -> str:
-    print(f"⚡ [VAJRA ZeroGPU] Incoming inference request on A10G: {prompt[:80]}...")
+    print(f" [VAJRA ZeroGPU] Incoming inference request on A10G: {prompt[:80]}...")
     t0 = time.time()
     try:
         clean_prompt = sanitize_and_check_injection(prompt)
@@ -115,7 +115,7 @@ def generate_vajra_reply(prompt: str) -> str:
         if res_text.count("```") % 2 != 0:
             res_text += "\n```"
 
-        print(f"✅ [VAJRA ZeroGPU] A10G GPU inference completed in {time.time() - t0:.2f}s!")
+        print(f"[OK] [VAJRA ZeroGPU] A10G GPU inference completed in {time.time() - t0:.2f}s!")
         return res_text.strip()
 
         del model_inputs, generated_ids
@@ -130,7 +130,7 @@ def generate_vajra_reply(prompt: str) -> str:
 # 4. GRADIO INTERFACE
 # =====================================================================
 with gr.Blocks(title="VAJRA Cyber-Reasoning Engine (ZeroGPU Burst)") as demo:
-    gr.Markdown("# 🛡️ VAJRA Cyber-Reasoning Intelligence System (ZeroGPU Burst)")
+    gr.Markdown("#  VAJRA Cyber-Reasoning Intelligence System (ZeroGPU Burst)")
     gr.Markdown("**Fine-Tuned by Arav Kataria** | 7B LoRA | Nvidia A100 / A10G ZeroGPU")
     gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat` (Zero-Trust Verified)")
 
@@ -208,5 +208,5 @@ async def chat_api(req: ChatRequest, request: Request):
         "security": "Zero-Retention Verified"
     })
 
-print("✅ [VAJRA ZeroGPU] Server starting with A10G / A100 support.")
+print("[OK] [VAJRA ZeroGPU] Server starting with A10G / A100 support.")
 demo.launch(server_name="0.0.0.0", server_port=7860)

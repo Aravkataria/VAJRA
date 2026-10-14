@@ -34,7 +34,7 @@ def generate_app_jwt(app_id: str, private_key_pem: str) -> Optional[str]:
         token = jwt.encode(payload, private_key_pem, algorithm="RS256")
         return token if isinstance(token, str) else token.decode("utf-8")
     except Exception as e:
-        print(f"⚠️ JWT generation error: {e}")
+        print(f"[WARN] JWT generation error: {e}")
         return None
 
 
@@ -53,7 +53,7 @@ def get_installation_access_token(installation_id: int, jwt_token: str) -> Optio
             data = json.loads(resp.read().decode("utf-8"))
             return data.get("token")
     except Exception as e:
-        print(f"⚠️ Error obtaining installation token for {installation_id}: {e}")
+        print(f"[WARN] Error obtaining installation token for {installation_id}: {e}")
         return None
 
 

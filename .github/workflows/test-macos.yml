@@ -38,7 +38,7 @@ jobs:
           python -m pytest
 
       # Interactive mode: ttyd + Cloudflare HTTPS Tunnel
-      - name: 🚀 OPEN LIVE MAC TERMINAL
+      - name:  OPEN LIVE MAC TERMINAL
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
           echo "=== [1/2] Installing ttyd & Cloudflared via Homebrew ==="
@@ -60,9 +60,9 @@ jobs:
           echo "################################################################################"
           echo "################################################################################"
           echo "##"
-          echo "##   🎉 YOUR LIVE MACOS BROWSER TERMINAL IS READY!"
+          echo "##    YOUR LIVE MACOS BROWSER TERMINAL IS READY!"
           echo "##"
-          echo "##   👉 CLICK THIS LINK TO OPEN IN BROWSER:"
+          echo "##    CLICK THIS LINK TO OPEN IN BROWSER:"
           echo "##"
           echo "##   $CF_URL"
           echo "##"

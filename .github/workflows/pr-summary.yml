@@ -95,7 +95,7 @@ jobs:
             for (const f of files) {
               totalAdditions += f.additions;
               totalDeletions += f.deletions;
-              const statusEmoji = f.status === "added" ? "✨ Added" : (f.status === "removed" ? "🗑️ Deleted" : "📝 Modified");
+              const statusEmoji = f.status === "added" ? " Added" : (f.status === "removed" ? " Deleted" : " Modified");
               fileTableRows.push("| `" + f.filename + "` | " + statusEmoji + " | +" + f.additions + " | -" + f.deletions + " |");
             }
 
@@ -106,25 +106,25 @@ jobs:
             // 5. Construct Markdown sections
             let changeBreakdown = "";
             if (categories.features.length > 0) {
-              changeBreakdown += "#### 🚀 New Features\n" + categories.features.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  New Features\n" + categories.features.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.fixes.length > 0) {
-              changeBreakdown += "#### 🐛 Bug Fixes\n" + categories.fixes.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  Bug Fixes\n" + categories.fixes.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.ui.length > 0) {
-              changeBreakdown += "#### 🎨 UI & Interface Improvements\n" + categories.ui.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  UI & Interface Improvements\n" + categories.ui.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.perf.length > 0) {
-              changeBreakdown += "#### ⚡ Performance & Engine Optimizations\n" + categories.perf.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  Performance & Engine Optimizations\n" + categories.perf.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.docs.length > 0) {
-              changeBreakdown += "#### 📚 Documentation & Guides\n" + categories.docs.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  Documentation & Guides\n" + categories.docs.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.tests.length > 0) {
-              changeBreakdown += "#### 🧪 Tests & Quality Assurance\n" + categories.tests.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  Tests & Quality Assurance\n" + categories.tests.map(m => "- " + m).join("\n") + "\n\n";
             }
             if (categories.others.length > 0) {
-              changeBreakdown += "#### 🔧 Other Changes\n" + categories.others.map(m => "- " + m).join("\n") + "\n\n";
+              changeBreakdown += "####  Other Changes\n" + categories.others.map(m => "- " + m).join("\n") + "\n\n";
             }
 
             // 6. Optional AI Executive Summary via Gemini API if secret exists
@@ -144,7 +144,7 @@ jobs:
                   const data = await geminiResp.json();
                   const summaryText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
                   if (summaryText) {
-                    aiSummarySection = "### 🤖 AI Executive Summary\n" + summaryText.trim() + "\n\n";
+                    aiSummarySection = "###  AI Executive Summary\n" + summaryText.trim() + "\n\n";
                   }
                 }
               } catch (aiErr) {
@@ -158,17 +158,17 @@ jobs:
 
             const summaryLines = [
               START_MARKER,
-              "## 📋 Automated PR Summary",
+              "##  Automated PR Summary",
               "",
               aiSummarySection,
-              "### 📊 Overview & Metrics",
+              "###  Overview & Metrics",
               "- **Files Changed**: " + files.length,
               "- **Lines Added**: +" + totalAdditions,
               "- **Lines Deleted**: -" + totalDeletions,
               "- **Total Commits**: " + commits.length,
               "",
               changeBreakdown,
-              "### 📁 Changed Files Details",
+              "###  Changed Files Details",
               "<details>",
               "<summary>Click to view files table (" + files.length + " changed)</summary>",
               "",
@@ -202,4 +202,4 @@ jobs:
               body: updatedBody
             });
 
-            console.log("✅ Successfully updated description for PR #" + pull_number);
+            console.log("[OK] Successfully updated description for PR #" + pull_number);

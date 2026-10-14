@@ -37,7 +37,7 @@ class GitHubReviewer:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             err_body = e.read().decode("utf-8", errors="ignore")
-            print(f"⚠️ GitHub API Error [{e.code}] on {method} {path}: {err_body}")
+            print(f"[WARN] GitHub API Error [{e.code}] on {method} {path}: {err_body}")
             raise
 
     def get_pr_files(self) -> List[Dict[str, Any]]:
@@ -82,7 +82,7 @@ class GitHubReviewer:
         try:
             self._request("POST", path, payload)
         except Exception as e:
-            print(f"⚠️ Could not set commit status: {e}")
+            print(f"[WARN] Could not set commit status: {e}")
 
 
 def build_audit_summary_markdown(findings: List[Finding], files_scanned_count: int) -> str:
@@ -92,11 +92,11 @@ def build_audit_summary_markdown(findings: List[Finding], files_scanned_count: i
     mediums = [f for f in findings if f.severity == "MEDIUM"]
 
     passed = len(criticals) == 0 and len(highs) == 0
-    status_badge = "🛡️ **ALL CHECKS PASSED**" if passed else "⚠️ **SECURITY ACTION REQUIRED**"
+    status_badge = " **ALL CHECKS PASSED**" if passed else "[WARN] **SECURITY ACTION REQUIRED**"
     status_desc = "No critical AST sinks or secret exposures detected." if passed else f"Found **{len(criticals)} critical** and **{len(highs)} high** severity issues."
 
     lines = [
-        "## ⚡ VAJRA Security Auditor",
+        "##  VAJRA Security Auditor",
         "> **Autonomous AST & Cryptographic Vulnerability Review**  ",
         "> *Engineered by [Arav Kataria](https://github.com/Aravkataria) • Zero-Retention Security Architecture*",
         "",
@@ -116,9 +116,9 @@ def build_audit_summary_markdown(findings: List[Finding], files_scanned_count: i
     ]
 
     if findings:
-        lines.append("### 🔍 Detected Vulnerability Findings")
+        lines.append("###  Detected Vulnerability Findings")
         for idx, f in enumerate(findings, start=1):
-            severity_icon = "🚨" if f.severity == "CRITICAL" else ("⚠️" if f.severity == "HIGH" else "ℹ️")
+            severity_icon = "[ALERT]" if f.severity == "CRITICAL" else ("[WARN]" if f.severity == "HIGH" else "[INFO]")
             lines.append(f"#### {idx}. {severity_icon} [{f.severity}] {f.title} ({f.cwe})")
             lines.append(f"- **Location**: `{f.file}` (Line {f.line})")
             lines.append(f"- **Vulnerability Details**: {f.description}")
@@ -127,5 +127,5 @@ def build_audit_summary_markdown(findings: List[Finding], files_scanned_count: i
             lines.append("")
 
     lines.append("---")
-    lines.append("*💡 To re-run this scan, comment `@vajra review` or push new commits to this branch.*")
+    lines.append("* To re-run this scan, comment `@vajra review` or push new commits to this branch.*")
     return "\n".join(lines)

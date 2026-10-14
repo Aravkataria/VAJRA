@@ -11,7 +11,7 @@ import argparse
 
 def merge_lora(base_model_name: str, adapter_path: str, output_dir: str):
     print("=" * 70)
-    print(" ❖ VAJRA LoRA Adapter Merger")
+    print(" * VAJRA LoRA Adapter Merger")
     print("=" * 70)
 
     try:
@@ -43,7 +43,7 @@ def merge_lora(base_model_name: str, adapter_path: str, output_dir: str):
     tokenizer.save_pretrained(output_dir)
 
     print("\n" + "=" * 70)
-    print(f" ✓ Successfully merged! Model saved to: {output_dir}")
+    print(f"  Successfully merged! Model saved to: {output_dir}")
     print(" You can now run this model directly or convert to GGUF for Ollama.")
     print("=" * 70)
 

@@ -25,7 +25,7 @@ def run_action():
     fail_on_critical = os.environ.get("INPUT_FAIL_ON_CRITICAL", "false").lower() == "true"
 
     if not repo:
-        print("❌ Error: GITHUB_REPOSITORY environment variable not set.")
+        print("[ERROR] Error: GITHUB_REPOSITORY environment variable not set.")
         sys.exit(1)
 
     event_data = {}
@@ -33,7 +33,7 @@ def run_action():
         try:
             event_data = json.loads(Path(event_path).read_text(encoding="utf-8"))
         except Exception as e:
-            print(f"⚠️ Could not parse event file {event_path}: {e}")
+            print(f"[WARN] Could not parse event file {event_path}: {e}")
 
     # Determine Pull Request number & commit SHA
     pull_number = None
@@ -47,14 +47,14 @@ def run_action():
         if "comment" in event_data:
             comment_body = event_data["comment"].get("body", "")
             if "@vajra" not in comment_body.lower():
-                print("ℹ️ Comment does not mention @vajra. Skipping.")
+                print("[INFO] Comment does not mention @vajra. Skipping.")
                 return
 
     remediator = ModelRemediator()
 
     if not pull_number:
         # Standalone scan on current directory
-        print("🔍 Standalone scan mode: Scanning current repository files...")
+        print(" Standalone scan mode: Scanning current repository files...")
         all_findings = []
         for p in Path(".").rglob("*"):
             if p.is_file() and not any(part.startswith(".") for part in p.parts):
@@ -69,23 +69,23 @@ def run_action():
                         pass
                     all_findings.extend(findings)
 
-        print(f"✅ Standalone scan complete. Found {len(all_findings)} potential findings.")
+        print(f"[OK] Standalone scan complete. Found {len(all_findings)} potential findings.")
         for f in all_findings:
             print(f"  [{f.severity}] {f.file}:{f.line} - {f.title} ({f.cwe})")
         return
 
     if not token:
-        print("❌ Error: GITHUB_TOKEN is required to audit pull requests.")
+        print("[ERROR] Error: GITHUB_TOKEN is required to audit pull requests.")
         sys.exit(1)
 
     reviewer = GitHubReviewer(token=token, repo=repo, pull_number=pull_number, commit_sha=commit_sha)
 
-    print(f"⚡ VAJRA Security Auditor initiated for PR #{pull_number} on {repo}...")
+    print(f" VAJRA Security Auditor initiated for PR #{pull_number} on {repo}...")
     reviewer.set_commit_status(state="pending", description="VAJRA Multi-Stage AST & Neural Audit in progress...")
 
     # Fetch changed files from PR
     pr_files = reviewer.get_pr_files()
-    print(f"📁 Fetched {len(pr_files)} changed files from PR #{pull_number}.")
+    print(f" Fetched {len(pr_files)} changed files from PR #{pull_number}.")
 
     findings: list[Finding] = []
     inline_comments = []
@@ -101,7 +101,7 @@ def run_action():
 
         fn_norm = filename.lower().replace("\\", "/")
         if any(part in fn_norm for part in ("/tests/", "tests/", "test_", "_test.")):
-            print(f"ℹ️ Skipping test fixture file: {filename}")
+            print(f"[INFO] Skipping test fixture file: {filename}")
             continue
 
         local_path = Path(filename)
@@ -148,9 +148,9 @@ def run_action():
                     fallback_suggestion=f.suggestion
                 )
 
-                verification_badge = "🛡️ **AST-Verified Patch**" if is_verified else "⚠️ **Suggested Remediation**"
+                verification_badge = " **AST-Verified Patch**" if is_verified else "[WARN] **Suggested Remediation**"
                 comment_text = (
-                    f"### ⚡ VAJRA Security Finding: {f.title} ({f.cwe})\n\n"
+                    f"###  VAJRA Security Finding: {f.title} ({f.cwe})\n\n"
                     f"**Severity**: `{f.severity}`  \n"
                     f"**Verification**: {verification_badge}\n\n"
                     f"{f.description}\n\n"
@@ -178,9 +178,9 @@ def run_action():
 
     try:
         reviewer.post_pr_comment(reply_md)
-        print("✅ Posted VAJRA response to PR thread.")
+        print("[OK] Posted VAJRA response to PR thread.")
     except Exception as e:
-        print(f"⚠️ Could not post PR comment: {e}")
+        print(f"[WARN] Could not post PR comment: {e}")
 
     # Set final commit status
     if criticals:
@@ -189,7 +189,7 @@ def run_action():
             description=f"VAJRA: {len(criticals)} critical vulnerabilities detected!"
         )
         if fail_on_critical:
-            print("🚨 Critical vulnerabilities detected and fail-on-critical is enabled.")
+            print("[ALERT] Critical vulnerabilities detected and fail-on-critical is enabled.")
             sys.exit(1)
     else:
         reviewer.set_commit_status(
@@ -197,7 +197,7 @@ def run_action():
             description="VAJRA: Multi-stage security audit passed clean."
         )
 
-    print("🎉 VAJRA Multi-Stage Security Audit completed successfully.")
+    print(" VAJRA Multi-Stage Security Audit completed successfully.")
 
 
 if __name__ == "__main__":

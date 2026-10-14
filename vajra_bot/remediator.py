@@ -52,7 +52,7 @@ class ModelRemediator:
                     data = json.loads(resp.read().decode("utf-8"))
                     return data["choices"][0]["message"]["content"].strip()
             except Exception as e:
-                print(f"⚠️ Groq upstream note: {e}")
+                print(f"[WARN] Groq upstream note: {e}")
 
         # 2. Gemini API
         if self.gemini_key:
@@ -69,7 +69,7 @@ class ModelRemediator:
                     data = json.loads(resp.read().decode("utf-8"))
                     return data["candidates"][0]["content"]["parts"][0]["text"].strip()
             except Exception as e:
-                print(f"⚠️ Gemini upstream note: {e}")
+                print(f"[WARN] Gemini upstream note: {e}")
 
         # 3. VAJRA Hugging Face Space Endpoint
         if self.vajra_url:
@@ -84,7 +84,7 @@ class ModelRemediator:
                     data = json.loads(resp.read().decode("utf-8"))
                     return data.get("reply") or data.get("draft")
             except Exception as e:
-                print(f"⚠️ VAJRA Space upstream note: {e}")
+                print(f"[WARN] VAJRA Space upstream note: {e}")
 
         return None
 
@@ -113,7 +113,7 @@ class ModelRemediator:
             if is_valid and verified_code:
                 return verified_code, True
             else:
-                print(f"ℹ️ LLM candidate patch failed verification ({reason}). Using verified AST template.")
+                print(f"[INFO] LLM candidate patch failed verification ({reason}). Using verified AST template.")
 
         # Fallback to verified deterministic template
         if fallback_suggestion:

@@ -145,10 +145,10 @@ async def production_security_and_rate_limit(request: Request, call_next):
                             "success": False,
                             "rate_limited": True,
                             "reply": (
-                                "⚠️ **Rate Limit Exceeded**\n\n"
+                                "[WARN] **Rate Limit Exceeded**\n\n"
                                 "You are submitting inference queries too quickly. "
                                 f"Please wait approximately **{reset_in} seconds** before sending your next request.\n\n"
-                                "💡 *Tip: Configure your personal Hugging Face Token in settings or pass X-API-Key to bypass public guest rate limits.*"
+                                " *Tip: Configure your personal Hugging Face Token in settings or pass X-API-Key to bypass public guest rate limits.*"
                             ),
                             "retry_after": reset_in,
                             "model": "VAJRA-Cyber-Reasoning",
@@ -961,10 +961,10 @@ async def chat_api(req: ChatRequest, request: Request):
             "success": False,
             "rate_limited": True,
             "reply": (
-                "⚠️ **Inference Cluster Busy**\n\n"
+                "[WARN] **Inference Cluster Busy**\n\n"
                 "The neural reasoning engine is currently processing queued tasks or warming up. "
                 "Please wait approximately **30 seconds** before trying again.\n\n"
-                "💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*"
+                " *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without delay.*"
             ),
             "retry_after": retry_sec,
             "model": "VAJRA-Cyber-Reasoning",
@@ -973,7 +973,7 @@ async def chat_api(req: ChatRequest, request: Request):
         }, status_code=429)
 
     # 2. Basic Identity / Greeting (Strictly no hardcoded general knowledge)
-    reply = "🛡️ **VAJRA Cyber-Reasoning System**\n\n"
+    reply = " **VAJRA Cyber-Reasoning System**\n\n"
     if any(k in lowered for k in ["hello", "hi", "hey", "greetings", "good morning", "good evening", "howdy"]):
         reply += (
             "Hello! I am **VAJRA**, an Autonomous Cyber-Reasoning and Software Security Intelligence System "
@@ -1099,7 +1099,7 @@ async def report_bug_endpoint(req: BugReportRequest, request: Request):
                 if "discord.com" in webhook_url:
                     payload = {
                         "embeds": [{
-                            "title": f"🚨 [VAJRA Bug Report] {req.title[:100]}",
+                            "title": f"[ALERT] [VAJRA Bug Report] {req.title[:100]}",
                             "description": req.description[:2000],
                             "color": 16102400,
                             "fields": [

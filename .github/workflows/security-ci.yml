@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest fastapi pydantic uvicorn httpx
 
-      - name: 🛡️ Run Security & Concurrency Test Suite
+      - name:  Run Security & Concurrency Test Suite
         run: |
           echo "=== Running VAJRA Security & Concurrency Verification Tests ==="
           python -m pytest tests/test_security_concurrency.py -v

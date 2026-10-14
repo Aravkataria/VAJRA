@@ -38,7 +38,7 @@ jobs:
           python -m pytest
 
       # Interactive mode: ttyd + Cloudflare HTTPS Tunnel (100% firewall proof)
-      - name: 🚀 OPEN LIVE LINUX TERMINAL
+      - name:  OPEN LIVE LINUX TERMINAL
         if: ${{ inputs.mode == 'interactive-web-terminal' }}
         run: |
           echo "=== [1/3] Installing Web Terminal Engine (ttyd) ==="
@@ -65,9 +65,9 @@ jobs:
           echo "################################################################################"
           echo "################################################################################"
           echo "##"
-          echo "##   🎉 YOUR LIVE LINUX BROWSER TERMINAL IS READY!"
+          echo "##    YOUR LIVE LINUX BROWSER TERMINAL IS READY!"
           echo "##"
-          echo "##   👉 CLICK THIS LINK TO OPEN IN BROWSER:"
+          echo "##    CLICK THIS LINK TO OPEN IN BROWSER:"
           echo "##"
           echo "##   $CF_URL"
           echo "##"

@@ -395,7 +395,7 @@ def render_dashboard_html(
 
     <!-- GitHub Direct Ingestion Box -->
     <div class="github-card">
-      <div style="font-weight: 700; font-size: 1.05rem;">🔗 Scan GitHub Repository Directly</div>
+      <div style="font-weight: 700; font-size: 1.05rem;"> Scan GitHub Repository Directly</div>
       <p style="color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">
         Enter any public repository link or branch to clone, extract AST evidence, generate repairs, and run independent verification.
       </p>
@@ -428,7 +428,7 @@ def render_dashboard_html(
     </div>
 
     <div class="section-title">
-      <span>🛡️</span>
+      <span></span>
       <span>Why We Decline: The Evidence-Based Difference</span>
     </div>
     <p style="color: var(--muted); font-size: 0.9rem; margin-top: -0.5rem; margin-bottom: 1rem;">
@@ -439,7 +439,7 @@ def render_dashboard_html(
     </div>
 
     <div class="section-title">
-      <span>📋</span>
+      <span></span>
       <span>Recent Workspace Assurance Reports</span>
     </div>
     <div class="card">

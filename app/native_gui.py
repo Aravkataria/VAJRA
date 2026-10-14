@@ -68,7 +68,7 @@ class VajraNativeApp(tk.Tk):
         header = ttk.Frame(self, padding=(15, 10))
         header.pack(fill="x")
 
-        ttk.Label(header, text="🛡️ VAJRA · Cyber-Security & Repair Desktop", style="Header.TLabel").pack(anchor="w")
+        ttk.Label(header, text=" VAJRA · Cyber-Security & Repair Desktop", style="Header.TLabel").pack(anchor="w")
         ttk.Label(header, text="6-Stage Independent Verification Pipeline | Offline Autonomous Repair Engine", style="SubHeader.TLabel").pack(anchor="w")
 
         # 2. Input / Action Bar Card
@@ -82,26 +82,26 @@ class VajraNativeApp(tk.Tk):
         self.path_entry.grid(row=1, column=0, sticky="ew", padx=(0, 8), ipady=4)
         action_card.columnconfigure(0, weight=1)
 
-        btn_folder = tk.Button(action_card, text="📁 Browse Folder", command=self._browse_folder, bg="#334155", fg="white", activebackground="#475569", relief="flat", font=("Segoe UI", 9, "bold"), padx=10, pady=3, cursor="hand2")
+        btn_folder = tk.Button(action_card, text=" Browse Folder", command=self._browse_folder, bg="#334155", fg="white", activebackground="#475569", relief="flat", font=("Segoe UI", 9, "bold"), padx=10, pady=3, cursor="hand2")
         btn_folder.grid(row=1, column=1, padx=4)
 
-        btn_zip = tk.Button(action_card, text="📦 Choose ZIP", command=self._browse_zip, bg="#334155", fg="white", activebackground="#475569", relief="flat", font=("Segoe UI", 9, "bold"), padx=10, pady=3, cursor="hand2")
+        btn_zip = tk.Button(action_card, text=" Choose ZIP", command=self._browse_zip, bg="#334155", fg="white", activebackground="#475569", relief="flat", font=("Segoe UI", 9, "bold"), padx=10, pady=3, cursor="hand2")
         btn_zip.grid(row=1, column=2, padx=4)
 
-        self.btn_run = tk.Button(action_card, text="🚀 RUN SCAN & AUTO-REPAIR", command=self._start_scan_thread, bg="#10b981", fg="white", activebackground="#059669", relief="flat", font=("Segoe UI", 10, "bold"), padx=14, pady=3, cursor="hand2")
+        self.btn_run = tk.Button(action_card, text=" RUN SCAN & AUTO-REPAIR", command=self._start_scan_thread, bg="#10b981", fg="white", activebackground="#059669", relief="flat", font=("Segoe UI", 10, "bold"), padx=14, pady=3, cursor="hand2")
         self.btn_run.grid(row=1, column=3, padx=(6, 0))
 
         # 3. Stats Strip
         self.stats_frame = ttk.Frame(self, style="Card.TFrame", padding=(12, 6))
         self.stats_frame.pack(fill="x", padx=15, pady=4)
 
-        self.lbl_stat_findings = ttk.Label(self.stats_frame, text="🔍 Vulnerabilities: 0", style="Stat.TLabel")
+        self.lbl_stat_findings = ttk.Label(self.stats_frame, text=" Vulnerabilities: 0", style="Stat.TLabel")
         self.lbl_stat_findings.pack(side="left", padx=10)
 
-        self.lbl_stat_verified = ttk.Label(self.stats_frame, text="✅ Verified Repairs: 0", style="Stat.TLabel", foreground="#34d399")
+        self.lbl_stat_verified = ttk.Label(self.stats_frame, text="[OK] Verified Repairs: 0", style="Stat.TLabel", foreground="#34d399")
         self.lbl_stat_verified.pack(side="left", padx=10)
 
-        self.lbl_stat_declined = ttk.Label(self.stats_frame, text="⛔ Declined Unsafe: 0", style="Stat.TLabel", foreground="#f87171")
+        self.lbl_stat_declined = ttk.Label(self.stats_frame, text=" Declined Unsafe: 0", style="Stat.TLabel", foreground="#f87171")
         self.lbl_stat_declined.pack(side="left", padx=10)
 
         self.lbl_status = ttk.Label(self.stats_frame, text="Ready", style="Stat.TLabel", foreground="#94a3b8")
@@ -144,10 +144,10 @@ class VajraNativeApp(tk.Tk):
         bottom_bar = ttk.Frame(self, padding=(15, 8))
         bottom_bar.pack(fill="x")
 
-        self.btn_export = tk.Button(bottom_bar, text="💾 Save Patched Clean Project (ZIP)", command=self._export_zip, bg="#2563eb", fg="white", font=("Segoe UI", 9, "bold"), padx=12, pady=4, relief="flat", cursor="hand2", state="disabled")
+        self.btn_export = tk.Button(bottom_bar, text=" Save Patched Clean Project (ZIP)", command=self._export_zip, bg="#2563eb", fg="white", font=("Segoe UI", 9, "bold"), padx=12, pady=4, relief="flat", cursor="hand2", state="disabled")
         self.btn_export.pack(side="left", padx=(0, 8))
 
-        self.btn_open_report = tk.Button(bottom_bar, text="📄 View Full Assurance Report (HTML)", command=self._open_html_report, bg="#334155", fg="white", font=("Segoe UI", 9, "bold"), padx=12, pady=4, relief="flat", cursor="hand2", state="disabled")
+        self.btn_open_report = tk.Button(bottom_bar, text=" View Full Assurance Report (HTML)", command=self._open_html_report, bg="#334155", fg="white", font=("Segoe UI", 9, "bold"), padx=12, pady=4, relief="flat", cursor="hand2", state="disabled")
         self.btn_open_report.pack(side="left")
 
         self.progress = ttk.Progressbar(bottom_bar, mode="indeterminate", length=200)
@@ -171,7 +171,7 @@ class VajraNativeApp(tk.Tk):
         self.btn_run.config(state="disabled")
         self.progress.pack(side="right", padx=10)
         self.progress.start(10)
-        self.lbl_status.config(text="⏳ Scanning & Running 6-Stage Verifiers...", foreground="#fbbf24")
+        self.lbl_status.config(text=" Scanning & Running 6-Stage Verifiers...", foreground="#fbbf24")
         self.tree.delete(*self.tree.get_children())
         self.txt_diff.delete("1.0", "end")
 
@@ -253,9 +253,9 @@ class VajraNativeApp(tk.Tk):
         findings = res["findings"]
         patches = res["patches"]
 
-        self.lbl_stat_findings.config(text=f"🔍 Vulnerabilities: {len(findings)}")
-        self.lbl_stat_verified.config(text=f"✅ Verified Repairs: {res['verified_count']}")
-        self.lbl_stat_declined.config(text=f"⛔ Declined Unsafe: {res['declined_count']}")
+        self.lbl_stat_findings.config(text=f" Vulnerabilities: {len(findings)}")
+        self.lbl_stat_verified.config(text=f"[OK] Verified Repairs: {res['verified_count']}")
+        self.lbl_stat_declined.config(text=f" Declined Unsafe: {res['declined_count']}")
         self.lbl_status.config(text="Scan Complete", foreground="#34d399")
 
         # Populate tree
@@ -289,13 +289,13 @@ class VajraNativeApp(tk.Tk):
         self.txt_diff.insert("end", header)
 
         if patch:
-            self.txt_diff.insert("end", f"STATUS: ✅ VERIFIED REPAIR APPLIED ATOMICALLY\n")
+            self.txt_diff.insert("end", f"STATUS: [OK] VERIFIED REPAIR APPLIED ATOMICALLY\n")
             self.txt_diff.insert("end", f"Confidence: {patch.confidence*100:.0f}%\n")
             self.txt_diff.insert("end", f"Strategy: {patch.strategy or 'deterministic/reasoning'}\n\n")
             self.txt_diff.insert("end", "--- UNIFIED DIFF (BEFORE / AFTER) ---\n")
             self.txt_diff.insert("end", patch.diff or "[Direct Source Change]")
         else:
-            self.txt_diff.insert("end", f"STATUS: ⛔ REPAIR DECLINED OR UNSAFE\n")
+            self.txt_diff.insert("end", f"STATUS:  REPAIR DECLINED OR UNSAFE\n")
             self.txt_diff.insert("end", f"Reason: The candidate did not pass all 6 independent verification stages\n")
             self.txt_diff.insert("end", "(Syntax AST, Static Re-scan, Dynamic PoC, Baseline Regressions, Fuzzing, Mutation).\n")
             self.txt_diff.insert("end", "VAJRA failed safe rather than applying a potentially breaking or sham fix.\n")

@@ -35,7 +35,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print(" ❖ VAJRA: Autonomous Cyber-Reasoning & Project Assistant")
+    print(" * VAJRA: Autonomous Cyber-Reasoning & Project Assistant")
     print(" Fine-tuned by: Arav Kataria | Base: Qwen2.5-Coder (Transformer)")
     print("=" * 70)
 

@@ -28,7 +28,7 @@ def export_dataset(output_path: Path) -> int:
     engine = AdaptiveLearningEngine()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     count = engine.export_fine_tuning_dataset(output_path)
-    print(f"[✓] Successfully exported {count} verified 6-stage repair pairs to: {output_path}")
+    print(f"[] Successfully exported {count} verified 6-stage repair pairs to: {output_path}")
     return count
 
 
@@ -52,7 +52,7 @@ def main():
     print(f"       • Alpha: 32")
     print(f"       • Learning Rate: 2e-4")
     print(f"       • Target Modules: ['q_proj', 'k_proj', 'v_proj', 'o_proj']")
-    print(f"\n[✓] When ready to fine-tune on GPU, execute with unsloth / trl.")
+    print(f"\n[] When ready to fine-tune on GPU, execute with unsloth / trl.")
 
 
 if __name__ == "__main__":

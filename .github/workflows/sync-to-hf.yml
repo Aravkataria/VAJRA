@@ -48,9 +48,9 @@ jobs:
                   repo_type='space',
                   commit_message='Automated sync: 2 vCPU engine with python_version 3.10 and audioop-lts'
               )
-              print('✅ AravKataria/VAJRA_v2 updated successfully!')
+              print('[OK] AravKataria/VAJRA_v2 updated successfully!')
           except Exception as e:
-              print(f'⚠️ Error updating VAJRA_v2: {e}')
+              print(f'[WARN] Error updating VAJRA_v2: {e}')
 
           # 2. Sync ZeroGPU Turbo Burst Space (vajra)
           print('Uploading hf_zerogpu_space contents to AravKataria/vajra Space (ZeroGPU)...')
@@ -58,7 +58,7 @@ jobs:
               # Remove legacy Dockerfile so Hugging Face uses native Gradio ZeroGPU SDK
               try:
                   api.delete_file(path_in_repo='Dockerfile', repo_id='AravKataria/vajra', repo_type='space')
-                  print('🗑️ Removed old Dockerfile from AravKataria/vajra!')
+                  print(' Removed old Dockerfile from AravKataria/vajra!')
               except Exception as del_err:
                   print(f'Note on Dockerfile removal: {del_err}')
 
@@ -68,7 +68,7 @@ jobs:
                   repo_type='space',
                   commit_message='Automated sync: ZeroGPU A10G burst engine with Gradio SDK'
               )
-              print('✅ AravKataria/vajra updated successfully!')
+              print('[OK] AravKataria/vajra updated successfully!')
           except Exception as e:
-              print(f'⚠️ Error updating vajra: {e}')
+              print(f'[WARN] Error updating vajra: {e}')
           "

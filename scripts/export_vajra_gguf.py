@@ -17,7 +17,7 @@ def merge_and_export_gguf(
     merged_output_dir: str = "./models/vajra_coder_7b_merged",
 ):
     print("=" * 65)
-    print("🛡️ VAJRA LoRA Merge & GGUF Quantization Pipeline")
+    print(" VAJRA LoRA Merge & GGUF Quantization Pipeline")
     print("=" * 65)
 
     os.makedirs(merged_output_dir, exist_ok=True)
@@ -48,18 +48,18 @@ def merge_and_export_gguf(
         print(f"[*] Step 3: Merging fine-tuned LoRA adapter from {lora_model_id}...")
         model = PeftModel.from_pretrained(base_model, lora_model_id, token=hf_token)
         merged_model = model.merge_and_unload()
-        print("[✅] LoRA weights successfully merged into base 7B foundation!")
+        print("[[OK]] LoRA weights successfully merged into base 7B foundation!")
 
         print(f"[*] Step 4: Saving standalone merged weights to {merged_output_dir}...")
         merged_model.save_pretrained(merged_output_dir)
-        print(f"[✅] Standalone merged checkpoint saved at {merged_output_dir}")
+        print(f"[[OK]] Standalone merged checkpoint saved at {merged_output_dir}")
 
     except Exception as e:
         print(f"[!] Error during LoRA merge: {e}")
         return
 
     print("\n" + "=" * 65)
-    print("📋 NEXT STEPS FOR ZERO-COST GGUF QUANTIZATION (via llama.cpp):")
+    print(" NEXT STEPS FOR ZERO-COST GGUF QUANTIZATION (via llama.cpp):")
     print("=" * 65)
     print("1. Clone llama.cpp:")
     print("   git clone https://github.com/ggerganov/llama.cpp.git && cd llama.cpp && cmake -B build && cmake --build build --config Release")

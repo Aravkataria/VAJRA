@@ -187,7 +187,7 @@ VAJRA ships in two synchronized editions that share the same visual identity (a 
  
 ### Edition comparison
  
-| Feature / Capability | 🌐 Web Edition (`docs/index.html`) | 🖥️ Tauri v2 Desktop App (`src-tauri/`) |
+| Feature / Capability |  Web Edition (`docs/index.html`) |  Tauri v2 Desktop App (`src-tauri/`) |
 | :--- | :--- | :--- |
 | Packaging & Format | Zero install — 100% client-side WebAssembly/JS on GitHub Pages | Native installer (Windows NSIS `.exe`, macOS `.dmg`, Linux `.AppImage`) |
 | Runtime Footprint | Browser memory only | Sub-200 ms startup, ~10 MB installer, ~25 MB idle RAM |

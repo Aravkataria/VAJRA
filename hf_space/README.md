@@ -1,6 +1,6 @@
 ---
 title: VAJRA_v2
-emoji: ⚡
+emoji: 
 colorFrom: purple
 colorTo: blue
 sdk: gradio
@@ -11,5 +11,5 @@ pinned: false
 license: apache-2.0
 ---
 
-# 🛡️ VAJRA Cyber-Reasoning Engine & API Gateway (v2)
+#  VAJRA Cyber-Reasoning Engine & API Gateway (v2)
 Fine-Tuned by Arav Kataria | 2 vCPU CPU Basic | FastAPI + Gradio

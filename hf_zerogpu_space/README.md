@@ -1,6 +1,6 @@
 ---
 title: VAJRA
-emoji: ⚡
+emoji: 
 colorFrom: purple
 colorTo: blue
 sdk: gradio
@@ -11,5 +11,5 @@ pinned: false
 license: apache-2.0
 ---
 
-# 🛡️ VAJRA Cyber-Reasoning Engine & ZeroGPU Turbo Burst Gateway
+#  VAJRA Cyber-Reasoning Engine & ZeroGPU Turbo Burst Gateway
 Fine-Tuned by Arav Kataria | ZeroGPU A100 | FastAPI + Gradio

@@ -29,7 +29,7 @@ Never claim you cannot access local files or that you are restricted to an obsol
 
 def run_chat_cli(args):
     print("=" * 70)
-    print(" ❖ VAJRA TERMINAL CONSOLE: Autonomous Cyber-Reasoning Engine")
+    print(" * VAJRA TERMINAL CONSOLE: Autonomous Cyber-Reasoning Engine")
     print(" Fine-tuned by: Arav Kataria | Base: Qwen2.5-Coder")
     print("=" * 70)
 
@@ -77,7 +77,7 @@ def run_chat_cli(args):
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
     print("\n" + "=" * 70)
-    print(" ✓ VAJRA is ready! Special commands:")
+    print("  VAJRA is ready! Special commands:")
     print("   /file <path>   -> Load a source file into context")
     print("   /clear         -> Reset conversation memory")
     print("   /exit or /quit -> Exit terminal")

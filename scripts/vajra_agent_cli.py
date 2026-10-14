@@ -88,7 +88,7 @@ class VajraTerminalAgent:
 
     # --- REPL & Agent Loop ---
     def execute_prompt(self, user_prompt: str):
-        print(f"\n\033[1;32m❖ VAJRA Agent Reasoning...\033[0m")
+        print(f"\n\033[1;32m* VAJRA Agent Reasoning...\033[0m")
         # In full LLM connection, tools are parsed from JSON / function call tokens
         # We provide interactive assistance, file reading, and command execution directly
         print(f"\033[1;36mTask:\033[0m {user_prompt}")
@@ -104,7 +104,7 @@ def main():
     agent = VajraTerminalAgent(endpoint=args.endpoint, model=args.model)
 
     print("\033[1;35m" + "=" * 70)
-    print(" ❖ VAJRA AGENTIC TERMINAL: Autonomous Cyber-Reasoning & Code Repair")
+    print(" * VAJRA AGENTIC TERMINAL: Autonomous Cyber-Reasoning & Code Repair")
     print(" Architecture: 3-Stage Pipeline | Built by: Arav Kataria")
     print("=" * 70 + "\033[0m")
     print("Type your instructions, e.g.:")

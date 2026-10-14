@@ -12,7 +12,7 @@ import subprocess
 
 def export_ultra_lite(output_dir: str = "./models/vajra_ultra_lite"):
     print("=" * 60)
-    print("🚀 VAJRA Ultra-Lite (0.5B) Export Pipeline")
+    print(" VAJRA Ultra-Lite (0.5B) Export Pipeline")
     print("=" * 60)
 
     os.makedirs(output_dir, exist_ok=True)
@@ -34,7 +34,7 @@ def export_ultra_lite(output_dir: str = "./models/vajra_ultra_lite"):
             trust_remote_code=True,
         )
         model.save_pretrained(output_dir)
-        print(f"[✅] Model weights successfully exported to {output_dir}")
+        print(f"[[OK]] Model weights successfully exported to {output_dir}")
 
     except Exception as e:
         print(f"[!] Error during model download: {e}")
@@ -45,7 +45,7 @@ def export_ultra_lite(output_dir: str = "./models/vajra_ultra_lite"):
     print(f"     python convert_hf_to_gguf.py {output_dir} --outtype f16")
     print(f"     ./llama-quantize {output_dir}/model.gguf {output_dir}/vajra-ultra-lite-Q4_K_M.gguf Q4_K_M")
     print("=" * 60)
-    print("✅ Ultra-Lite Export Complete!")
+    print("[OK] Ultra-Lite Export Complete!")
 
 
 if __name__ == "__main__":

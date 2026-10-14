@@ -7,12 +7,12 @@ interface VerificationPanelProps {
 
 export const VerificationPanel: React.FC<VerificationPanelProps> = ({ passed }) => {
   const steps = [
-    { name: "Syntax AST Validation", icon: "✓" },
-    { name: "Static Sink Removal", icon: "✓" },
-    { name: "Sentinel Dynamic Exploit PoC", icon: "✓" },
-    { name: "Baseline Regression Suites", icon: "✓" },
-    { name: "Boundary Fuzzing Clean", icon: "✓" },
-    { name: "Patch Mutation Verified", icon: "✓" },
+    { name: "Syntax AST Validation", icon: "" },
+    { name: "Static Sink Removal", icon: "" },
+    { name: "Sentinel Dynamic Exploit PoC", icon: "" },
+    { name: "Baseline Regression Suites", icon: "" },
+    { name: "Boundary Fuzzing Clean", icon: "" },
+    { name: "Patch Mutation Verified", icon: "" },
   ];
 
   return (
@@ -20,7 +20,7 @@ export const VerificationPanel: React.FC<VerificationPanelProps> = ({ passed }) 
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-bold text-sm text-slate-100 uppercase tracking-wider">6-Stage Independent Verification</h4>
         <span className={`text-xs font-black px-2.5 py-1 rounded ${passed ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400"}`}>
-          {passed ? "✓ PATCH VERIFIED & EFFECTIVE" : "VERIFICATION FAILED"}
+          {passed ? " PATCH VERIFIED & EFFECTIVE" : "VERIFICATION FAILED"}
         </span>
       </div>
 

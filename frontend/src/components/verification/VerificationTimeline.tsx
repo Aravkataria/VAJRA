@@ -23,7 +23,7 @@ export const VerificationTimeline: React.FC = () => {
           >
             <span className="font-mono text-sky-400 font-bold text-[11px]">{s.idx}</span>
             <span className="text-slate-200 font-medium">{s.name}</span>
-            <span className="ml-auto text-emerald-400 font-bold">✓ {s.status}</span>
+            <span className="ml-auto text-emerald-400 font-bold"> {s.status}</span>
           </div>
         ))}
       </div>

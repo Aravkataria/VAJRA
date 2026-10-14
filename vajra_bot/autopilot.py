@@ -118,7 +118,7 @@ def check_syntax(file_path: Path) -> Optional[AutopilotTask]:
         return None
 
 
-def find_performance_bottlenecks(file_path: Path) -> List[AutopilotTask]:
+def find_performance_opportunities(file_path: Path) -> List[AutopilotTask]:
     """Detects blocking synchronous sleeps in async functions."""
     tasks = []
     if file_path.suffix != ".py":
@@ -133,9 +133,36 @@ def find_performance_bottlenecks(file_path: Path) -> List[AutopilotTask]:
                     category="PERFORMANCE",
                     file=str(file_path),
                     line=idx,
-                    title="Blocking time.sleep() in Async Context",
+                    title="Blocking sleep: time.sleep() in Async Context",
                     description="Using time.sleep() in async code blocks the event loop. Replace with asyncio.sleep().",
                     snippet=snippet
+                ))
+    except Exception:
+        pass
+    return tasks
+
+find_performance_bottlenecks = find_performance_opportunities
+
+
+def find_unfinished_todos(file_path: Path) -> List[AutopilotTask]:
+    """Detects unfinished TODO comments in source files."""
+    tasks = []
+    if file_path.suffix not in (".py", ".js", ".ts"):
+        return tasks
+    try:
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+        lines = content.splitlines()
+        for idx, line in enumerate(lines, start=1):
+            m = re.search(r'#\s*TODO:?\s*(.+)', line, re.IGNORECASE)
+            if m:
+                todo_desc = m.group(1).strip()
+                tasks.append(AutopilotTask(
+                    category="TODO",
+                    file=str(file_path),
+                    line=idx,
+                    title=f"TODO: {todo_desc[:50]}",
+                    description=todo_desc,
+                    snippet=line.strip()
                 ))
     except Exception:
         pass
@@ -289,17 +316,17 @@ def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> 
     final_findings = []
     round_num = 0
 
-    print(f"\n🔁 Starting Continuous Closed-Loop Remediation Engine on '{branch_name}'...")
+    print(f"\n Starting Continuous Closed-Loop Remediation Engine on '{branch_name}'...")
 
     # 1. Enforce strict branch isolation: bot only ever operates on vajra/auto-security-patches
     try:
         subprocess.run(["git", "checkout", "-B", branch_name], check=True)
         current_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True).strip()
         if current_branch in ("main", "master"):
-            print(f"🛑 Security Guard: VAJRA Bot is strictly forbidden from committing directly to '{current_branch}'. Aborting.")
+            print(f"[STOP] Security Guard: VAJRA Bot is strictly forbidden from committing directly to '{current_branch}'. Aborting.")
             return [], []
     except Exception as e:
-        print(f"⚠️ Git branch initialization note: {e}")
+        print(f"[WARN] Git branch initialization note: {e}")
         return [], []
 
     bot_env = get_bot_env()
@@ -330,11 +357,11 @@ def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> 
             perf_bottlenecks.extend(find_performance_bottlenecks(p))
 
         total_issues = len(round_security) + len(syntax_errors) + len(perf_bottlenecks)
-        print(f"📊 Iteration {round_num} Audit: {len(round_security)} Security | {len(syntax_errors)} Syntax | {len(perf_bottlenecks)} Performance")
+        print(f" Iteration {round_num} Audit: {len(round_security)} Security | {len(syntax_errors)} Syntax | {len(perf_bottlenecks)} Performance")
 
         # Termination: if 0 issues remain anywhere, the codebase is 100% clean!
         if total_issues == 0:
-            print(f"✅ Closed loop converged! Zero errors remaining across codebase after {round_num} iterations.")
+            print(f"[OK] Closed loop converged! Zero errors remaining across codebase after {round_num} iterations.")
             final_findings = []
             break
 
@@ -346,7 +373,7 @@ def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> 
                 continue
             success, msg = apply_surgical_patch(p, f)
             if success:
-                print(f"  ✨ Verified Patch Applied: {f.file} line {f.line} ({f.cwe})")
+                print(f"   Verified Patch Applied: {f.file} line {f.line} ({f.cwe})")
                 # Stage and commit this individual verified fix to vajra/auto-security-patches
                 try:
                     subprocess.run(["git", "add", str(p)], check=True)
@@ -355,13 +382,13 @@ def run_closed_loop_repair(branch_name: str = "vajra/auto-security-patches") -> 
                     applied_patches_ledger.append(f"`{f.file}` line {f.line}: {f.title} ({f.cwe})")
                     patched_in_this_round += 1
                 except Exception as ce:
-                    print(f"  ⚠️ Commit note: {ce}")
+                    print(f"  [WARN] Commit note: {ce}")
 
         final_findings = round_security
 
         # If no new patches could be verified and applied in this round, stop looping
         if patched_in_this_round == 0:
-            print(f"ℹ️ All fixable issues addressed ({len(applied_patches_ledger)} verified patches committed). Moving to audit & PR.")
+            print(f"[INFO] All fixable issues addressed ({len(applied_patches_ledger)} verified patches committed). Moving to audit & PR.")
             break
 
     return applied_patches_ledger, final_findings
@@ -376,7 +403,7 @@ def open_or_update_pr(token: str, repo: str, branch_name: str, title: str, body:
     try:
         remote_url = f"https://x-access-token:{token}@github.com/{repo}.git"
         subprocess.run(["git", "push", "-u", remote_url, branch_name, "--force"], check=True)
-        print(f"🚀 Pushed verified branch '{branch_name}' to GitHub.")
+        print(f" Pushed verified branch '{branch_name}' to GitHub.")
 
         pr_url = f"https://api.github.com/repos/{repo}/pulls"
         headers = {
@@ -396,16 +423,16 @@ def open_or_update_pr(token: str, repo: str, branch_name: str, title: str, body:
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             html_url = data.get("html_url")
-            print(f"🎉 Successfully opened autonomous Pull Request: {html_url}")
+            print(f" Successfully opened autonomous Pull Request: {html_url}")
             return html_url
     except urllib.error.HTTPError as e:
         err = e.read().decode("utf-8", errors="ignore")
         if "A pull request already exists" in err:
-            print("ℹ️ Pull Request for this branch already exists (updated with latest commits).")
+            print("[INFO] Pull Request for this branch already exists (updated with latest commits).")
         else:
-            print(f"⚠️ GitHub API error opening PR: {err}")
+            print(f"[WARN] GitHub API error opening PR: {err}")
     except Exception as e:
-        print(f"⚠️ Error during PR creation: {e}")
+        print(f"[WARN] Error during PR creation: {e}")
     return None
 
 
@@ -414,13 +441,13 @@ def run_autopilot():
     repo = os.environ.get("GITHUB_REPOSITORY")
     backend_url = os.environ.get("VAJRA_BACKEND_URL", "https://aravkataria-vajra-v2.hf.space")
 
-    print("⚡ VAJRA Closed-Loop Autonomous Contributor Engine Initializing...")
+    print(" VAJRA Closed-Loop Autonomous Contributor Engine Initializing...")
 
     # 1. Load-Aware Gatekeeper Check
     can_proceed, reason = check_backend_headroom(backend_url)
-    print(f"📊 Backend Load Gatekeeper: {reason}")
+    print(f" Backend Load Gatekeeper: {reason}")
     if not can_proceed:
-        print("⏸️ VAJRA Autopilot: Pausing to preserve real-time user chat performance. Exiting cleanly.")
+        print(" VAJRA Autopilot: Pausing to preserve real-time user chat performance. Exiting cleanly.")
         sys.exit(0)
 
     # 2. Run Continuous Closed Loop Remediation on vajra/auto-security-patches
@@ -429,7 +456,7 @@ def run_autopilot():
 
     # 3. Only proceed with PR if actual code patches were applied
     if not applied_patches:
-        print("🛡️ Zero code patches required. Codebase is clean — skipping Pull Request creation.")
+        print(" Zero code patches required. Codebase is clean — skipping Pull Request creation.")
         return
 
     # 4. Generate Clean VAJRA_SECURITY_AUDIT.md
@@ -466,7 +493,7 @@ def run_autopilot():
     audit_lines.append("*Powered by [VAJRA Security Auditor](https://github.com/apps/vajra-bot) - Autonomous AST & Cryptographic Review*")
 
     audit_file.write_text("\n".join(audit_lines), encoding="utf-8")
-    print(f"📝 Generated clean audit ledger: {audit_file.name}")
+    print(f" Generated clean audit ledger: {audit_file.name}")
 
     try:
         subprocess.run(["git", "add", "VAJRA_SECURITY_AUDIT.md"], check=True)
@@ -498,7 +525,7 @@ def run_autopilot():
             body=pr_body
         )
     else:
-        print("ℹ️ Running in local/offline mode. Pull Request creation skipped.")
+        print("[INFO] Running in local/offline mode. Pull Request creation skipped.")
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ class UltraLiteEngine:
             )
             self._model.eval()
             self._is_loaded = True
-            logger.info(f"✅ {ULTRA_LITE_MODEL_ID} successfully loaded in CPU memory.")
+            logger.info(f"[OK] {ULTRA_LITE_MODEL_ID} successfully loaded in CPU memory.")
             return True
         except Exception as e:
             logger.warning(f"Local 0.5B model load skipped or failed: {e}")

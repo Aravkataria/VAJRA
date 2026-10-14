@@ -128,9 +128,9 @@ class AdversarialMutationEngine:
         )
 
         if has_unsafe_sink:
-            return True, "Sentinel detected dangerous sink node in mutant AST (KILLED ✓)"
+            return True, "Sentinel detected dangerous sink node in mutant AST (KILLED )"
 
         if "if False:" in mutant_source or "pass # stripped guard" in mutant_source:
-            return True, "Sentinel detected disabled path validation guard (KILLED ✓)"
+            return True, "Sentinel detected disabled path validation guard (KILLED )"
 
-        return True, "Security test suite identified invariant violation (KILLED ✓)"
+        return True, "Security test suite identified invariant violation (KILLED )"

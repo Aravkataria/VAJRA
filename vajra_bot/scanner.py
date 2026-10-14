@@ -453,5 +453,5 @@ def scan_file(path: Path) -> List[Finding]:
         content = path.read_text(encoding="utf-8", errors="ignore")
         return scan_content(str(path), content)
     except Exception as e:
-        print(f"⚠️ Could not read {path}: {e}")
+        print(f"[WARN] Could not read {path}: {e}")
         return []

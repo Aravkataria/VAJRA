@@ -2781,7 +2781,7 @@
               <div class="settings-row">
                 <div>
                   <div class="settings-row-label">Queued Messages</div>
-                  <div class="settings-row-desc">Configure when follow-up messages are sent. Keyboard shortcuts ℹ️</div>
+                  <div class="settings-row-desc">Configure when follow-up messages are sent. Keyboard shortcuts [INFO]</div>
                 </div>
                 <div class="segmented-pill" id="prefQueuePill">
                   <button type="button" class="segmented-pill-btn active" data-val="queue" onclick="selectSegmented('prefQueuePill', 'queue')">Queue</button>
@@ -2806,7 +2806,7 @@
               <div class="settings-row">
                 <div>
                   <div class="settings-row-label">Security Preset</div>
-                  <div class="settings-row-desc">Controls the actions the agent can take. Learn more about Default ℹ️</div>
+                  <div class="settings-row-desc">Controls the actions the agent can take. Learn more about Default [INFO]</div>
                 </div>
                 <select id="prefSecurityPreset" class="modal-input" style="width:auto; min-width:150px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
                   <option value="default">Default</option>
@@ -2956,9 +2956,9 @@
                   <div class="settings-row-desc">Dual-channel speculation pairs 0.5B instant drafting with 7B deep reasoning.</div>
                 </div>
                 <select id="prefPipelineSelect" class="modal-input" style="width:auto; min-width:260px; padding:4px 8px; font-size:0.76rem; cursor:pointer;">
-                  <option value="hybrid">⚡ Dual-Channel (0.5B Speculative + 7B Engine)</option>
-                  <option value="deep">🔒 Dedicated 7B Model Only</option>
-                  <option value="lite">🚀 Ultra-Fast 0.5B Speculative Only</option>
+                  <option value="hybrid"> Dual-Channel (0.5B Speculative + 7B Engine)</option>
+                  <option value="deep"> Dedicated 7B Model Only</option>
+                  <option value="lite"> Ultra-Fast 0.5B Speculative Only</option>
                 </select>
               </div>
               <div class="settings-row">
@@ -3973,7 +3973,7 @@
 
       var logResponse =
         '<div>' +
-          '🛡️ <b>Forensic Ingestion Complete for ' + escapeHtml(targetName) + '</b><br>' +
+          ' <b>Forensic Ingestion Complete for ' + escapeHtml(targetName) + '</b><br>' +
           'Found <b>' + findings.length + ' vulnerabilities</b>, synthesized <b>' + patches.length + ' verified minimal patches</b>, ' +
           'and verified all proof stages in isolated runtime sandbox.' +
         '</div>' +
@@ -4094,7 +4094,7 @@
         if (st) {
           st.style.display = "block";
           st.style.color = "var(--ok, #4ade80)";
-          st.textContent = "✓ Diagnostics copied to clipboard!";
+          st.textContent = " Diagnostics copied to clipboard!";
           setTimeout(function () { st.style.display = "none"; }, 3000);
         }
       });
@@ -4211,11 +4211,11 @@
       if (st) {
         st.style.display = "block";
         st.style.color = "var(--ok, #4ade80)";
-        st.innerHTML = "✅ <b>Bug report sent directly to Arav Kataria!</b><br><span style='font-size:0.75rem; color:var(--text-muted);'>Delivered to maintainer inbox. Thank you for reporting!</span>";
+        st.innerHTML = "[OK] <b>Bug report sent directly to Arav Kataria!</b><br><span style='font-size:0.75rem; color:var(--text-muted);'>Delivered to maintainer inbox. Thank you for reporting!</span>";
       }
 
       if (btn) {
-        btn.textContent = "Delivered ✓";
+        btn.textContent = "Delivered ";
         btn.disabled = false;
       }
 
@@ -4363,7 +4363,7 @@
       var st = document.getElementById("hfTokenStatus");
       if (st) {
         if (tokenVal) {
-          st.textContent = "✅ ZeroGPU A10G Acceleration Active";
+          st.textContent = "[OK] ZeroGPU A10G Acceleration Active";
           st.style.color = "var(--ok, #4ade80)";
         } else {
           st.textContent = "Operating on shared public quotas.";
@@ -4503,7 +4503,7 @@
       if (notice) {
         notice.style.display = "inline";
         notice.style.color = "var(--ok, #4ade80)";
-        notice.textContent = "✅ Preferences saved!";
+        notice.textContent = "[OK] Preferences saved!";
       }
 
       setTimeout(function () {
@@ -5127,7 +5127,7 @@
           }
 
           var formattedHtml = formatBotMarkdown(partial);
-          formattedHtml += '<div style="margin-top:8px; font-size:0.75rem; color:var(--text-muted); font-family:\'JetBrains Mono\',monospace;">⏹️ Generation stopped by user</div>';
+          formattedHtml += '<div style="margin-top:8px; font-size:0.75rem; color:var(--text-muted); font-family:\'JetBrains Mono\',monospace;"> Generation stopped by user</div>';
 
           if (card) {
             card.innerHTML = formattedHtml;
@@ -5215,7 +5215,7 @@
         try { e.preventDefault(); e.stopPropagation(); } catch(err) {}
       }
       if (!isGenerating) return;
-      console.log("🛑 [VAJRA User Action] Generation stopped by user.");
+      console.log("[STOP] [VAJRA User Action] Generation stopped by user.");
 
       if (activeGenerationAbortController) {
         try {
@@ -5369,7 +5369,7 @@
       try {
         var expiry = Date.now() + 15 * 60 * 1000;
         sessionStorage.setItem("vajra_zerogpu_cooldown", expiry.toString());
-        console.warn("🛡️ [VAJRA Circuit Breaker] ZeroGPU Quota Exhausted (429). Tripped 15-minute cooldown. CPU Workhorse Active.");
+        console.warn(" [VAJRA Circuit Breaker] ZeroGPU Quota Exhausted (429). Tripped 15-minute cooldown. CPU Workhorse Active.");
       } catch (e) {}
     }
 
@@ -5399,7 +5399,7 @@
         sendBtn.title = "Cooldown active — wait for inference to resume";
       }
       if (composer) {
-        composer.placeholder = "\u23F1 Inference cooldown: " + remaining + "s remaining...";
+        composer.placeholder = "Inference cooldown: " + remaining + "s remaining...";
       }
 
       rateLimitInterval = setInterval(function() {
@@ -5408,7 +5408,7 @@
         if (cdSpan) cdSpan.textContent = remaining;
 
         if (composer) {
-          composer.placeholder = "\u23F1 Inference cooldown: " + remaining + "s remaining...";
+          composer.placeholder = "Inference cooldown: " + remaining + "s remaining...";
         }
 
         if (remaining <= 0) {
@@ -5426,7 +5426,7 @@
           }
           var timerBox = document.getElementById("cooldownTimerBox");
           if (timerBox) {
-            timerBox.innerHTML = "\u2705 <b>Cooldown Complete</b>: AI inference engine is ready for your next request!";
+            timerBox.innerHTML = "<b>Cooldown Complete</b>: AI inference engine is ready for your next request!";
             timerBox.style.color = "var(--ok, #5fbf7a)";
           }
         }
@@ -5508,7 +5508,7 @@
                 if (firstTokenTimeoutMs && firstTokenTimeoutMs > 0) {
                   bailoutTimer = setTimeout(function() {
                     if (!receivedFirstToken) {
-                      console.warn("⏱️ [VAJRA Watchdog] First token watchdog fired (" + firstTokenTimeoutMs + "ms). Initiating Fast Bailout.");
+                      console.warn(" [VAJRA Watchdog] First token watchdog fired (" + firstTokenTimeoutMs + "ms). Initiating Fast Bailout.");
                       try { reader.cancel(); } catch (cancelErr) {}
                     }
                   }, firstTokenTimeoutMs);
@@ -5887,7 +5887,7 @@
         // 2. TRUE LAST RESORT: ZeroGPU A10G Burst (only if 2 vCPU is busy or unreachable AND no tokens were received)
         var zeroGpuAvailable = !isZeroGpuCircuitOpen();
         if (!vcpuTokensReceived && (vcpuBusy || vcpuFailed) && zeroGpuAvailable) {
-          console.log("⚡ [VAJRA Last Resort] 2 vCPU " + (vcpuBusy ? "busy/overflow" : "failed") + " -> Escalating to ZeroGPU A10G as last resort...");
+          console.log(" [VAJRA Last Resort] 2 vCPU " + (vcpuBusy ? "busy/overflow" : "failed") + " -> Escalating to ZeroGPU A10G as last resort...");
           try {
             var gpuRes = await _executeSingleHfSpaceQuery(
               VAJRA_HF_ZEROGPU_URL.replace(/\/$/, ""),
@@ -5949,7 +5949,7 @@
     async function tryFastLlmInference(userPrompt, sess, extraFiles, onToken, activeReqId) {
       var dlpResult = sanitizeClientDlpAndPii(userPrompt);
       if (dlpResult.detected.length > 0) {
-        console.log("🛡️ [VAJRA Client DLP Gatekeeper] Auto-redacted sensitive client data before transmission:", dlpResult.detected);
+        console.log(" [VAJRA Client DLP Gatekeeper] Auto-redacted sensitive client data before transmission:", dlpResult.detected);
         userPrompt = dlpResult.text;
       }
 
@@ -6454,7 +6454,7 @@
           removeTypingIndicator();
           appendSessionMessage("bot",
             "<div style='border:1px solid var(--spark); background:rgba(245,180,0,0.08); padding:12px 16px; border-radius:8px; font-size:0.88rem;'>" +
-              "<b>\u23F1 Inference Cooldown Active</b>" +
+              "<b>Inference Cooldown Active</b>" +
               "<p style='margin-top:6px; color:var(--text-secondary);'>The AI inference engine is still resetting. Please wait <b>" + secLeft + " more seconds</b> before sending your next message.</p>" +
               "<p style='margin-top:4px; font-size:0.82rem; color:var(--text-muted);'>You can continue using local AST security scans and codebase audits without limit.</p>" +
             "</div>"
@@ -6603,7 +6603,7 @@
               (query.startsWith("upload") && query.length < 30)) {
             return '<p><b>How to Submit Code to VAJRA:</b></p>' +
               '<ul style="margin:0.4rem 0 0 1.2rem; font-size:0.85rem; color:var(--text-secondary); line-height:1.6;">' +
-                '<li>Click the <b>📎 attachment icon</b> in the chat input to upload individual files</li>' +
+                '<li>Click the <b> attachment icon</b> in the chat input to upload individual files</li>' +
                 '<li>Drag-and-drop a <b>ZIP archive</b> directly into the chat window</li>' +
                 '<li>Paste a <b>GitHub repository URL</b> in the chat input</li>' +
                 '<li>Click <b>Load Local Folder</b> in the sidebar to scan entire project directories</li>' +
@@ -6661,7 +6661,7 @@
         // Hard Ceiling Timer: Dissolves glass if deep reasoner exceeds 75s
         var glassCeilingTimer = setTimeout(function() {
           if (!isDeepResolved && typewriter && typewriter.isDraftActive && typewriter.isDraftActive()) {
-            console.warn("⏱️ [VAJRA Guard] Ceiling reached: dissolving glass overlay and presenting draft response.");
+            console.warn(" [VAJRA Guard] Ceiling reached: dissolving glass overlay and presenting draft response.");
             typewriter.removeGlassOverlay();
             typewriter.updateBadge("AravKataria/vajra-7b-gguf (4-bit 2 vCPU)");
             if (draftReplyText) {
@@ -6721,7 +6721,7 @@
         }, thisRequestId);
 
         if (thisRequestId !== activeInferenceRequestId) {
-          console.warn("🛡️ [VAJRA Concurrency Guard] Stale request superseded by newer query; discarded.");
+          console.warn(" [VAJRA Concurrency Guard] Stale request superseded by newer query; discarded.");
           return;
         }
 
@@ -6758,7 +6758,7 @@
               "<div class='rate-limit-alert' style='border: 1px solid var(--spark); background: rgba(245, 180, 0, 0.08); padding: 14px 16px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5; color: var(--text-primary);'>" +
                 "<p>" + formattedHtml + "</p>" +
                 "<div id='cooldownTimerBox' style='margin-top: 10px; font-family: monospace; font-size: 0.8rem; color: var(--spark); font-weight: 600;'>" +
-                  "\u23F1\uFE0F Cooldown active: <span id='cooldownSeconds'>" + Math.min(inferenceRes.retryAfter || 30, 30) + "</span>s remaining" +
+                  "Cooldown active: <span id='cooldownSeconds'>" + Math.min(inferenceRes.retryAfter || 30, 30) + "</span>s remaining" +
                 "</div>" +
               "</div>"
             );
@@ -6844,7 +6844,7 @@
               'The cloud neural reasoning cluster is currently busy or warming up from idle. Please wait a few seconds and try your request again.' +
             '</p>' +
             '<p style="margin-top:0.4rem; color:var(--text-secondary); font-size:0.85rem;">' +
-              '💡 <i>Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit, or provide a GitHub repository link for deterministic verification.</i>' +
+              ' <i>Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit, or provide a GitHub repository link for deterministic verification.</i>' +
             '</p>';
         }
         appendSessionMessage("bot", response, "VAJRA REASONING AUDIT");

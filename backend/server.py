@@ -318,7 +318,7 @@ async def report_bug_endpoint(req: BugReportRequest, request: Request):
         with open(reports_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(report_record) + "\n")
     except Exception as e:
-        print(f"⚠️ Bug report logging note: {e}")
+        print(f"[WARN] Bug report logging note: {e}")
 
     return JSONResponse({
         "success": True,
@@ -466,7 +466,7 @@ async def chat_endpoint(req: ChatRequest, request: Request):
                     "success": False,
                     "rate_limited": True,
                     "retry_after": retry_seconds,
-                    "reply": f"⚠️ **Inference Limit Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait **{wait_text}** before sending your next chat request.\n\n💡 *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
+                    "reply": f"[WARN] **Inference Limit Reached**\n\nYou have reached the temporary AI inference limit for this session (free GPU compute quota). Please wait **{wait_text}** before sending your next chat request.\n\n *Tip: You can continue using local AST security scans, CWE rule triage, and codebase audits without limit.*"
                 }, status_code=429)
             return JSONResponse({
                 "success": False,
@@ -490,5 +490,5 @@ async def chat_endpoint(req: ChatRequest, request: Request):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    print(f"⚡ Starting VAJRA Fast Backend on http://0.0.0.0:{port}...")
+    print(f" Starting VAJRA Fast Backend on http://0.0.0.0:{port}...")
     uvicorn.run(app, host="0.0.0.0", port=port)
