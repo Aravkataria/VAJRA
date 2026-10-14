@@ -13,10 +13,10 @@ import os
 import unittest
 from pathlib import Path
 
-# Add hf_space to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf_space"))
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import (
+from hf_space.app import (
     sanitize_and_check_injection,
     scrub_output_secrets,
     VAJRA_SYSTEM_PROMPT,

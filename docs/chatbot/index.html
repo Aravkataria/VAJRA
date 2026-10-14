@@ -5296,7 +5296,7 @@
     }
 
     /* ─── Contextual Safety & Content Policy Evaluator (Not Naive Keyword Blocking) ─── */
-    var TECHNICAL_CONTEXT_REGEX = /\b(llm|large\s+language\s+model|transformer|neural\s+network|deep\s+learning|machine\s+learning|ai\s+model|pytorch|tensorflow|hugging\s*face|fine-?tun\w*|weights|loss|gradient|backprop\w*|scratch|dataset|python|javascript|typescript|c\+\+|golang|rust|java|html|css|sql|nosql|docker|kubernetes|linux|algorithm|data\s+structure|api|backend|frontend|framework|library|compiler|ast|syntax\s+tree|bytecode|react|vue|angular|node|express|fastapi|django|flask|nextjs|tailwind|git|github|database|query|schema|memory|pointer|buffer|stack|heap|concurrency|async|await|coroutine|socket|network|tcp|udp|http|dns|build|code|coding|develop|programming|script|scripting|debug|debugging|refactor|optimize|architecture|system\s+design|penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|anatomy|medicine|medical|physiology|cellular|molecular|genetics|pharmacology|therapy|math|calculus|algebra|linear\s+algebra|matrix|tensor|vector|statistics|probability|firmware|packet\s+capture|wireshark|software|function|variable|class|object|method|repo|repository)\b/i;
+    var TECHNICAL_CONTEXT_REGEX = /\b(llm|large\s+language\s+model|transformer|neural\s+network|deep\s+learning|machine\s+learning|ai\s+model|pytorch|tensorflow|hugging\s*face|fine-?tun\w*|weights|loss|gradient|backprop\w*|scratch|dataset|python|javascript|typescript|c\+\+|golang|rust|java|html|css|sql|nosql|docker|kubernetes|linux|algorithm|data\s+structure|api|backend|frontend|framework|library|compiler|ast|syntax\s+tree|bytecode|react|vue|angular|node|express|fastapi|django|flask|nextjs|tailwind|git|github|database|query|schema|memory|pointer|buffer|stack|heap|concurrency|async|await|coroutine|socket|network|tcp|udp|http|dns|build|code|coding|develop|programming|script|scripting|debug|debugging|refactor|optimize|architecture|system\s+design|penetration\s+test(ing)?|pen\s+test(ing)?|vulnerabilit(y|ies)|cve-\d+|ast\s+sink|sink\s+sanitiz\w*|sql\s+injection|sqli|cross-site\s+scripting|xss|csrf|buffer\s+overflow|heap\s+overflow|stack\s+overflow|race\s+condition|idor|privilege\s+escalation|reverse\s+shell|reverse\s+engineer(ing)?|malware\s+analysis|forensic(s)?|disassembl(y|er|ed)|decompil(er|ed|ation)?|binary\s+exploitation|shellcode|rop\s+chain|kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|anatomy|medicine|medical|physiology|cellular|molecular|genetics|pharmacology|therapy|schrodinger|schrödinger|heisenberg|quantum|wave\s+equation|wavefunction|superposition|entanglement|physics|mechanics|thermodynamics|relativity|hamiltonian|particle|photon|electron|proton|neutron|atom|atomic|molecule|molecular|orbit|spin|boson|fermion|gravit\w*|cosmolog\w*|astrophysic\w*|electromagnet\w*|maxwell|planck|bohr|dirac|feynman|einstein|newton\w*|optics|spectroscopy|kinetic|potential\s+energy|entropy|enthalpy|math|equation|formula|theorem|proof|calculus|derivative|integral|differential|eigen\w*|laplace|fourier|matrix|matrices|geometry|algebra|linear\s+algebra|tensor|vector|statistics|probability|topology|trigonometr\w*|polynomial|arithmetic|logarithm|exponent|combinatorics|discrete\s+math|chemistry|chemical|reaction|catalyst|element|compound|acid|base|protein|dna|rna|enzyme|organism|explain|how\s+does|how\s+to|what\s+is|who\s+is|why\s+is|why\s+does|define|definition|describe|summary|summarize|history|concept|theory|principle|overview|tutorial|guide|firmware|packet\s+capture|wireshark|software|function|variable|class|object|method|repo|repository)\b/i;
 
     var HARD_BAN_REGEX = /\b(child\s+porn|csam|underage\s+(sex|porn|nude|erotic)|pedophil\w*|pedosex\w*|rape|gangrape|non-consensual\s+sex|sexual\s+assault|date\s+rape|revenge\s+porn|forced\s+intercourse|molest(ation|ing)?)\b/i;
 
@@ -5377,7 +5377,7 @@
     function classifyQueryComplexity(fullPrompt) {
       if (!fullPrompt) return false;
       if (fullPrompt.length > 350) return true;
-      var complexTriggers = /\b(audit|scan|ast|taint|sink|exploit|cwe-\d+|patch|disassembl|decompile|decompil|decompilation|invariant|symbolic|formal proof|vulnerability|schrodinger|taylor\s+series|calculus|derivative|integral|eigen|laplace|fourier|matrix|differential\s+equation)\b/i;
+      var complexTriggers = /\b(audit|scan|ast|taint|sink|exploit|cwe-\d+|patch|disassembl|decompile|decompil|decompilation|invariant|symbolic|formal proof|vulnerability|schrodinger|schrödinger|heisenberg|quantum|wave\s+equation|taylor\s+series|calculus|derivative|integral|eigen|laplace|fourier|matrix|differential\s+equation|physics|mechanics|thermodynamics|relativity|hamiltonian|einstein|maxwell)\b/i;
       return complexTriggers.test(fullPrompt);
     }
 
@@ -5457,10 +5457,13 @@
             var cleanDiff = rawItem.replace(/^append,*\s*/, "");
             return (prevAcc || "") + (prevAcc && !prevAcc.endsWith(" ") && !cleanDiff.startsWith(" ") ? " " : "") + cleanDiff;
           }
-          if (prevAcc && rawItem.length >= prevAcc.length && rawItem.startsWith(prevAcc.slice(0, Math.min(prevAcc.length, 12)))) {
+          if (prevAcc && (rawItem.startsWith(prevAcc.slice(0, Math.min(prevAcc.length, 20))) || rawItem.length >= prevAcc.length)) {
             return rawItem;
           }
-          return (prevAcc || "") + rawItem;
+          if (prevAcc && !rawItem.startsWith(prevAcc)) {
+            return prevAcc + rawItem;
+          }
+          return rawItem || prevAcc || "";
         }
         return String(rawItem || "");
       }

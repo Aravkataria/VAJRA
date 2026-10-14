@@ -367,7 +367,16 @@ TECHNICAL_CONTEXT_REGEX = re.compile(
     r"kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|"
     r"sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|"
     r"anatomy|medicine|medical|physiology|cellular|molecular|genetics|pharmacology|therapy|"
-    r"math|calculus|algebra|linear\s+algebra|matrix|tensor|vector|statistics|probability|"
+    r"schrodinger|schrödinger|heisenberg|quantum|wave\s+equation|wavefunction|superposition|entanglement|"
+    r"physics|mechanics|thermodynamics|relativity|hamiltonian|particle|photon|electron|proton|neutron|atom|atomic|"
+    r"molecule|molecular|orbit|spin|boson|fermion|gravit\w*|cosmolog\w*|astrophysic\w*|electromagnet\w*|"
+    r"maxwell|planck|bohr|dirac|feynman|einstein|newton\w*|optics|spectroscopy|kinetic|potential\s+energy|entropy|enthalpy|"
+    r"math|equation|formula|theorem|proof|calculus|derivative|integral|differential|eigen\w*|laplace|fourier|"
+    r"matrix|matrices|geometry|algebra|linear\s+algebra|tensor|vector|statistics|probability|topology|trigonometr\w*|"
+    r"polynomial|arithmetic|logarithm|exponent|combinatorics|discrete\s+math|"
+    r"chemistry|chemical|reaction|catalyst|element|compound|acid|base|protein|dna|rna|enzyme|organism|"
+    r"explain|how\s+does|how\s+to|what\s+is|who\s+is|why\s+is|why\s+does|define|definition|describe|summary|summarize|"
+    r"history|concept|theory|principle|overview|tutorial|guide|"
     r"firmware|packet\s+capture|wireshark|software|function|variable|class|object|method|repo|repository"
     r")\b",
     re.IGNORECASE
@@ -389,6 +398,17 @@ DESTRUCTIVE_MALWARE_REGEX = re.compile(
     r"\b(write|code|create|build|generate|make)\b.*"
     r"\b(undetectable\s+ransomware|corporate\s+ransomware|disk\s+wiper|destroy\s+boot\s+records|"
     r"mbr\s+wiper|destructive\s+wiper|weaponized\s+trojan|evade\s+all\s+edr\s+to\s+steal)\b",
+    re.IGNORECASE
+)
+
+# 4. Sensitive Adult / Erotic Indicators (Explicit NSFW signal check before neural guard):
+SENSITIVE_NSFW_TRIGGER_REGEX = re.compile(
+    r"\b("
+    r"erotic|erotica|porn|porno|pornograph\w*|nsfw|hentai|sexually\s+explicit|"
+    r"fetish|blowjob|handjob|orgasm|cunnilingus|fellatio|masturbat\w*|"
+    r"intercourse|coitus|penetration|vagina|penis|boobs|tits|clitoris|"
+    r"naked|nude|nudity|striptease|sexy|sensual|horny|lust|bedroom\s+roleplay"
+    r")\b",
     re.IGNORECASE
 )
 
@@ -445,19 +465,25 @@ def classify_neural_intent(prompt: str) -> Tuple[bool, str]:
     """
     Tier 2: 0.5B Neural Guard (~80-150ms).
     Zero-shot semantic intent classification using local Qwen2.5-Coder-0.5B-Instruct on CPU.
-    No hardcoded erotic/nsfw word lists: evaluates context, semantics, and intent dynamically.
+    Evaluates context, semantics, and intent dynamically for ambiguous queries.
     Returns (is_safe: bool, reason: str).
     """
+    # Fast path: If prompt contains zero sensitive adult/erotic triggers, it is unconditionally safe.
+    if not SENSITIVE_NSFW_TRIGGER_REGEX.search(prompt):
+        return True, "no_sensitive_signals"
+
     tok, m = get_draft_model()
     if tok is None or m is None:
         return True, "model_unavailable"
 
     try:
         guard_system = (
-            "You are VAJRA Neural Safety Guard. Analyze the user prompt's true semantic intent.\n"
+            "You are VAJRA Semantic Safety Classifier.\n"
+            "Evaluate whether the user prompt's true semantic intent is EXPLICIT EROTIC PORNOGRAPHY / EROTIC ROLEPLAY, or a LEGITIMATE INQUIRY (medical, biological, educational, scientific, programming, historical).\n"
             "Rules:\n"
-            "- Output [UNSAFE] if the user explicitly requests erotic narrative, pornography, sexually explicit roleplay, or destructive malware payloads.\n"
-            "- Output [SAFE] for all programming, cybersecurity forensics, biology, anatomy, medicine, history, creative writing (non-erotic), and general conversation.\n"
+            "- Output [UNSAFE] ONLY if the user explicitly requests erotic narrative, sexually explicit roleplay, or pornography.\n"
+            "- Output [SAFE] for all technical, scientific, educational, medical, anatomical, historical, creative writing (non-erotic), and general conversation.\n"
+            "When in doubt, output [SAFE].\n"
             "Respond ONLY with [SAFE] or [UNSAFE]."
         )
         messages = [
@@ -481,7 +507,9 @@ def classify_neural_intent(prompt: str) -> Tuple[bool, str]:
         if verdict.startswith("[SAFE]") or verdict.startswith("SAFE") or ("[SAFE]" in verdict and "[UNSAFE]" not in verdict):
             return True, "neural_safe"
         if ("[UNSAFE]" in verdict or verdict.startswith("UNSAFE")) and "NOT UNSAFE" not in verdict and "NOT [UNSAFE]" not in verdict:
-            return False, "neural_unsafe"
+            if SENSITIVE_NSFW_TRIGGER_REGEX.search(prompt):
+                return False, "neural_unsafe"
+            return True, "neural_safe"
         return True, "neural_safe"
     except Exception as e:
         print(f"[WARN] 0.5B Neural Guard evaluation exception: {e}")
@@ -609,26 +637,14 @@ def get_gguf_model():
             token=token
         )
         print(f"[OK] [VAJRA v2] Downloaded GGUF to {model_path}. Initializing Llama CPU engine (2 threads, 4K ctx, 512 batch)...")
-        try:
-            gguf_llm = Llama(
-                model_path=model_path,
-                n_threads=2,
-                n_ctx=4096,
-                n_batch=512,
-                chat_format="chatml",
-                type_k=2,
-                type_v=2,
-                verbose=False
-            )
-        except Exception:
-            gguf_llm = Llama(
-                model_path=model_path,
-                n_threads=2,
-                n_ctx=4096,
-                n_batch=512,
-                chat_format="chatml",
-                verbose=False
-            )
+        gguf_llm = Llama(
+            model_path=model_path,
+            n_threads=2,
+            n_ctx=4096,
+            n_batch=512,
+            chat_format="chatml",
+            verbose=False
+        )
         print(" [VAJRA v2] 4-bit 7B GGUF Model ONLINE on 2 vCPU! (~3.8 GB RAM footprint)")
     except Exception as e:
         print(f"[INFO] [VAJRA v2] GGUF model note: {e}. Using 0.5B CPU engine.")
@@ -715,7 +731,7 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
             output = llm.create_chat_completion(
                 messages=prompt_msgs,
-                max_tokens=350,
+                max_tokens=512,
                 temperature=0.25,
                 top_p=0.9,
                 repeat_penalty=1.15,
@@ -725,10 +741,6 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             for marker in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
                 if marker in raw_reply:
                     raw_reply = raw_reply.split(marker)[0].strip()
-            if raw_reply and not raw_reply.endswith(('.', '!', '?', '`', '}')):
-                last_punct = max(raw_reply.rfind('.'), raw_reply.rfind('!'), raw_reply.rfind('?'))
-                if last_punct > len(raw_reply) // 2:
-                    raw_reply = raw_reply[:last_punct + 1].strip()
             if not is_safe and reason == "defensive_reframe" and not raw_reply.startswith(DEFENSIVE_REFRAME_MALWARE):
                 raw_reply = DEFENSIVE_REFRAME_MALWARE + raw_reply
             print("[OK] [VAJRA v2] Query processed locally via 4-bit 7B GGUF engine.")
@@ -852,7 +864,7 @@ def gradio_generate(prompt: str):
             try:
                 for chunk in llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=350,
+                    max_tokens=512,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.15,
@@ -872,10 +884,6 @@ def gradio_generate(prompt: str):
                                         for m in ["<|im_end|>", "<|im_start|>", "\nUser:", "\n\nUser:"]:
                                             if m in accumulated:
                                                 accumulated = accumulated.split(m)[0].strip()
-                                        if accumulated and not accumulated.endswith(('.', '!', '?', '`', '}')):
-                                            last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
-                                            if last_p > len(accumulated) // 2:
-                                                accumulated = accumulated[:last_p + 1].strip()
                                         yield scrub_output_secrets(accumulated)
                                         return
                                     yield scrub_output_secrets(accumulated)
@@ -885,10 +893,6 @@ def gradio_generate(prompt: str):
                 print(f"[WARN] GGUF stream=True note: {stream_err}")
 
             if accumulated:
-                if not accumulated.endswith(('.', '!', '?', '`', '}')):
-                    last_p = max(accumulated.rfind('.'), accumulated.rfind('!'), accumulated.rfind('?'))
-                    if last_p > len(accumulated) // 2:
-                        accumulated = accumulated[:last_p + 1].strip()
                 yield scrub_output_secrets(accumulated)
                 return
 
@@ -896,7 +900,7 @@ def gradio_generate(prompt: str):
             try:
                 direct_out = llm.create_chat_completion(
                     messages=prompt_msgs,
-                    max_tokens=350,
+                    max_tokens=512,
                     temperature=0.25,
                     top_p=0.9,
                     repeat_penalty=1.15,
@@ -907,10 +911,6 @@ def gradio_generate(prompt: str):
                     if m in direct_reply:
                         direct_reply = direct_reply.split(m)[0].strip()
                 if direct_reply:
-                    if not direct_reply.endswith(('.', '!', '?', '`', '}')):
-                        last_p = max(direct_reply.rfind('.'), direct_reply.rfind('!'), direct_reply.rfind('?'))
-                        if last_p > len(direct_reply) // 2:
-                            direct_reply = direct_reply[:last_p + 1].strip()
                     yield scrub_output_secrets(direct_reply)
                     return
             except Exception as direct_err:

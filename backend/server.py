@@ -123,7 +123,16 @@ TECHNICAL_CONTEXT_REGEX = re.compile(
     r"kill\s+-9|kill\s+process|sigkill|sigterm|daemon|thread|mutex|deadlock|process\s+management|"
     r"sex\s+ratio|demographic(s)?|chromosome|phenotype|genotype|biology|biological\s+sex|clinical|pathology|"
     r"anatomy|medicine|medical|physiology|cellular|molecular|genetics|pharmacology|therapy|"
-    r"math|calculus|algebra|linear\s+algebra|matrix|tensor|vector|statistics|probability|"
+    r"schrodinger|schrödinger|heisenberg|quantum|wave\s+equation|wavefunction|superposition|entanglement|"
+    r"physics|mechanics|thermodynamics|relativity|hamiltonian|particle|photon|electron|proton|neutron|atom|atomic|"
+    r"molecule|molecular|orbit|spin|boson|fermion|gravit\w*|cosmolog\w*|astrophysic\w*|electromagnet\w*|"
+    r"maxwell|planck|bohr|dirac|feynman|einstein|newton\w*|optics|spectroscopy|kinetic|potential\s+energy|entropy|enthalpy|"
+    r"math|equation|formula|theorem|proof|calculus|derivative|integral|differential|eigen\w*|laplace|fourier|"
+    r"matrix|matrices|geometry|algebra|linear\s+algebra|tensor|vector|statistics|probability|topology|trigonometr\w*|"
+    r"polynomial|arithmetic|logarithm|exponent|combinatorics|discrete\s+math|"
+    r"chemistry|chemical|reaction|catalyst|element|compound|acid|base|protein|dna|rna|enzyme|organism|"
+    r"explain|how\s+does|how\s+to|what\s+is|who\s+is|why\s+is|why\s+does|define|definition|describe|summary|summarize|"
+    r"history|concept|theory|principle|overview|tutorial|guide|"
     r"firmware|packet\s+capture|wireshark|software|function|variable|class|object|method|repo|repository"
     r")\b",
     re.IGNORECASE
