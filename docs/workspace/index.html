@@ -6688,9 +6688,6 @@
             }
             return draftText;
           }).catch(function() { return null; });
-
-          // Wait up to 4.5s for 0.5B draft to render before 7B starts
-          await Promise.race([draftPromise, new Promise(function(r) { setTimeout(r, 4500); })]);
         }
 
         // Handle streaming chunks from Channel B (replace word-by-word behind glass overlay)
