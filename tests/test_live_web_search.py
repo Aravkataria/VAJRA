@@ -96,3 +96,29 @@ def test_vajra_live_web_search_structure():
         assert "snippet" in first
         assert "source" in first
         assert first["url"].startswith("http")
+
+def test_vajra_search_google_structure():
+    from backend.server import vajra_search_google
+    results = vajra_search_google("Python language updates", max_results=2)
+    assert isinstance(results, list)
+    for item in results:
+        assert "title" in item
+        assert "url" in item
+        assert "snippet" in item
+        assert "source" in item
+
+def test_format_web_context_deep_research():
+    sample_sources = [
+        {
+            "title": "Quantum Physics Breakthrough",
+            "url": "https://example.com/quantum",
+            "snippet": "New research on Schrödinger wave equations...",
+            "source": "Google News"
+        }
+    ]
+    formatted = format_web_context_for_prompt(sample_sources, deep_research=True)
+    assert "[VAJRA Deep Research Multi-Source Dossier]" in formatted
+    assert "### References & Sources" in formatted
+    assert "https://example.com/quantum" in formatted
+    assert "multi-dimensional technical synthesis" in formatted
+

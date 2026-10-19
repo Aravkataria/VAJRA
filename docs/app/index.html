@@ -1769,6 +1769,243 @@
       color: #3f3f46;
     }
 
+    /* More Options & Intelligence Menu */
+    .more-options-container {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-more-options {
+      padding: 0.25rem 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .btn-more-options.active-mode {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+    }
+
+    .more-options-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      width: 290px;
+      background: #0f131a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+      padding: 0.6rem 0.75rem;
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+
+    [data-theme="light"] .more-options-menu {
+      background: #ffffff;
+      border-color: rgba(0, 0, 0, 0.12);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+    }
+
+    .more-options-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted, #71717a);
+      padding: 0.2rem 0.25rem 0.45rem 0.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      margin-bottom: 0.45rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] .more-options-header {
+      border-bottom-color: rgba(0, 0, 0, 0.08);
+      color: #71717a;
+    }
+
+    .more-option-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 0.45rem 0.35rem;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s ease;
+    }
+
+    .more-option-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    [data-theme="light"] .more-option-item:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .more-option-item .option-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .more-option-item .option-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary, #f4f4f5);
+    }
+
+    .more-option-item .option-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary, #a1a1aa);
+      line-height: 1.25;
+    }
+
+    .more-option-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    .more-options-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.07);
+      margin: 0.35rem 0;
+    }
+
+    [data-theme="light"] .more-options-divider {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .active-mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.22rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+      transition: all 0.15s ease;
+    }
+
+    .active-mode-pill:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: rgba(56, 189, 248, 0.6);
+    }
+
+    /* Verified References & Sources Block & Card Grid */
+    .vajra-references-block {
+      margin-top: 1.25rem;
+      padding-top: 0.95rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    [data-theme="light"] .vajra-references-block {
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .vajra-references-header {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 0.65rem;
+    }
+
+    .vajra-references-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 0.55rem;
+    }
+
+    .vajra-reference-pill-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.35rem;
+      padding: 0.6rem 0.75rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text-primary, #f4f4f5);
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] .vajra-reference-pill-card {
+      background: rgba(0, 0, 0, 0.02);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #18181b;
+    }
+
+    .vajra-reference-pill-card:hover {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .ref-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem;
+    }
+
+    .ref-domain-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 1px 6px;
+      border-radius: 3px;
+      max-width: 85%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ref-ext-icon {
+      color: var(--text-muted, #71717a);
+      flex-shrink: 0;
+      transition: color 0.12s ease;
+    }
+
+    .vajra-reference-pill-card:hover .ref-ext-icon {
+      color: #38bdf8;
+    }
+
+    .ref-card-title {
+      font-size: 0.79rem;
+      font-weight: 500;
+      line-height: 1.35;
+      color: var(--text-secondary, #e4e4e7);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] .ref-card-title {
+      color: #3f3f46;
+    }
+
     .btn-run-scan {
       background: var(--btn-primary-bg);
       color: var(--btn-primary-text);
@@ -2573,6 +2810,40 @@
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
                   GitHub
                 </button>
+                <div class="more-options-container" id="moreOptionsContainer">
+                  <button type="button" class="btn-tool-chip btn-more-options" id="btnMoreOptions" onclick="toggleMoreOptionsMenu(event)" title="More Options: Live Web Search, Deep Research & Search Engine">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg>
+                    ...
+                  </button>
+                  <div class="more-options-menu" id="moreOptionsDropdown" style="display: none;">
+                    <div class="more-options-header">
+                      <span>Intelligence &amp; Dual-Layer Retrieval</span>
+                    </div>
+                    <label class="more-option-item" for="toggleLiveWebSearch">
+                      <div class="option-info">
+                        <span class="option-title">Live Web Search</span>
+                        <span class="option-desc">Layer 1: Real-time internet grounding</span>
+                      </div>
+                      <input type="checkbox" id="toggleLiveWebSearch" onchange="onSearchOptionChanged()">
+                    </label>
+                    <label class="more-option-item" for="toggleDeepResearch">
+                      <div class="option-info">
+                        <span class="option-title">Deep Research</span>
+                        <span class="option-desc">Multi-vector technical intelligence</span>
+                      </div>
+                      <input type="checkbox" id="toggleDeepResearch" onchange="onSearchOptionChanged()">
+                    </label>
+                    <div class="more-options-divider"></div>
+                    <label class="more-option-item" for="togglePreferGoogle">
+                      <div class="option-info">
+                        <span class="option-title">Prefer Google Search</span>
+                        <span class="option-desc">Prioritize latest knowledge, CVEs &amp; news</span>
+                      </div>
+                      <input type="checkbox" id="togglePreferGoogle" checked onchange="onSearchOptionChanged()">
+                    </label>
+                  </div>
+                </div>
+                <div class="active-mode-pill" id="activeModePill" style="display:none;" onclick="toggleMoreOptionsMenu(event)" title="Click to configure intelligence search options"></div>
               </div>
               <button type="submit" class="btn-run-scan" id="btnSubmitChat" title="Send message, request project plan, or scan repository">
                 <span id="btnSubmitChatText">Send</span>
@@ -4013,6 +4284,109 @@
       if (el) el.classList.remove("active");
     };
 
+    // =====================================================================
+    // MORE OPTIONS (LIVE WEB SEARCH & DEEP RESEARCH) CONTROLLER
+    // =====================================================================
+    window.toggleMoreOptionsMenu = function (e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      var dropdown = document.getElementById("moreOptionsDropdown");
+      if (!dropdown) return;
+      var isOpen = dropdown.style.display !== "none";
+      dropdown.style.display = isOpen ? "none" : "block";
+    };
+
+    window.closeMoreOptionsMenu = function () {
+      var dropdown = document.getElementById("moreOptionsDropdown");
+      if (dropdown) dropdown.style.display = "none";
+    };
+
+    document.addEventListener("click", function (e) {
+      var container = document.getElementById("moreOptionsContainer");
+      if (container && !container.contains(e.target)) {
+        closeMoreOptionsMenu();
+      }
+    });
+
+    window.isLiveWebSearchActive = function () {
+      var el = document.getElementById("toggleLiveWebSearch");
+      if (el) return Boolean(el.checked);
+      return localStorage.getItem("vajra_live_web_search") === "true";
+    };
+
+    window.isDeepResearchActive = function () {
+      var el = document.getElementById("toggleDeepResearch");
+      if (el) return Boolean(el.checked);
+      return localStorage.getItem("vajra_deep_research") === "true";
+    };
+
+    window.isPreferGoogleActive = function () {
+      var el = document.getElementById("togglePreferGoogle");
+      if (el) return Boolean(el.checked);
+      return localStorage.getItem("vajra_prefer_google") !== "false";
+    };
+
+    window.onSearchOptionChanged = function () {
+      var webEl = document.getElementById("toggleLiveWebSearch");
+      var deepEl = document.getElementById("toggleDeepResearch");
+      var googleEl = document.getElementById("togglePreferGoogle");
+
+      if (webEl) localStorage.setItem("vajra_live_web_search", webEl.checked ? "true" : "false");
+      if (deepEl) localStorage.setItem("vajra_deep_research", deepEl.checked ? "true" : "false");
+      if (googleEl) localStorage.setItem("vajra_prefer_google", googleEl.checked ? "true" : "false");
+
+      updateActiveModePill();
+    };
+
+    window.updateActiveModePill = function () {
+      var pill = document.getElementById("activeModePill");
+      var btn = document.getElementById("btnMoreOptions");
+      if (!pill) return;
+
+      var isWeb = isLiveWebSearchActive();
+      var isDeep = isDeepResearchActive();
+      var isGoogle = isPreferGoogleActive();
+
+      if (isDeep) {
+        pill.textContent = isGoogle ? "Deep Research: Google ON" : "Deep Research ON";
+        pill.style.display = "inline-flex";
+        if (btn) btn.classList.add("active-mode");
+      } else if (isWeb) {
+        pill.textContent = isGoogle ? "Live Web: Google ON" : "Live Web ON";
+        pill.style.display = "inline-flex";
+        if (btn) btn.classList.add("active-mode");
+      } else {
+        pill.style.display = "none";
+        if (btn) btn.classList.remove("active-mode");
+      }
+    };
+
+    window.initMoreOptionsState = function () {
+      var webEl = document.getElementById("toggleLiveWebSearch");
+      var deepEl = document.getElementById("toggleDeepResearch");
+      var googleEl = document.getElementById("togglePreferGoogle");
+
+      if (webEl) webEl.checked = localStorage.getItem("vajra_live_web_search") === "true";
+      if (deepEl) deepEl.checked = localStorage.getItem("vajra_deep_research") === "true";
+      if (googleEl) googleEl.checked = localStorage.getItem("vajra_prefer_google") !== "false";
+
+      updateActiveModePill();
+    };
+
+    window.shouldSearchLiveWeb = function (query) {
+      if (!query || typeof query !== "string") return false;
+      var q = query.toLowerCase().trim();
+      var triggers = [
+        "latest", "recent", "today", "yesterday", "news", "current",
+        "update", "release", "cve-", "vulnerability in", "who is",
+        "who was", "what happened", "when was", "search", "lookup",
+        "google", "find out", "price of", "weather", "version of", "schrodinger"
+      ];
+      return triggers.some(function (t) { return q.includes(t); });
+    };
+
     var currentBugScreenshotBase64 = null;
 
     window.handleBugScreenshotSelected = function (file) {
@@ -4647,7 +5021,7 @@
       });
     });
 
-    function showTypingIndicator() {
+    function showTypingIndicator(customLabel) {
       var hero = document.getElementById("ledgerHero");
       if (hero) hero.style.display = "none";
 
@@ -4656,9 +5030,10 @@
       typingDiv.className = "msg-group bot";
       typingDiv.id = "activeTypingIndicator";
 
+      var label = customLabel || "VAJRA IS REASONING";
       typingDiv.innerHTML =
         '<div class="typing-box">' +
-          '<span class="typing-label">VAJRA IS REASONING</span>' +
+          '<span class="typing-label">' + escapeHtml(label) + '</span>' +
           '<span class="typing-dot"></span>' +
           '<span class="typing-dot"></span>' +
           '<span class="typing-dot"></span>' +
@@ -4767,6 +5142,64 @@
         return placeholder;
       });
 
+      // 3b. Convert References & Sources into Dedicated Interactive Card Grid
+      var refWidgets = [];
+      var refBlockRegex = /###\s*(?:References(?:\s*&\s*Sources)?|Verified\s*(?:Research|Reference)?\s*Sources|Grounding\s*Sources|Sources(?:\s*&\s*Citations)?)\s*[\r\n]+([\s\S]*?)(?=(?:\r?\n###|\r?\n\r?\n[A-Z]|$))/i;
+      var refMatch = text.match(refBlockRegex);
+      if (refMatch && refMatch[1]) {
+        var rawRefList = refMatch[1];
+        var linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+        var cardsHtml = "";
+        var linkMatch;
+        var count = 0;
+        while ((linkMatch = linkRegex.exec(rawRefList)) !== null) {
+          count++;
+          var fullTitle = linkMatch[1].trim();
+          var linkUrl = linkMatch[2].trim();
+          var domain = "";
+          try {
+            domain = new URL(linkUrl).hostname.replace(/^www\./, "");
+          } catch (e) {
+            domain = "web";
+          }
+
+          var displayTitle = fullTitle;
+          var domainBadge = domain;
+          if (fullTitle.indexOf(" - ") !== -1) {
+            var parts = fullTitle.split(" - ");
+            if (parts[0].length < 32) {
+              domainBadge = parts[0].trim();
+              displayTitle = parts.slice(1).join(" - ").trim();
+            }
+          }
+
+          cardsHtml +=
+            '<a href="' + escapeHtml(linkUrl) + '" target="_blank" rel="noopener noreferrer" class="vajra-reference-pill-card" title="' + escapeHtml(fullTitle) + '">' +
+              '<div class="ref-card-meta">' +
+                '<span class="ref-domain-badge">' + escapeHtml(domainBadge) + '</span>' +
+                '<svg class="ref-ext-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+              '</div>' +
+              '<div class="ref-card-title">' + escapeHtml(displayTitle) + '</div>' +
+            '</a>';
+        }
+
+        if (count > 0) {
+          var renderedWidget =
+            '<div class="vajra-references-block">' +
+              '<div class="vajra-references-header">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>' +
+                '<span>Verified References &amp; Sources (' + count + ')</span>' +
+              '</div>' +
+              '<div class="vajra-references-grid">' +
+                cardsHtml +
+              '</div>' +
+            '</div>';
+          var refPlaceholder = "___REFWIDGET_" + refWidgets.length + "___";
+          refWidgets.push(renderedWidget);
+          text = text.replace(refBlockRegex, "\n\n" + refPlaceholder + "\n\n");
+        }
+      }
+
       // 4. Headers
       text = text.replace(/^### (References.*$)/gim, "<h4 style='margin:1.1rem 0 0.4rem 0; font-weight:700; color:#38bdf8; border-bottom:1px solid rgba(56,189,248,0.25); padding-bottom:4px; font-size:0.95rem; font-family:JetBrains Mono,monospace;'>$1</h4>");
       text = text.replace(/^### (.*$)/gim, "<h4 style='margin:0.75rem 0 0.25rem 0; font-weight:700; color:var(--text-primary);'>$1</h4>");
@@ -4806,6 +5239,11 @@
         var escaped = item.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         return "<pre style='background:#050505; border:1px solid var(--border-subtle); border-radius:8px; padding:12px; margin:10px 0; overflow-x:auto; font-family:JetBrains Mono,monospace; font-size:0.85rem;'><code class='language-" +
           (item.lang || "text") + "'>" + escaped + "</code></pre>";
+      });
+
+      // 11. Restore References Widgets
+      text = text.replace(/___REFWIDGET_(\d+)___/g, function(match, idx) {
+        return refWidgets[parseInt(idx, 10)] || "";
       });
 
       return "<p>" + text + "</p>";
@@ -5710,7 +6148,9 @@
               prompt: fullPrompt,
               session_id: getVajraCryptoSessionId(),
               request_id: reqId,
-              enable_web_search: true
+              enable_web_search: true,
+              deep_research: (typeof isDeepResearchActive === 'function' && isDeepResearchActive()) || fullPrompt.includes("[DEEP_RESEARCH]"),
+              prefer_google: (typeof isPreferGoogleActive === 'function' ? isPreferGoogleActive() : true)
             }),
             signal: getActiveSignal(25000)
           });
@@ -5878,7 +6318,9 @@
                 prompt: fullPrompt,
                 session_id: getVajraCryptoSessionId(),
                 request_id: activeReqId,
-                enable_web_search: true
+                enable_web_search: true,
+                deep_research: (typeof isDeepResearchActive === 'function' && isDeepResearchActive()) || fullPrompt.includes("[DEEP_RESEARCH]"),
+                prefer_google: (typeof isPreferGoogleActive === 'function' ? isPreferGoogleActive() : true)
               }),
               signal: getActiveSignal(25000)
             });
@@ -5988,7 +6430,9 @@
         hf_token: storedHfToken || null,
         session_id: getVajraCryptoSessionId(),
         request_id: activeReqId || activeInferenceRequestId,
-        enable_web_search: true
+        enable_web_search: true,
+        deep_research: (typeof isDeepResearchActive === 'function' && isDeepResearchActive()) || userPrompt.includes("[DEEP_RESEARCH]"),
+        prefer_google: (typeof isPreferGoogleActive === 'function' ? isPreferGoogleActive() : true)
       });
 
       try {
@@ -6650,6 +7094,27 @@
           directHeaders["Authorization"] = "Bearer " + storedHfToken;
         }
 
+        // Dual-Layer Live Search & Deep Research Detection
+        var isWebActive = (typeof isLiveWebSearchActive === 'function' && isLiveWebSearchActive());
+        var isDeepActive = (typeof isDeepResearchActive === 'function' && isDeepResearchActive());
+        var isGoogle = (typeof isPreferGoogleActive === 'function' ? isPreferGoogleActive() : true);
+        var hasSearchIntent = (typeof shouldSearchLiveWeb === 'function' && shouldSearchLiveWeb(promptToQuery));
+        var isDualLayerSearch = isWebActive || isDeepActive || hasSearchIntent;
+
+        if (isDualLayerSearch) {
+          var labelText = isDeepActive ?
+            (isGoogle ? "LAYER 1: DEEP RESEARCH VIA GOOGLE & INTERNET" : "LAYER 1: DEEP MULTI-VECTOR RESEARCH") :
+            (isGoogle ? "LAYER 1: GOOGLE LIVE RETRIEVAL & VAJRA REASONING" : "LAYER 1: DUAL-LAYER LIVE RETRIEVAL & VAJRA REASONING");
+          var typingLbl = document.querySelector("#activeTypingIndicator .typing-label");
+          if (typingLbl) typingLbl.textContent = labelText;
+
+          if (isDeepActive) {
+            promptToQuery = "[DEEP_RESEARCH] " + promptToQuery;
+          } else {
+            promptToQuery = "[LIVE_SEARCH] " + promptToQuery;
+          }
+        }
+
         // Speculative Dual-Channel Neural Reasoning Pipeline:
         // Channel A: Fast 0.5B Speculative Draft (<1.5s) rendered with Frosted Glassmorphism Shimmer
         // Channel B: Deep 7B Reasoning Pipeline (Optimized 2 vCPU -> ZeroGPU Bailout -> 0.5B fallback)
@@ -6660,7 +7125,7 @@
         var pipelinePref = localStorage.getItem("vajra_pipeline_mode") || "hybrid";
         var isComplexQuery = classifyQueryComplexity(promptToQuery) || (chunkedExtraFiles && Object.keys(chunkedExtraFiles).length > 0);
 
-        if (pipelinePref === "lite" || (!isComplexQuery && pipelinePref !== "deep" && promptToQuery.length < 150)) {
+        if (!isDualLayerSearch && (pipelinePref === "lite" || (!isComplexQuery && pipelinePref !== "deep" && promptToQuery.length < 150))) {
           var liteDraft = await tryFastDraftQuery(promptToQuery, directHeaders, thisRequestId);
           if (liteDraft && liteDraft.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
             removeTypingIndicator();
@@ -6682,7 +7147,7 @@
           }
         }, 75000);
 
-        if (pipelinePref !== "deep") {
+        if (!isDualLayerSearch && pipelinePref !== "deep") {
           // Launch Channel A FIRST: Fast 0.5B Draft gets full CPU priority
           var draftPromise = tryFastDraftQuery(promptToQuery, directHeaders, thisRequestId).then(function(draftText) {
             if (isDeepResolved || !draftText || draftText.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") !== -1) {
@@ -7244,6 +7709,7 @@
     renderSidebarSessions();
     renderActiveSessionWorkspace();
     renderSidebarArtifacts();
+    initMoreOptionsState();
 
   })();
   </script>

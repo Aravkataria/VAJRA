@@ -186,6 +186,49 @@ def vajra_search_duckduckgo_lite(query: str, max_results: int = 4) -> List[Dict[
 
     return results
 
+def vajra_search_google(query: str, max_results: int = 4) -> List[Dict[str, str]]:
+    """Retrieves real-time breaking news, events, and latest knowledge via Google News RSS."""
+    results = []
+    q = (query or "").strip()
+    if not q:
+        return []
+    try:
+        import xml.etree.ElementTree as ET
+        rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(q)}&hl=en-US&gl=US&ceid=US:en"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.8"
+        }
+        req = urllib.request.Request(rss_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            xml_data = resp.read()
+        root = ET.fromstring(xml_data)
+        items = root.findall(".//item")
+        for item in items[:max_results]:
+            title_elem = item.find("title")
+            link_elem = item.find("link")
+            source_elem = item.find("source")
+            pub_elem = item.find("pubDate")
+
+            raw_title = title_elem.text if title_elem is not None else ""
+            link = link_elem.text if link_elem is not None else ""
+            source_name = source_elem.text if source_elem is not None else "Google News"
+            pub_date = pub_elem.text if pub_elem is not None else ""
+
+            if raw_title and link:
+                clean_title = re.sub(r"\s+-\s+[^-]+$", "", raw_title).strip()
+                snippet = f"Published: {pub_date}. Source: {source_name}. {raw_title}"
+                results.append({
+                    "title": clean_title or raw_title,
+                    "url": link,
+                    "snippet": snippet,
+                    "source": source_name
+                })
+    except Exception as e:
+        print(f"[WARN] Google search note: {e}")
+
+    return results
+
 def vajra_search_wikipedia(query: str, max_results: int = 2) -> List[Dict[str, str]]:
     """Instant factual fallback via Wikipedia REST API."""
     results = []
@@ -216,43 +259,85 @@ def vajra_search_wikipedia(query: str, max_results: int = 2) -> List[Dict[str, s
 
     return results
 
-def vajra_live_web_search(query: str, max_results: int = 4) -> List[Dict[str, str]]:
-    """Unified hybrid live search pipeline combining DDG Lite with Wikipedia fallback."""
+def vajra_live_web_search(
+    query: str,
+    max_results: int = 4,
+    prefer_google: bool = True,
+    deep_research: bool = False
+) -> List[Dict[str, str]]:
+    """
+    Unified dual-layer real-time web retrieval pipeline.
+    Combines Google Search/News (for latest knowledge & breaking recency),
+    DuckDuckGo Lite (for canonical URLs & documentation), and Wikipedia (for foundational facts).
+    Supports deep research multi-query vector synthesis.
+    """
     q = (query or "").strip()
     if not q:
         return []
 
-    results = vajra_search_duckduckgo_lite(q, max_results=max_results)
+    results = []
+    seen_urls = set()
 
-    if len(results) < 2:
-        wiki_results = vajra_search_wikipedia(q, max_results=2)
-        existing_urls = {r["url"] for r in results}
-        for wr in wiki_results:
-            if wr["url"] not in existing_urls:
-                results.append(wr)
+    def add_results(items):
+        for it in items:
+            u = it.get("url", "")
+            if u and u not in seen_urls:
+                seen_urls.add(u)
+                results.append(it)
 
-    return results[:max_results]
+    # Multi-vector queries if deep research is requested
+    search_queries = [q]
+    if deep_research:
+        clean_base = re.sub(r"^(deep\s+research|research|investigate|search(\s+the\s+web)?(\s+for)?)\s+", "", q, flags=re.IGNORECASE).strip()
+        search_queries = [
+            clean_base,
+            f"{clean_base} latest updates documentation",
+            f"{clean_base} security architecture overview"
+        ]
+        target_count = max_results * 2
+    else:
+        target_count = max_results
 
-def format_web_context_for_prompt(results: List[Dict[str, str]]) -> str:
+    is_recency = bool(re.search(r"\b(latest|recent|news|today|current|2024|2025|2026|newest|release|update|version|who\s+won|score|price)\b", q, re.IGNORECASE))
+
+    for sq in search_queries:
+        if prefer_google or is_recency:
+            google_res = vajra_search_google(sq, max_results=3 if deep_research else 2)
+            add_results(google_res)
+
+        ddg_res = vajra_search_duckduckgo_lite(sq, max_results=4 if deep_research else 3)
+        add_results(ddg_res)
+
+        if len(results) < target_count:
+            wiki_res = vajra_search_wikipedia(sq, max_results=2)
+            add_results(wiki_res)
+
+    return results[:target_count]
+
+def format_web_context_for_prompt(results: List[Dict[str, str]], deep_research: bool = False) -> str:
     """Formats verified live web search results for LLM prompt ingestion."""
     if not results:
         return ""
 
+    mode_label = "VAJRA Deep Research Multi-Source Dossier" if deep_research else "VAJRA Live Web Retrieval Context"
     lines = [
-        "[VAJRA Live Web Retrieval Context]",
+        f"[{mode_label}]",
         "The following verified real-time sources were retrieved from the live internet for this query:",
         ""
     ]
     for idx, r in enumerate(results, 1):
         lines.append(f"Source [{idx}]: {r['title']}")
+        lines.append(f"Publisher / Domain: {r['source']}")
         lines.append(f"URL: {r['url']}")
         lines.append(f"Snippet: {r['snippet']}")
         lines.append("")
 
     lines.append("Directives:")
-    lines.append("1. Answer accurately using the live web facts above.")
+    lines.append("1. Answer accurately and authoritatively using the verified live web facts above.")
     lines.append("2. When citing facts, mention the source name with markdown link [Source Name](URL).")
-    lines.append("3. At the end of your response, always provide a dedicated '### References & Sources' section listing the reference websites with clickable links.")
+    lines.append("3. At the end of your response, always provide a dedicated '### References & Sources' section listing all reference websites with clickable links.")
+    if deep_research:
+        lines.append("4. Provide a thorough, multi-dimensional technical synthesis covering background, architectural implications, and verifiable conclusions.")
     return "\n".join(lines)
 
 def ensure_citations_in_reply(reply: str, sources: List[Dict[str, str]]) -> str:
@@ -414,10 +499,14 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     request_id: Optional[str] = None
     enable_web_search: Optional[bool] = True
+    deep_research: Optional[bool] = False
+    prefer_google: Optional[bool] = True
 
 class SearchRequest(BaseModel):
     query: str
     max_results: Optional[int] = 4
+    prefer_google: Optional[bool] = True
+    deep_research: Optional[bool] = False
     session_id: Optional[str] = None
     request_id: Optional[str] = None
 
@@ -596,16 +685,24 @@ async def chat_endpoint(req: ChatRequest, request: Request):
         if not is_safe and reason == "defensive_reframe":
             prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
-        # Live Web Search & Grounding
+        # Live Web Search & Grounding (Dual Layer: Internet First -> VAJRA Reasoning Second)
         web_sources = []
+        is_deep = bool(req.deep_research) or ("[DEEP_RESEARCH]" in req.prompt)
+        prefer_g = True if req.prefer_google is None else bool(req.prefer_google)
         enable_search = True if req.enable_web_search is None else req.enable_web_search
-        if enable_search:
-            should_s, clean_q = should_search_live_web(prompt_to_run)
-            if should_s:
-                print(f" [VAJRA Backend] Live web search triggered for: '{clean_q}'")
-                web_sources = await asyncio.to_thread(vajra_live_web_search, clean_q, 3)
+        if "[LIVE_SEARCH]" in req.prompt:
+            enable_search = True
+        prompt_to_run = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", prompt_to_run).strip()
 
-        web_context = format_web_context_for_prompt(web_sources) if web_sources else ""
+        if enable_search or is_deep:
+            should_s, clean_q = should_search_live_web(prompt_to_run)
+            if should_s or is_deep:
+                target_q = clean_q or prompt_to_run
+                print(f" [VAJRA Backend] Dual-layer live search triggered (Deep={is_deep}, Google={prefer_g}): '{target_q}'")
+                max_res = 6 if is_deep else 4
+                web_sources = await asyncio.to_thread(vajra_live_web_search, target_q, max_res, prefer_g, is_deep)
+
+        web_context = format_web_context_for_prompt(web_sources, deep_research=is_deep) if web_sources else ""
         system_content = VAJRA_SYSTEM_PROMPT
         if web_context:
             system_content += f"\n\n{web_context}"
@@ -697,12 +794,17 @@ async def search_endpoint(req: SearchRequest, request: Request):
     request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
     try:
         clean_q = (req.query or "").strip()
-        results = await asyncio.to_thread(vajra_live_web_search, clean_q, req.max_results or 4)
+        prefer_g = True if req.prefer_google is None else bool(req.prefer_google)
+        is_deep = bool(req.deep_research)
+        max_res = req.max_results or (6 if is_deep else 4)
+        results = await asyncio.to_thread(vajra_live_web_search, clean_q, max_res, prefer_g, is_deep)
         return JSONResponse({
             "success": True,
             "query": clean_q,
             "count": len(results),
             "results": results,
+            "deep_research": is_deep,
+            "prefer_google": prefer_g,
             "session_id": session_id,
             "request_id": request_id
         }, headers={

@@ -777,71 +777,157 @@ def vajra_search_duckduckgo_lite(query: str, max_results: int = 4) -> List[Dict[
     except Exception as e:
         print(f"[WARN] DuckDuckGo search note: {e}")
 
-    return results
+def vajra_search_google(query: str, max_results: int = 4) -> List[Dict[str, str]]:
+    """Retrieves real-time breaking news, events, and latest knowledge via Google News RSS."""
+    results = []
+    q = (query or "").strip()
+    if not q:
+        return []
+    try:
+        import xml.etree.ElementTree as ET
+        rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(q)}&hl=en-US&gl=US&ceid=US:en"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.8"
+        }
+        req = urllib.request.Request(rss_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            xml_data = resp.read()
+        root = ET.fromstring(xml_data)
+        items = root.findall(".//item")
+        for item in items[:max_results]:
+            title_elem = item.find("title")
+            link_elem = item.find("link")
+            source_elem = item.find("source")
+            pub_elem = item.find("pubDate")
+
+            raw_title = title_elem.text if title_elem is not None else ""
+            link = link_elem.text if link_elem is not None else ""
+            source_name = source_elem.text if source_elem is not None else "Google News"
+            pub_date = pub_elem.text if pub_elem is not None else ""
+
+            if raw_title and link:
+                clean_title = re.sub(r"\s+-\s+[^-]+$", "", raw_title).strip()
+                snippet = f"Published: {pub_date}. Source: {source_name}. {raw_title}"
+                results.append({
+                    "title": clean_title or raw_title,
+                    "url": link,
+                    "snippet": snippet,
+                    "source": source_name
+                })
+    except Exception as e:
+        print(f"[WARN] Google search note: {e}")
 
     return results
 
-def vajra_search_wikipedia(query: str, max_results: int = 3) -> List[Dict[str, str]]:
+def vajra_search_wikipedia(query: str, max_results: int = 2) -> List[Dict[str, str]]:
+    """Instant factual fallback via Wikipedia REST API."""
     results = []
     try:
-        url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query)}&format=json&utf8=1"
-        req = urllib.request.Request(url, headers={'User-Agent': 'VAJRA-Cyber-Reasoning/2.0 (Security Research Intelligence)'})
-        with urllib.request.urlopen(req, timeout=3.5) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
+        clean_q = re.sub(r"[^\w\s-]", "", query).strip()
+        encoded = urllib.parse.quote(clean_q)
+        url = f"https://en.wikipedia.org/w/api.php?action=opensearch&search={encoded}&limit={max_results}&namespace=0&format=json"
+        headers = {"User-Agent": "VAJRA-Cyber-Reasoning/2.1 (contact@vajra-ai.org)"}
+        req = urllib.request.Request(url, headers=headers)
 
-        items = data.get('query', {}).get('search', [])
-        for item in items[:max_results]:
-            title = item.get('title', '').strip()
-            if not title:
-                continue
-            snippet = html.unescape(re.sub(r'<[^>]+>', '', item.get('snippet', ''))).strip()
-            page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}"
-            results.append({
-                "title": f"{title} - Wikipedia",
-                "url": page_url,
-                "snippet": snippet,
-                "source": "Wikipedia"
-            })
+        with urllib.request.urlopen(req, timeout=4) as response:
+            data = json.loads(response.read().decode("utf-8", errors="replace"))
+
+        if len(data) >= 4:
+            titles = data[1]
+            snippets = data[2]
+            urls = data[3]
+            for t, s, u in zip(titles, snippets, urls):
+                snippet = s if s else f"Wikipedia article for {t}."
+                results.append({
+                    "title": t,
+                    "url": u,
+                    "snippet": snippet,
+                    "source": "Wikipedia"
+                })
     except Exception as e:
         print(f"[WARN] Wikipedia search note: {e}")
 
     return results
 
-def vajra_live_web_search(query: str, max_results: int = 4) -> List[Dict[str, str]]:
+def vajra_live_web_search(
+    query: str,
+    max_results: int = 4,
+    prefer_google: bool = True,
+    deep_research: bool = False
+) -> List[Dict[str, str]]:
+    """
+    Unified dual-layer real-time web retrieval pipeline.
+    Combines Google Search/News (for latest knowledge & breaking recency),
+    DuckDuckGo Lite (for canonical URLs & documentation), and Wikipedia (for foundational facts).
+    Supports deep research multi-query vector synthesis.
+    """
     q = (query or "").strip()
     if not q:
         return []
 
-    results = vajra_search_duckduckgo_lite(q, max_results=max_results)
+    results = []
+    seen_urls = set()
 
-    if len(results) < 2:
-        wiki_results = vajra_search_wikipedia(q, max_results=2)
-        existing_urls = {r["url"] for r in results}
-        for wr in wiki_results:
-            if wr["url"] not in existing_urls:
-                results.append(wr)
+    def add_results(items):
+        for it in items:
+            u = it.get("url", "")
+            if u and u not in seen_urls:
+                seen_urls.add(u)
+                results.append(it)
 
-    return results[:max_results]
+    search_queries = [q]
+    if deep_research:
+        clean_base = re.sub(r"^(deep\s+research|research|investigate|search(\s+the\s+web)?(\s+for)?)\s+", "", q, flags=re.IGNORECASE).strip()
+        search_queries = [
+            clean_base,
+            f"{clean_base} latest updates documentation",
+            f"{clean_base} security architecture overview"
+        ]
+        target_count = max_results * 2
+    else:
+        target_count = max_results
 
-def format_web_context_for_prompt(results: List[Dict[str, str]]) -> str:
+    is_recency = bool(re.search(r"\b(latest|recent|news|today|current|2024|2025|2026|newest|release|update|version|who\s+won|score|price)\b", q, re.IGNORECASE))
+
+    for sq in search_queries:
+        if prefer_google or is_recency:
+            google_res = vajra_search_google(sq, max_results=3 if deep_research else 2)
+            add_results(google_res)
+
+        ddg_res = vajra_search_duckduckgo_lite(sq, max_results=4 if deep_research else 3)
+        add_results(ddg_res)
+
+        if len(results) < target_count:
+            wiki_res = vajra_search_wikipedia(sq, max_results=2)
+            add_results(wiki_res)
+
+    return results[:target_count]
+
+def format_web_context_for_prompt(results: List[Dict[str, str]], deep_research: bool = False) -> str:
+    """Formats verified live web search results for LLM prompt ingestion."""
     if not results:
         return ""
 
+    mode_label = "VAJRA Deep Research Multi-Source Dossier" if deep_research else "VAJRA Live Web Retrieval Context"
     lines = [
-        "[VAJRA Live Web Retrieval Context]",
+        f"[{mode_label}]",
         "The following verified real-time sources were retrieved from the live internet for this query:",
         ""
     ]
     for idx, r in enumerate(results, 1):
         lines.append(f"Source [{idx}]: {r['title']}")
+        lines.append(f"Publisher / Domain: {r['source']}")
         lines.append(f"URL: {r['url']}")
         lines.append(f"Snippet: {r['snippet']}")
         lines.append("")
 
     lines.append("Directives:")
-    lines.append("1. Answer accurately using the live web facts above.")
+    lines.append("1. Answer accurately and authoritatively using the verified live web facts above.")
     lines.append("2. When citing facts, mention the source name with markdown link [Source Name](URL).")
-    lines.append("3. At the end of your response, always provide a dedicated '### References & Sources' section listing the reference websites with clickable links.")
+    lines.append("3. At the end of your response, always provide a dedicated '### References & Sources' section listing all reference websites with clickable links.")
+    if deep_research:
+        lines.append("4. Provide a thorough, multi-dimensional technical synthesis covering background, architectural implications, and verifiable conclusions.")
     return "\n".join(lines)
 
 def ensure_citations_in_reply(reply: str, sources: List[Dict[str, str]]) -> str:
@@ -858,9 +944,13 @@ def ensure_citations_in_reply(reply: str, sources: List[Dict[str, str]]) -> str:
 
     return reply.rstrip() + ref_section
 
-# 4. INFERENCE WITH CONCURRENCY LOCK & LOAD SHEDDING
-# =====================================================================
-def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = None, enable_web_search: bool = True):
+def generate_vajra_reply(
+    prompt: str,
+    context_files: Optional[Dict[str, str]] = None,
+    enable_web_search: bool = True,
+    deep_research: bool = False,
+    prefer_google: bool = True
+):
     # Contextual safety evaluation (preserves technical/cybersecurity context)
     is_safe, reason, safety_out = evaluate_contextual_safety(prompt)
     if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
@@ -870,15 +960,24 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
     if not is_safe and reason == "defensive_reframe":
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
-    # 1. Live Web Search & Grounding
-    web_sources = []
-    if enable_web_search:
-        should_s, clean_q = should_search_live_web(prompt)
-        if should_s:
-            print(f" [VAJRA v2] Live web search triggered for: '{clean_q}'")
-            web_sources = vajra_live_web_search(clean_q, max_results=3)
+    if "[DEEP_RESEARCH]" in prompt:
+        deep_research = True
+    if "[LIVE_SEARCH]" in prompt:
+        enable_web_search = True
+    clean_prompt = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", clean_prompt).strip()
+    raw_prompt_clean = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", prompt).strip()
 
-    web_context = format_web_context_for_prompt(web_sources) if web_sources else ""
+    # 1. Live Web Search & Grounding (Dual Layer: Internet First -> VAJRA Reasoning Second)
+    web_sources = []
+    if enable_web_search or deep_research:
+        should_s, clean_q = should_search_live_web(raw_prompt_clean)
+        if should_s or deep_research:
+            target_q = clean_q or raw_prompt_clean
+            print(f" [VAJRA v2] Dual-layer live search triggered (Deep={deep_research}, Google={prefer_google}): '{target_q}'")
+            max_res = 6 if deep_research else 4
+            web_sources = vajra_live_web_search(target_q, max_results=max_res, prefer_google=prefer_google, deep_research=deep_research)
+
+    web_context = format_web_context_for_prompt(web_sources, deep_research=deep_research) if web_sources else ""
 
     # 2. Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
     acquired = inference_lock.acquire(blocking=False, timeout=2.5)
@@ -926,10 +1025,13 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
 
         if model is None or tokenizer is None:
             # 1. Answer immediately on 2 vCPU using fast local engine (~42 tokens/sec, 1.2 GB RAM)
-            lite_reply = generate_ultra_lite_reply(clean_prompt, context_files)
+            draft_in = f"{web_context}\n\n{clean_prompt}" if web_context else clean_prompt
+            lite_reply = generate_ultra_lite_reply(draft_in, context_files)
             if lite_reply:
                 if not is_safe and reason == "defensive_reframe" and not lite_reply.startswith(DEFENSIVE_REFRAME_MALWARE):
                     lite_reply = DEFENSIVE_REFRAME_MALWARE + lite_reply
+                if web_sources:
+                    lite_reply = ensure_citations_in_reply(lite_reply, web_sources)
                 print("[OK] [VAJRA v2] Query processed locally on 2 vCPU (0.5B engine).")
                 return scrub_output_secrets(lite_reply), "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "standard"
 
@@ -943,8 +1045,11 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                         "Authorization": f"Bearer {token}",
                         "User-Agent": "VAJRA-v2-CPU/1.0"
                     }
+                    sys_r = VAJRA_SYSTEM_PROMPT
+                    if web_context:
+                        sys_r += f"\n\n{web_context}"
                     payload = json.dumps({
-                        "inputs": f"<|im_start|>system\n{VAJRA_SYSTEM_PROMPT}<|im_end|>\n<|im_start|>user\n{clean_prompt}<|im_end|>\n<|im_start|>assistant\n",
+                        "inputs": f"<|im_start|>system\n{sys_r}<|im_end|>\n<|im_start|>user\n{clean_prompt}<|im_end|>\n<|im_start|>assistant\n",
                         "parameters": {"max_new_tokens": 280, "temperature": 0.2, "return_full_text": False}
                     }).encode("utf-8")
                     req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
@@ -955,13 +1060,18 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
                             if text:
                                 if not is_safe and reason == "defensive_reframe" and not text.startswith(DEFENSIVE_REFRAME_MALWARE):
                                     text = DEFENSIVE_REFRAME_MALWARE + text
+                                if web_sources:
+                                    text = ensure_citations_in_reply(text, web_sources)
                                 return scrub_output_secrets(text), "Qwen/Qwen2.5-Coder-7B-Instruct (Cloud Router)", "cloud_router"
                 except Exception as route_err:
                     print(f"[WARN] 7B Serverless router fallback note: {route_err}")
 
             return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
-        messages = [{"role": "system", "content": VAJRA_SYSTEM_PROMPT}]
+        sys_cpu = VAJRA_SYSTEM_PROMPT
+        if web_context:
+            sys_cpu += f"\n\n{web_context}"
+        messages = [{"role": "system", "content": sys_cpu}]
         if context_files and isinstance(context_files, dict):
             summary_text = ""
             for fname, fcontent in list(context_files.items())[:3]:
@@ -993,6 +1103,8 @@ def generate_vajra_reply(prompt: str, context_files: Optional[Dict[str, str]] = 
             res_text += "\n```"
         if not is_safe and reason == "defensive_reframe" and not res_text.startswith(DEFENSIVE_REFRAME_MALWARE):
             res_text = DEFENSIVE_REFRAME_MALWARE + res_text
+        if web_sources:
+            res_text = ensure_citations_in_reply(res_text, web_sources)
         del model_inputs, generated_ids
         gc.collect()
 
@@ -1021,14 +1133,20 @@ def gradio_generate(prompt: str):
     if not is_safe and reason == "defensive_reframe":
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
-    # 1. Live Web Search & Grounding
-    web_sources = []
-    should_s, clean_q = should_search_live_web(prompt)
-    if should_s:
-        print(f" [VAJRA v2] Live web search triggered for: '{clean_q}'")
-        web_sources = vajra_live_web_search(clean_q, max_results=3)
+    # 1. Live Web Search & Grounding (Dual Layer: Internet First -> VAJRA Reasoning Second)
+    is_live_flag = bool(re.search(r"\[LIVE_SEARCH\]", prompt, re.IGNORECASE))
+    is_deep = bool(re.search(r"^(?:/research\s+|deep\s+research\b)|\[DEEP_RESEARCH\]", prompt, re.IGNORECASE))
+    raw_prompt_clean = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", prompt).strip()
+    clean_prompt = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", clean_prompt).strip()
 
-    web_context = format_web_context_for_prompt(web_sources) if web_sources else ""
+    web_sources = []
+    should_s, clean_q = should_search_live_web(raw_prompt_clean)
+    if should_s or is_deep or is_live_flag:
+        target_q = clean_q or raw_prompt_clean
+        print(f" [VAJRA v2] Gradio live search triggered (Deep={is_deep}): '{target_q}'")
+        web_sources = vajra_live_web_search(target_q, max_results=6 if is_deep else 4, prefer_google=True, deep_research=is_deep)
+
+    web_context = format_web_context_for_prompt(web_sources, deep_research=is_deep) if web_sources else ""
 
     # Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
     acquired = inference_lock.acquire(blocking=False, timeout=2.5)
@@ -1115,8 +1233,11 @@ def gradio_generate(prompt: str):
         if model is None or tokenizer is None:
             d_tok, d_m = get_draft_model()
             if d_tok is not None and d_m is not None:
+                sys_msg = "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."
+                if web_context:
+                    sys_msg += f"\n\n{web_context}"
                 messages = [
-                    {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."},
+                    {"role": "system", "content": sys_msg},
                     {"role": "user", "content": clean_prompt}
                 ]
                 text_input = d_tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -1144,13 +1265,19 @@ def gradio_generate(prompt: str):
                 gen_thread.join()
                 del model_inputs
                 gc.collect()
+                if web_sources:
+                    accumulated = ensure_citations_in_reply(accumulated, web_sources)
+                    yield scrub_output_secrets(accumulated)
                 return
 
             yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"
             return
 
+        cpu_sys = VAJRA_SYSTEM_PROMPT
+        if web_context:
+            cpu_sys += f"\n\n{web_context}"
         messages = [
-            {"role": "system", "content": VAJRA_SYSTEM_PROMPT},
+            {"role": "system", "content": cpu_sys},
             {"role": "user", "content": clean_prompt}
         ]
 
@@ -1182,7 +1309,9 @@ def gradio_generate(prompt: str):
 
         if accumulated.count("```") % 2 != 0:
             accumulated += "\n```"
-            yield accumulated
+        if web_sources:
+            accumulated = ensure_citations_in_reply(accumulated, web_sources)
+        yield scrub_output_secrets(accumulated)
 
         del model_inputs
         gc.collect()
@@ -1206,7 +1335,18 @@ def gradio_generate_draft(prompt: str) -> str:
     if not is_safe and reason in ("hard_ban", "nsfw_erotica"):
         return safety_out
     clean, _ = sanitize_and_check_injection(prompt)
-    reply = generate_ultra_lite_reply(clean)
+    should_s, clean_q = should_search_live_web(clean)
+    web_context = ""
+    web_sources = []
+    if should_s:
+        target_q = clean_q or clean
+        web_sources = vajra_live_web_search(target_q, max_results=3, prefer_google=True, deep_research=False)
+        if web_sources:
+            web_context = format_web_context_for_prompt(web_sources, deep_research=False)
+    draft_prompt = f"{web_context}\n\n{clean}" if web_context else clean
+    reply = generate_ultra_lite_reply(draft_prompt)
+    if web_sources:
+        reply = ensure_citations_in_reply(reply, web_sources)
     return scrub_output_secrets(reply)
 
 # =====================================================================
@@ -1215,7 +1355,7 @@ def gradio_generate_draft(prompt: str) -> str:
 demo = None
 if gr is not None:
     with gr.Blocks(title="VAJRA v2 Cyber-Reasoning Engine") as demo:
-        gr.Markdown("#  VAJRA v2 Cyber-Reasoning Intelligence System")
+        gr.Markdown("# VAJRA v2 Cyber-Reasoning Intelligence System")
         gr.Markdown("**Fine-Tuned by Arav Kataria** | 2 vCPU • 16 GB RAM • 24/7 Unlimited Online")
         gr.Markdown("• **FastAPI REST Endpoint Active**: `POST /api/chat` (With Dynamic Load Shedding)")
 
@@ -1279,10 +1419,14 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     request_id: Optional[str] = None
     enable_web_search: Optional[bool] = True
+    deep_research: Optional[bool] = False
+    prefer_google: Optional[bool] = True
 
 class SearchRequest(BaseModel):
     query: str
     max_results: Optional[int] = 4
+    prefer_google: Optional[bool] = True
+    deep_research: Optional[bool] = False
     session_id: Optional[str] = None
     request_id: Optional[str] = None
 
@@ -1365,7 +1509,11 @@ async def chat_v1(req: ChatRequest, request: Request):
             })
 
         enable_search = True if req.enable_web_search is None else req.enable_web_search
-        reply, model_name, tier_name = await asyncio.to_thread(generate_vajra_reply, req.prompt, req.files, enable_search)
+        is_deep = bool(req.deep_research)
+        prefer_g = True if req.prefer_google is None else bool(req.prefer_google)
+        reply, model_name, tier_name = await asyncio.to_thread(
+            generate_vajra_reply, req.prompt, req.files, enable_search, is_deep, prefer_g
+        )
         is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
         return JSONResponse({
             "success": not is_overflow,
@@ -1392,7 +1540,10 @@ async def search_v1(req: SearchRequest, request: Request):
     request_id = req.request_id or request.headers.get("X-Vajra-Request-ID") or str(uuid.uuid4())
     try:
         clean_q = (req.query or "").strip()
-        results = await asyncio.to_thread(vajra_live_web_search, clean_q, req.max_results or 4)
+        max_res = req.max_results or 4
+        prefer_g = True if req.prefer_google is None else bool(req.prefer_google)
+        is_deep = bool(req.deep_research)
+        results = await asyncio.to_thread(vajra_live_web_search, clean_q, max_res, prefer_g, is_deep)
         return JSONResponse({
             "success": True,
             "query": clean_q,
