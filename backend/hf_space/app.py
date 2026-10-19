@@ -216,10 +216,11 @@ VAJRA_SYSTEM_PROMPT = _load_core_prompt()
 VAJRA_GGUF_SYSTEM_PROMPT = (
     "You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System, engineered and fine-tuned by Arav Kataria.\n\n"
     "Operational Directives:\n"
-    "1. Identity: Specialized fine-tuned Qwen2.5-Coder model, fine-tuned by Arav Kataria for autonomous vulnerability triage, zero-regression patch generation, and formal verification.\n"
-    "2. Direct Assistance: Deliver direct, authoritative, and structured technical explanations with exact code solutions.\n"
-    "3. Live Internet & Verified Citations: When provided with live web search results, ground your response in the verified facts and cite your sources with markdown links [Source Name](URL). Always include a References section at the end.\n"
-    "4. Speed & Precision: Avoid preamble and conversational fluff. Complete all points definitively."
+    "1. Identity: Specialized fine-tuned Qwen2.5-Coder model, engineered by Arav Kataria for autonomous vulnerability triage, zero-regression patch synthesis, AST invariant verification, and software security auditing.\n"
+    "2. System Identity Queries: When asked about who you are, what VAJRA can do, or how you were made, provide a clear, comprehensive, and authoritative technical breakdown of your capabilities (autonomous code audits, AST repair, CVE triage, verified live internet search) and architecture (fine-tuned by Arav Kataria, multi-tier reasoning engine, dual-layer grounding).\n"
+    "3. Direct Assistance: Deliver direct, authoritative, and structured technical explanations with exact code solutions.\n"
+    "4. Live Internet & Verified Citations: When provided with live web search results, ground your response in the verified facts and cite your sources with markdown links [Source Name](URL). Always include a References section at the end.\n"
+    "5. Speed & Precision: Avoid conversational fluff or truncated single-line responses. Deliver thorough, complete explanations."
 )
 
 # Dynamically construct confidential shingle set in volatile RAM from the decrypted prompt (zero plaintext in repo)
@@ -569,7 +570,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
         tok, m = get_draft_model()
         if tok is not None and m is not None:
             messages = [
-                {"role": "system", "content": "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and concise technical explanation. Complete all points cleanly."},
+                {"role": "system", "content": "You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered by Arav Kataria. Deliver a direct, authoritative, and structured technical explanation. Complete all points cleanly."},
                 {"role": "user", "content": active_prompt}
             ]
             text_in = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -605,7 +606,7 @@ def generate_ultra_lite_reply(prompt: str, context_files: Optional[Dict[str, str
                 "User-Agent": "VAJRA-v2-CPU/1.0"
             }
             payload = json.dumps({
-                "inputs": f"<|im_start|>system\nYou are VAJRA-Ultra-Lite, a precise engineering assistant. Provide a complete, structured explanation concluding with a summary.<|im_end|>\n<|im_start|>user\n{active_prompt}<|im_end|>\n<|im_start|>assistant\n",
+                "inputs": f"<|im_start|>system\nYou are VAJRA, an Autonomous Cyber-Reasoning System engineered by Arav Kataria. Provide a complete, structured technical explanation concluding with a summary.<|im_end|>\n<|im_start|>user\n{active_prompt}<|im_end|>\n<|im_start|>assistant\n",
                 "parameters": {"max_new_tokens": 512, "temperature": 0.2, "return_full_text": False}
             }).encode("utf-8")
             req = urllib.request.Request(api_url, data=payload, headers=headers, method="POST")
@@ -1311,7 +1312,7 @@ def gradio_generate(prompt: str):
         if model is None or tokenizer is None:
             d_tok, d_m = get_draft_model()
             if d_tok is not None and d_m is not None:
-                sys_msg = "You are VAJRA-Ultra-Lite, an autonomous cyber-reasoning and technical intelligence assistant. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."
+                sys_msg = "You are VAJRA, an Autonomous Cyber-Reasoning and Software Security Intelligence System engineered by Arav Kataria. Deliver a clear, authoritative, and structured technical explanation within 180-220 words. Always complete all points and conclude with a definitive summary sentence."
                 if web_context:
                     sys_msg += f"\n\n{web_context}"
                 messages = [
@@ -1588,6 +1589,7 @@ async def chat_v1(req: ChatRequest, request: Request):
 
         enable_search = True if req.enable_web_search is None else req.enable_web_search
         is_deep = bool(req.deep_research)
+        prefer_g = True if req.prefer_google is None else bool(req.prefer_google)
         t_start = time.perf_counter()
         reply, model_name, tier_name = await asyncio.to_thread(
             generate_vajra_reply, req.prompt, req.files, enable_search, is_deep, prefer_g

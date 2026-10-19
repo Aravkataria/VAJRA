@@ -9,6 +9,7 @@ class RouteArchetype:
     DEFENSIVE_REFRAME = "defensive_reframe"
     REALTIME_FACT = "realtime_fact"
     DEEP_CODE_AUDIT = "deep_code_audit"
+    SYSTEM_IDENTITY = "system_identity"
     RAPID_LITE = "rapid_lite"
     STANDARD_REASONING = "standard_reasoning"
 
@@ -69,9 +70,18 @@ class VajraAutoRouter:
         re.IGNORECASE
     )
 
+    SYSTEM_IDENTITY_REGEX = re.compile(
+        r"\b("
+        r"vajra|who\s+are\s+you|what\s+are\s+you|what\s+is\s+your\s+name|"
+        r"what\s+is\s+vajra|how\s+(?:is|was)\s+vajra\s+(?:made|built|trained|created)|"
+        r"what\s+can\s+vajra\s+do|what\s+can\s+you\s+do|tell\s+me\s+about\s+vajra|"
+        r"who\s+made\s+you|who\s+created\s+you|who\s+engineered\s+you"
+        r")\b",
+        re.IGNORECASE
+    )
+
     CONVERSATIONAL_QUICK_REGEX = re.compile(
         r"^(?:hi|hello|hey|greetings|good\s+(?:morning|afternoon|evening)|"
-        r"who\s+are\s+you|what\s+is\s+your\s+name|what\s+can\s+you\s+do|"
         r"thanks|thank\s+you|bye|goodbye|how\s+are\s+you|"
         r"help|test|ping)$",
         re.IGNORECASE
@@ -177,7 +187,19 @@ class VajraAutoRouter:
                 routing_latency_ms=(time.perf_counter() - t0) * 1000
             )
 
-        # 5. Rapid Speculative Lite Detection (<150ms instant response)
+        # 5. Core System Identity & Architecture Archetype
+        is_identity = bool(cls.SYSTEM_IDENTITY_REGEX.search(clean_p))
+        if is_identity:
+            return RouteDecision(
+                archetype=RouteArchetype.SYSTEM_IDENTITY,
+                target_tier=ComputeTier.GGUF_2VCPU,
+                clean_query=clean_p,
+                requires_web_search=False,
+                reason="system_identity_grounding",
+                routing_latency_ms=(time.perf_counter() - t0) * 1000
+            )
+
+        # 6. Rapid Speculative Lite Detection (<150ms instant response)
         is_conversational = bool(cls.CONVERSATIONAL_QUICK_REGEX.match(clean_p.strip()))
         is_short_general = len(clean_p) < 140 and "\n" not in clean_p and not has_code_block
         if is_conversational or is_short_general:

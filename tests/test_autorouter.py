@@ -39,14 +39,30 @@ def test_code_audit_classification():
     assert file_decision.archetype == RouteArchetype.DEEP_CODE_AUDIT
 
 
+def test_system_identity_classification():
+    queries = [
+        "what can vajra do and how it is made",
+        "who are you",
+        "what can you do",
+        "what is your name",
+        "what is vajra",
+        "tell me about vajra",
+        "who made you",
+        "how was vajra trained"
+    ]
+    for q in queries:
+        decision = VajraAutoRouter.classify_intent(q)
+        assert decision.archetype == RouteArchetype.SYSTEM_IDENTITY, f"Failed for: {q}"
+        assert decision.target_tier == ComputeTier.GGUF_2VCPU
+
+
 def test_rapid_lite_classification():
     queries = [
         "hello",
         "hi",
         "good morning",
-        "what is your name",
-        "what can you do",
         "thanks",
+        "thank you",
         "what is recursion",
         "convert json to yaml syntax"
     ]
