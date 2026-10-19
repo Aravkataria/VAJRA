@@ -754,7 +754,7 @@ def vajra_search_duckduckgo_lite(query: str, max_results: int = 4) -> List[Dict[
         data = encoded_q.encode("utf-8")
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=2) as response:
             raw_html = response.read().decode("utf-8", errors="replace")
 
         for tag_match in re.finditer(r"<a\b([^>]*\bclass=['\"]result-link['\"][^>]*)>(.*?)</a>", raw_html, re.IGNORECASE):
@@ -842,7 +842,7 @@ def vajra_search_wikipedia(query: str, max_results: int = 2) -> List[Dict[str, s
         headers = {"User-Agent": "VAJRA-Cyber-Reasoning/2.1 (contact@vajra-ai.org)"}
         req = urllib.request.Request(url, headers=headers)
 
-        with urllib.request.urlopen(req, timeout=4) as response:
+        with urllib.request.urlopen(req, timeout=2) as response:
             data = json.loads(response.read().decode("utf-8", errors="replace"))
 
         if len(data) >= 4:
@@ -873,13 +873,17 @@ def vajra_live_web_search(
     Combines Google Search/News (for latest knowledge & breaking recency),
     DuckDuckGo Lite (for canonical URLs & documentation), and Wikipedia (for foundational facts).
     Supports deep research multi-query vector synthesis.
+    Google and DDG run in parallel; Wikipedia is a fallback when more results are needed.
     """
+    import concurrent.futures
+
     q = (query or "").strip()
     if not q:
         return []
 
     results = []
     seen_urls = set()
+    results_lock = __import__("threading").Lock()
 
     def add_results(items):
         if not items:
@@ -904,21 +908,36 @@ def vajra_live_web_search(
     else:
         target_count = max_results
 
-    is_recency = bool(re.search(r"\b(latest|recent|news|today|current|2024|2025|2026|newest|release|update|version|who\s+won|score|price)\b", q, re.IGNORECASE))
-
     for sq in search_queries:
-        if prefer_google or is_recency:
-            google_res = vajra_search_google(sq, max_results=3 if deep_research else 2)
-            add_results(google_res)
+        if len(results) >= target_count:
+            break
 
-        ddg_res = vajra_search_duckduckgo_lite(sq, max_results=4 if deep_research else 3)
-        add_results(ddg_res)
+        g_count = 3 if deep_research else 2
+        d_count = 4 if deep_research else 3
 
+        # Fire Google and DDG in parallel; take results as they arrive
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_google = executor.submit(vajra_search_google, sq, g_count)
+            future_ddg = executor.submit(vajra_search_duckduckgo_lite, sq, d_count)
+
+            for future in concurrent.futures.as_completed(
+                [future_google, future_ddg], timeout=4.0
+            ):
+                try:
+                    add_results(future.result())
+                except Exception as e:
+                    print(f"[WARN] Parallel search error: {e}")
+
+        # Wikipedia only as a fallback when parallel pair did not fill the quota
         if len(results) < target_count:
-            wiki_res = vajra_search_wikipedia(sq, max_results=2)
-            add_results(wiki_res)
+            try:
+                wiki_res = vajra_search_wikipedia(sq, max_results=2)
+                add_results(wiki_res)
+            except Exception as e:
+                print(f"[WARN] Wikipedia fallback error: {e}")
 
     return results[:target_count]
+
 
 def format_web_context_for_prompt(results: List[Dict[str, str]], deep_research: bool = False) -> str:
     """Formats verified live web search results for LLM prompt ingestion."""
@@ -1039,7 +1058,7 @@ def generate_vajra_reply(
             print(" [VAJRA AutoRouter] 2 vCPU busy -> AutoRouter preemptively dispatches to ZeroGPU Burst!")
             return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
 
-    acquired = inference_lock.acquire(blocking=True, timeout=4.0)
+    acquired = inference_lock.acquire(blocking=True, timeout=2.0)
     if not acquired:
         print(" [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
         return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
@@ -1208,7 +1227,7 @@ def gradio_generate(prompt: str):
     web_context = format_web_context_for_prompt(web_sources, deep_research=is_deep) if web_sources else ""
 
     # Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
-    acquired = inference_lock.acquire(blocking=True, timeout=4.0)
+    acquired = inference_lock.acquire(blocking=True, timeout=2.0)
     if not acquired:
         print(" [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
         yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"

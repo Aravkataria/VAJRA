@@ -5884,7 +5884,7 @@
     }
 
     async function _executeSingleHfSpaceQuery(hfEndpoint, fullPrompt, directHeaders, streamTimeoutMs, onToken, firstTokenTimeoutMs, activeReqId) {
-      var sTimeout = streamTimeoutMs || 85000;
+      var sTimeout = streamTimeoutMs || 45000;
       var isZeroGpu = (hfEndpoint.indexOf("vajra.hf.space") !== -1 && hfEndpoint.indexOf("vajra-v2") === -1);
       var reqId = activeReqId || activeInferenceRequestId || generateInferenceRequestId();
       var sessionHeaders = Object.assign({}, directHeaders || {});
@@ -6283,7 +6283,7 @@
             VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
             fullPrompt,
             directHeaders,
-            55000,
+            28000,
             function(chunk) {
               if (chunk && chunk.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
                 vcpuTokensReceived = true;
