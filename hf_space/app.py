@@ -779,6 +779,8 @@ def vajra_search_duckduckgo_lite(query: str, max_results: int = 4) -> List[Dict[
     except Exception as e:
         print(f"[WARN] DuckDuckGo search note: {e}")
 
+    return results
+
 def vajra_search_google(query: str, max_results: int = 4) -> List[Dict[str, str]]:
     """Retrieves real-time breaking news, events, and latest knowledge via Google News RSS."""
     results = []
@@ -872,7 +874,11 @@ def vajra_live_web_search(
     seen_urls = set()
 
     def add_results(items):
+        if not items:
+            return
         for it in items:
+            if not isinstance(it, dict):
+                continue
             u = it.get("url", "")
             if u and u not in seen_urls:
                 seen_urls.add(u)
