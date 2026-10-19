@@ -27,6 +27,14 @@ import urllib.error
 import urllib.parse
 from datetime import datetime, timezone
 
+try:
+    from autorouter import VajraAutoRouter, RouteArchetype, ComputeTier, RouteDecision
+except ImportError:
+    try:
+        from backend.autorouter import VajraAutoRouter, RouteArchetype, ComputeTier, RouteDecision
+    except ImportError:
+        VajraAutoRouter = RouteArchetype = ComputeTier = RouteDecision = None
+
 app = FastAPI(
     title="VAJRA Cyber-Reasoning Cloud Backend",
     version="2.1.0",
@@ -696,15 +704,42 @@ async def chat_endpoint(req: ChatRequest, request: Request):
             enable_search = True
         prompt_to_run = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", prompt_to_run).strip()
 
+        # AutoRouter Pre-Flight Classification (<5ms)
+        decision = None
+        if VajraAutoRouter is not None:
+            decision = VajraAutoRouter.classify_intent(
+                req.prompt,
+                context_files=req.files,
+                force_web_search=enable_search,
+                deep_research=is_deep,
+                prefer_google=prefer_g
+            )
+            is_deep = decision.deep_research
+            enable_search = decision.requires_web_search
+            prefer_g = decision.prefer_google
+            if decision.archetype == RouteArchetype.DEFENSIVE_REFRAME and not prompt_to_run.startswith("Analyze the defensive"):
+                prompt_to_run = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {decision.clean_query}"
+
         if enable_search or is_deep:
             should_s, clean_q = should_search_live_web(prompt_to_run)
-            if should_s or is_deep:
+            if should_s or is_deep or (decision and decision.requires_web_search):
                 target_q = clean_q or prompt_to_run
-                print(f" [VAJRA Backend] Dual-layer live search triggered (Deep={is_deep}, Google={prefer_g}): '{target_q}'")
+                print(f" [VAJRA Backend AutoRouter] Live search triggered (Deep={is_deep}, Google={prefer_g}): '{target_q}'")
                 max_res = 6 if is_deep else 4
                 web_sources = await asyncio.to_thread(vajra_live_web_search, target_q, max_res, prefer_g, is_deep)
 
-        web_context = format_web_context_for_prompt(web_sources, deep_research=is_deep) if web_sources else ""
+        if web_sources:
+            web_context = format_web_context_for_prompt(web_sources, deep_research=is_deep)
+        elif decision and decision.requires_web_search:
+            web_context = (
+                "[VAJRA Live Grounding Notice]\n"
+                "Live internet retrieval was performed but returned zero external sources.\n"
+                "Directives:\n"
+                "1. Answer authoritatively from verified baseline technical knowledge.\n"
+                "2. Acknowledge your knowledge horizon and do not fabricate unverified real-time facts."
+            )
+        else:
+            web_context = ""
         system_content = VAJRA_SYSTEM_PROMPT
         if web_context:
             system_content += f"\n\n{web_context}"
@@ -730,6 +765,7 @@ async def chat_endpoint(req: ChatRequest, request: Request):
             "max_tokens": req.max_tokens or 4096
         }).encode("utf-8")
         
+        t_call_start = time.perf_counter()
         try:
             http_req = urllib.request.Request(
                 cfg["endpoint"],
@@ -744,7 +780,8 @@ async def chat_endpoint(req: ChatRequest, request: Request):
                     content = DEFENSIVE_REFRAME_MALWARE + content
                 if web_sources:
                     content = ensure_citations_in_reply(content, web_sources)
-                return JSONResponse({
+                
+                resp_payload = {
                     "success": True,
                     "reply": content,
                     "provider": cfg["provider"],
@@ -754,7 +791,15 @@ async def chat_endpoint(req: ChatRequest, request: Request):
                     "request_id": request_id,
                     "security": "Zero-Retention & Cryptographic Session Isolation Verified",
                     "bypassed_finder": not is_finder_intent(req.prompt)
-                }, headers=resp_headers)
+                }
+                if decision and VajraAutoRouter is not None:
+                    resp_payload["telemetry"] = VajraAutoRouter.format_telemetry(
+                        decision,
+                        target_model,
+                        (time.perf_counter() - t_call_start) * 1000,
+                        len(web_sources)
+                    )
+                return JSONResponse(resp_payload, headers=resp_headers)
         except urllib.error.HTTPError as e:
             if e.code == 429:
                 retry_header = e.headers.get("Retry-After")

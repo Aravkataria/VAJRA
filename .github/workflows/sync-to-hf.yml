@@ -2,7 +2,7 @@ name: Sync to Hugging Face Space
 
 on:
   push:
-    branches: [ main, feature/stream-typewriter-inference, feat/live-internet-search ]
+    branches: [ main, feature/stream-typewriter-inference, feat/live-internet-search, feat/intelligent-autorouter ]
     paths:
       - 'hf_space/**'
       - 'hf_zerogpu_space/**'

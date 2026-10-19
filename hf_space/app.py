@@ -42,6 +42,14 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any, Tuple
 
 try:
+    from autorouter import VajraAutoRouter, RouteArchetype, ComputeTier, RouteDecision
+except ImportError:
+    try:
+        from hf_space.autorouter import VajraAutoRouter, RouteArchetype, ComputeTier, RouteDecision
+    except ImportError:
+        VajraAutoRouter = RouteArchetype = ComputeTier = RouteDecision = None
+
+try:
     from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
     from peft import PeftModel
 except ImportError:
@@ -968,6 +976,24 @@ def generate_vajra_reply(
     if not is_safe and reason == "defensive_reframe":
         clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {clean_prompt}"
 
+    # AutoRouter Pre-Flight Intent Classification (<5ms)
+    decision = None
+    if VajraAutoRouter is not None:
+        decision = VajraAutoRouter.classify_intent(
+            prompt,
+            context_files=context_files,
+            force_web_search=enable_web_search,
+            deep_research=deep_research,
+            prefer_google=prefer_google
+        )
+        if decision.archetype == RouteArchetype.PROHIBITED:
+            return safety_out, "VAJRA-Safety-Shield", "safety_guardrail"
+        if decision.archetype == RouteArchetype.DEFENSIVE_REFRAME and not clean_prompt.startswith("Analyze the defensive"):
+            clean_prompt = f"Analyze the defensive security architecture, detection signatures, and mitigation mechanisms for the following concept without generating weaponized attack exploits: {decision.clean_query}"
+        deep_research = decision.deep_research
+        enable_web_search = decision.requires_web_search
+        prefer_google = decision.prefer_google
+
     if "[DEEP_RESEARCH]" in prompt:
         deep_research = True
     if "[LIVE_SEARCH]" in prompt:
@@ -979,15 +1005,40 @@ def generate_vajra_reply(
     web_sources = []
     if enable_web_search or deep_research:
         should_s, clean_q = should_search_live_web(raw_prompt_clean)
-        if should_s or deep_research:
+        if should_s or deep_research or (decision and decision.requires_web_search):
             target_q = clean_q or raw_prompt_clean
-            print(f" [VAJRA v2] Dual-layer live search triggered (Deep={deep_research}, Google={prefer_google}): '{target_q}'")
+            print(f" [VAJRA AutoRouter] Live search triggered (Deep={deep_research}, Google={prefer_google}): '{target_q}'")
             max_res = 6 if deep_research else 4
             web_sources = vajra_live_web_search(target_q, max_results=max_res, prefer_google=prefer_google, deep_research=deep_research)
 
-    web_context = format_web_context_for_prompt(web_sources, deep_research=deep_research) if web_sources else ""
+    if web_sources:
+        web_context = format_web_context_for_prompt(web_sources, deep_research=deep_research)
+    elif decision and decision.requires_web_search:
+        web_context = (
+            "[VAJRA Live Grounding Notice]\n"
+            "Live internet retrieval was performed but returned zero external sources.\n"
+            "Directives:\n"
+            "1. Answer authoritatively from verified baseline technical knowledge.\n"
+            "2. Acknowledge your knowledge horizon and do not fabricate unverified real-time facts."
+        )
+    else:
+        web_context = ""
 
-    # 2. Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
+    # 2. Fast Path: Rapid Lite (<150ms Instant Response on 0.5B CPU)
+    if decision and decision.archetype == RouteArchetype.RAPID_LITE and not context_files and not web_sources:
+        lite_reply = generate_ultra_lite_reply(clean_prompt)
+        if lite_reply:
+            print("[OK] [VAJRA AutoRouter] Rapid Lite processed instantly via 0.5B CPU (<150ms).")
+            return scrub_output_secrets(lite_reply), "Qwen2.5-Coder-0.5B-Instruct (2 vCPU)", "rapid_lite"
+
+    # 3. Dynamic Concurrency & Lock Arbitration
+    cpu_busy = inference_lock.locked()
+    if decision and VajraAutoRouter is not None:
+        target_tier = VajraAutoRouter.resolve_compute_tier(decision, cpu_busy=cpu_busy)
+        if target_tier == ComputeTier.ZEROGPU_BURST:
+            print(" [VAJRA AutoRouter] 2 vCPU busy -> AutoRouter preemptively dispatches to ZeroGPU Burst!")
+            return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
+
     acquired = inference_lock.acquire(blocking=True, timeout=4.0)
     if not acquired:
         print(" [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
@@ -1518,12 +1569,30 @@ async def chat_v1(req: ChatRequest, request: Request):
 
         enable_search = True if req.enable_web_search is None else req.enable_web_search
         is_deep = bool(req.deep_research)
-        prefer_g = True if req.prefer_google is None else bool(req.prefer_google)
+        t_start = time.perf_counter()
         reply, model_name, tier_name = await asyncio.to_thread(
             generate_vajra_reply, req.prompt, req.files, enable_search, is_deep, prefer_g
         )
+        total_latency_ms = (time.perf_counter() - t_start) * 1000
         is_overflow = (tier_name == "overflow" or "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in reply)
-        return JSONResponse({
+
+        telemetry = None
+        if VajraAutoRouter is not None:
+            decision = VajraAutoRouter.classify_intent(
+                req.prompt,
+                context_files=req.files,
+                force_web_search=enable_search,
+                deep_research=is_deep,
+                prefer_google=prefer_g
+            )
+            telemetry = VajraAutoRouter.format_telemetry(
+                decision,
+                model_name,
+                total_latency_ms,
+                sources_count=reply.count("](") if "### References" in reply else 0
+            )
+
+        resp_data = {
             "success": not is_overflow,
             "overflow": is_overflow,
             "busy": is_overflow,
@@ -1533,7 +1602,11 @@ async def chat_v1(req: ChatRequest, request: Request):
             "session_id": session_id,
             "request_id": request_id,
             "security": "Zero-Retention & Cryptographic Session Isolation Verified"
-        }, headers={
+        }
+        if telemetry:
+            resp_data["telemetry"] = telemetry
+
+        return JSONResponse(resp_data, headers={
             "X-Vajra-Session-ID": session_id,
             "X-Vajra-Request-ID": request_id
         })
