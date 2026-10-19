@@ -2,7 +2,7 @@ name: Sync to Hugging Face Space
 
 on:
   push:
-    branches: [ main, feature/stream-typewriter-inference ]
+    branches: [ main, feature/stream-typewriter-inference, feat/live-internet-search ]
     paths:
       - 'hf_space/**'
       - 'hf_zerogpu_space/**'
@@ -58,7 +58,7 @@ jobs:
               # Remove legacy Dockerfile so Hugging Face uses native Gradio ZeroGPU SDK
               try:
                   api.delete_file(path_in_repo='Dockerfile', repo_id='AravKataria/vajra', repo_type='space')
-                  print(' Removed old Dockerfile from AravKataria/vajra!')
+                  print('[INFO] Removed old Dockerfile from AravKataria/vajra!')
               except Exception as del_err:
                   print(f'Note on Dockerfile removal: {del_err}')
 

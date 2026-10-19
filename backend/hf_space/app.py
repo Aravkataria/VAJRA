@@ -706,7 +706,9 @@ SEARCH_TRIGGER_REGEX = re.compile(
     r"\b("
     r"search(\s+the)?\s+web|look\s+up|latest|news|today|recent|current\s+events?|"
     r"cve-\d{4}-\d+|vulnerability\s+report|zero-?day|security\s+advisory|"
-    r"release\s+notes?|changelog|version\s+\d+|who\s+won|score|price|stock|"
+    r"release\s+notes?|changelog|version\s+\d+|who\s+won|score|price|pricing|"
+    r"cost(\s+of)?|how\s+much(\s+is|\s+does|\s+cost)?|rates?|quote|buy|specs|"
+    r"specifications?|benchmarks?|worth|ssd|gpu|cpu|ram|hardware|laptop|phone|"
     r"weather|president|prime\s+minister|ceo\s+of|founded|who\s+is|"
     r"what\s+happened|documentation\s+for|official\s+docs|github\s+repo\s+of|"
     r"2024|2025|2026|newest|patch\s+notes|in\s+the\s+wild"
@@ -980,7 +982,7 @@ def generate_vajra_reply(
     web_context = format_web_context_for_prompt(web_sources, deep_research=deep_research) if web_sources else ""
 
     # 2. Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
-    acquired = inference_lock.acquire(blocking=False, timeout=2.5)
+    acquired = inference_lock.acquire(blocking=True, timeout=4.0)
     if not acquired:
         print(" [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
         return "[VAJRA_SYSTEM_BUSY_OVERFLOW]", "VAJRA-ZeroGPU-Burst", "overflow"
@@ -1149,7 +1151,7 @@ def gradio_generate(prompt: str):
     web_context = format_web_context_for_prompt(web_sources, deep_research=is_deep) if web_sources else ""
 
     # Concurrency check: If another user is using the 2 vCPU, signal overflow immediately
-    acquired = inference_lock.acquire(blocking=False, timeout=2.5)
+    acquired = inference_lock.acquire(blocking=True, timeout=4.0)
     if not acquired:
         print(" [VAJRA v2] 2 vCPU busy with another task -> Overflowing to ZeroGPU!")
         yield "[VAJRA_SYSTEM_BUSY_OVERFLOW]"

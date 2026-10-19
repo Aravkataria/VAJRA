@@ -4382,7 +4382,10 @@
         "latest", "recent", "today", "yesterday", "news", "current",
         "update", "release", "cve-", "vulnerability in", "who is",
         "who was", "what happened", "when was", "search", "lookup",
-        "google", "find out", "price of", "weather", "version of", "schrodinger"
+        "google", "find out", "price", "pricing", "cost", "how much",
+        "rate", "rates", "quote", "buy", "worth", "specs", "specification",
+        "benchmark", "ssd", "gpu", "cpu", "ram", "hardware", "laptop",
+        "phone", "weather", "version of", "schrodinger"
       ];
       return triggers.some(function (t) { return q.includes(t); });
     };
@@ -5086,8 +5089,7 @@
             delimiters: [
               { left: "$$", right: "$$", display: true },
               { left: "\\[", right: "\\]", display: true },
-              { left: "\\(", right: "\\)", display: false },
-              { left: "$", right: "$", display: false }
+              { left: "\\(", right: "\\)", display: false }
             ],
             throwOnError: false
           });
@@ -5101,6 +5103,9 @@
     function formatBotMarkdown(rawText) {
       if (!rawText) return "";
       var text = rawText;
+
+      // Protect currency and price figures ($70, $150, $200.00, etc.) from being corrupted by math parsers
+      text = text.replace(/\$(\d+(?:,\d{3})*(?:\.\d+)?)/g, "&#36;$1");
 
       // Auto-close unbalanced inline math \( ... \) or $$ ... $$ or \[ ... \]
       var openParenMath = (text.match(/\\\(/g) || []).length;
