@@ -188,7 +188,7 @@ class VajraNativeApp(tk.Tk):
             if target_path.is_file() and target_path.suffix.lower() == ".zip":
                 # Extract zip
                 with zipfile.ZipFile(target_path, "r") as zf:
-                    zf.extractall(ws_path)
+                    zf.extractall(ws_path, filter='data')
             elif target_path.is_dir():
                 shutil.copytree(target_path, ws_path, dirs_exist_ok=True)
             elif target.startswith("http://") or target.startswith("https://"):

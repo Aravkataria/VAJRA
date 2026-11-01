@@ -56,7 +56,7 @@ def discover_model_checkpoint() -> Optional[Path]:
                         print(f"  * [Auto-Extract] Unzipping checkpoint archive {zf} -> {target_dir}")
                         target_dir.mkdir(parents=True, exist_ok=True)
                         with zipfile.ZipFile(zf, 'r') as zip_ref:
-                            zip_ref.extractall(target_dir)
+                            zip_ref.extractall(target_dir, filter='data')
                 except Exception as e:
                     pass
 

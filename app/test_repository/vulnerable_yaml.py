@@ -9,7 +9,7 @@ def load_config(user_input):
     deserialization. It uses yaml.Loader (not SafeLoader), which
     can execute arbitrary code embedded in the YAML document.
     """
-    return yaml.load(user_input, Loader=yaml.Loader)
+    return yaml.safe_load(user_input)
 
 
 def main():

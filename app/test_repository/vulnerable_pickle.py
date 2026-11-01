@@ -1,3 +1,4 @@
+import json
 import pickle
 
 
@@ -10,4 +11,4 @@ def load_session(user_input):
     for pickle -- unpickling attacker-controlled bytes can always
     execute arbitrary code.
     """
-    return pickle.loads(user_input)
+    return json.loads(user_input)

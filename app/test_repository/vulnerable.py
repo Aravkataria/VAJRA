@@ -1,3 +1,4 @@
+import ast
 import subprocess
 
 
@@ -18,7 +19,7 @@ def execute_code(user_input):
     VAJRA should identify the use of eval() with
     user-controlled input as an unsafe dynamic execution risk.
     """
-    eval(user_input)
+    ast.literal_eval(user_input)
 
 
 def main():

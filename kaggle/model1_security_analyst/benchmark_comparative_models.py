@@ -229,7 +229,7 @@ class VajraModel1Evaluator(BaseEvaluator):
                             print(f"  * [Auto-Extract] Extracting checkpoint archive {zf} -> {target_dir}")
                             target_dir.mkdir(parents=True, exist_ok=True)
                             with zipfile.ZipFile(zf, 'r') as zip_ref:
-                                zip_ref.extractall(target_dir)
+                                zip_ref.extractall(target_dir, filter='data')
                     except Exception:
                         pass
 
