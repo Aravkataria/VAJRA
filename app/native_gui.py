@@ -240,7 +240,8 @@ class VajraNativeApp(tk.Tk):
             self.after(0, self._render_results)
 
         except Exception as exc:
-            self.after(0, lambda: self._show_error(str(exc)))
+            err_msg = str(exc)
+            self.after(0, lambda msg=err_msg: self._show_error(msg))
 
     def _render_results(self):
         self.progress.stop()
