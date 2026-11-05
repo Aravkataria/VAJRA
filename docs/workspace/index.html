@@ -6158,7 +6158,7 @@
               deep_research: (typeof isDeepResearchActive === 'function' && isDeepResearchActive()) || fullPrompt.includes("[DEEP_RESEARCH]"),
               prefer_google: (typeof isPreferGoogleActive === 'function' ? isPreferGoogleActive() : true)
             }),
-            signal: getActiveSignal(25000)
+            signal: getActiveSignal(60000)
           });
           if (v1ChatResp.ok) {
             var v1ChatData = await v1ChatResp.json();
@@ -6283,7 +6283,7 @@
             VAJRA_HF_SPACE_URL.replace(/\/$/, ""),
             fullPrompt,
             directHeaders,
-            28000,
+            65000,
             function(chunk) {
               if (chunk && chunk.indexOf("[VAJRA_SYSTEM_BUSY_OVERFLOW]") === -1) {
                 vcpuTokensReceived = true;
@@ -6328,7 +6328,7 @@
                 deep_research: (typeof isDeepResearchActive === 'function' && isDeepResearchActive()) || fullPrompt.includes("[DEEP_RESEARCH]"),
                 prefer_google: (typeof isPreferGoogleActive === 'function' ? isPreferGoogleActive() : true)
               }),
-              signal: getActiveSignal(25000)
+              signal: getActiveSignal(60000)
             });
             if (v1ChatResp.ok) {
               var v1ChatData = await v1ChatResp.json();

@@ -324,13 +324,18 @@ def vajra_live_web_search(
             future_google = executor.submit(vajra_search_google, sq, g_count)
             future_ddg = executor.submit(vajra_search_duckduckgo_lite, sq, d_count)
 
-            for future in concurrent.futures.as_completed(
-                [future_google, future_ddg], timeout=4.0
-            ):
-                try:
-                    add_results(future.result())
-                except Exception as e:
-                    print(f"[WARN] Parallel search error: {e}")
+            try:
+                for future in concurrent.futures.as_completed(
+                    [future_google, future_ddg], timeout=4.0
+                ):
+                    try:
+                        add_results(future.result())
+                    except Exception as e:
+                        print(f"[WARN] Parallel search error: {e}")
+            except TimeoutError:
+                print("[WARN] Parallel search timed out after 4.0s; proceeding with partial results.")
+            except Exception as e:
+                print(f"[WARN] Parallel search collection error: {e}")
 
         if len(results) < target_count:
             try:
@@ -725,10 +730,12 @@ async def chat_endpoint(req: ChatRequest, request: Request):
         # AutoRouter Pre-Flight Classification (<5ms)
         decision = None
         if VajraAutoRouter is not None:
+            is_forced_search = bool("[LIVE_SEARCH]" in req.prompt or req.prompt.strip().startswith(("/search", "/web")))
             decision = VajraAutoRouter.classify_intent(
                 req.prompt,
                 context_files=req.files,
-                force_web_search=enable_search,
+                force_web_search=is_forced_search,
+                allow_web_search=enable_search,
                 deep_research=is_deep,
                 prefer_google=prefer_g
             )

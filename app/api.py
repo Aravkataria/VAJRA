@@ -832,7 +832,7 @@ def query_vajra_fine_tuned_model(
 
     # 1. Primary Turbo Burst: ZeroGPU Space (vajra) - High-speed A10G / A100 GPU (<3s latency)
     res_gpu = _query_single_space_endpoint(VAJRA_HF_ZEROGPU_URL, full_prompt, headers, timeout=25)
-    if res_gpu and res_gpu.get("reply"):
+    if res_gpu and res_gpu.get("reply") and not str(res_gpu.get("reply")).startswith("[VAJRA ZeroGPU Engine"):
         if not res_gpu.get("tier"):
             res_gpu["tier"] = "max"
         if not res_gpu.get("model"):

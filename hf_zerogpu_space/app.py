@@ -276,13 +276,18 @@ def vajra_live_web_search(
             future_google = executor.submit(vajra_search_google, sq, g_count)
             future_ddg = executor.submit(vajra_search_duckduckgo_lite, sq, d_count)
 
-            for future in concurrent.futures.as_completed(
-                [future_google, future_ddg], timeout=4.0
-            ):
-                try:
-                    add_results(future.result())
-                except Exception as e:
-                    print(f"[WARN] Parallel search error: {e}")
+            try:
+                for future in concurrent.futures.as_completed(
+                    [future_google, future_ddg], timeout=4.0
+                ):
+                    try:
+                        add_results(future.result())
+                    except Exception as e:
+                        print(f"[WARN] Parallel search error: {e}")
+            except TimeoutError:
+                print("[WARN] Parallel search timed out after 4.0s; proceeding with partial results.")
+            except Exception as e:
+                print(f"[WARN] Parallel search collection error: {e}")
 
         if len(results) < target_count:
             try:

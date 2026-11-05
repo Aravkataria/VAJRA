@@ -107,6 +107,7 @@ class VajraAutoRouter:
         prompt: str,
         context_files: Optional[Dict[str, str]] = None,
         force_web_search: bool = False,
+        allow_web_search: bool = True,
         deep_research: bool = False,
         prefer_google: bool = True
     ) -> RouteDecision:
@@ -154,30 +155,29 @@ class VajraAutoRouter:
 
         clean_p = re.sub(r"\[(?:DEEP_RESEARCH|LIVE_SEARCH)\]\s*", "", raw).strip()
 
-        # 3. Real-Time Fact / Recency Search Detection
+        # 3. Tag & Syntax Intent Directives
         explicit_search = bool(re.search(
             r"^(?:/(?:search|web|browse|lookup|internet)|search(?:\s+(?:the\s+web|the\s+internet|for))?|look\s+up|google)\s+(.+)$",
             clean_p,
             re.IGNORECASE
         ))
-        has_search_intent = explicit_search or force_web_search or deep_research or bool(cls.REALTIME_FACT_REGEX.search(clean_p))
+        has_code_block = "```" in clean_p or (context_files and len(context_files) > 0)
+        has_audit_keywords = bool(cls.CODE_AUDIT_REGEX.search(clean_p))
+        is_identity = bool(cls.SYSTEM_IDENTITY_REGEX.search(clean_p))
 
-        if has_search_intent:
+        # 4. Core System Identity & Architecture Archetype (never needs external web search)
+        if is_identity and not explicit_search and not deep_research:
             return RouteDecision(
-                archetype=RouteArchetype.REALTIME_FACT,
+                archetype=RouteArchetype.SYSTEM_IDENTITY,
                 target_tier=ComputeTier.GGUF_2VCPU,
                 clean_query=clean_p,
-                requires_web_search=True,
-                deep_research=deep_research,
-                prefer_google=prefer_google,
-                reason="realtime_fact_retrieval",
+                requires_web_search=False,
+                reason="system_identity_grounding",
                 routing_latency_ms=(time.perf_counter() - t0) * 1000
             )
 
-        # 4. Deep Code Audit & AST Verification Detection
-        has_code_block = "```" in clean_p or (context_files and len(context_files) > 0)
-        has_audit_keywords = bool(cls.CODE_AUDIT_REGEX.search(clean_p))
-        if has_code_block or has_audit_keywords:
+        # 5. Deep Code Audit & AST Verification Detection (self-contained reasoning)
+        if (has_code_block or has_audit_keywords) and not explicit_search and not deep_research:
             return RouteDecision(
                 archetype=RouteArchetype.DEEP_CODE_AUDIT,
                 target_tier=ComputeTier.GGUF_2VCPU,
@@ -187,15 +187,17 @@ class VajraAutoRouter:
                 routing_latency_ms=(time.perf_counter() - t0) * 1000
             )
 
-        # 5. Core System Identity & Architecture Archetype
-        is_identity = bool(cls.SYSTEM_IDENTITY_REGEX.search(clean_p))
-        if is_identity:
+        # 6. Real-Time Fact / Recency Search Detection
+        has_search_intent = explicit_search or force_web_search or deep_research or bool(cls.REALTIME_FACT_REGEX.search(clean_p))
+        if has_search_intent and allow_web_search:
             return RouteDecision(
-                archetype=RouteArchetype.SYSTEM_IDENTITY,
+                archetype=RouteArchetype.REALTIME_FACT,
                 target_tier=ComputeTier.GGUF_2VCPU,
                 clean_query=clean_p,
-                requires_web_search=False,
-                reason="system_identity_grounding",
+                requires_web_search=True,
+                deep_research=deep_research,
+                prefer_google=prefer_google,
+                reason="realtime_fact_retrieval",
                 routing_latency_ms=(time.perf_counter() - t0) * 1000
             )
 
