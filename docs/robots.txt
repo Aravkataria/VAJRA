@@ -1,4 +1,4 @@
-﻿# Robots.txt for VAJRA (https://aravkataria.github.io/VAJRA/)
+# Robots.txt for VAJRA (https://aravkataria.github.io/VAJRA/)
 User-agent: *
 Allow: /
 

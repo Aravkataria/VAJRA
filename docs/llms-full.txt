@@ -1,4 +1,4 @@
-﻿# VAJRA: Complete Architecture & Developer Specification (llms-full.txt)
+# VAJRA: Complete Architecture & Developer Specification (llms-full.txt)
 
 > Vulnerability Analysis, Judgment, Repair & Assurance: Evidence-Driven Sovereign Cyber Reasoning System (CRS) and Neuro-Symbolic Autonomous Vulnerability Remediation Platform.
 

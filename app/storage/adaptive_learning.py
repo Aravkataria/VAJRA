@@ -1,4 +1,4 @@
-﻿# app/storage/adaptive_learning.py
+# app/storage/adaptive_learning.py
 
 """
 Phase 7: Long-Term Adaptive Learning & Outcome Tracking Engine.

@@ -1,4 +1,4 @@
-﻿# VAJRA
+# VAJRA
 
 > Vulnerability Analysis, Judgment, Repair & Assurance: Evidence-Driven Sovereign Cyber Reasoning System (CRS) & Neuro-Symbolic Autonomous Vulnerability Remediation Platform.
 

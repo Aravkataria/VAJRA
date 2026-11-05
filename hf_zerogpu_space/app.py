@@ -397,7 +397,14 @@ def _zerogpu_model_generate(user_prompt: str) -> str:
         add_generation_prompt=True
     )
 
-    model_inputs = tokenizer([text_input], return_tensors="pt").to("cuda")
+    device = "cuda" if (torch is not None and torch.cuda.is_available()) else "cpu"
+    try:
+        if next(model.parameters()).device != torch.device(device):
+            model.to(device)
+    except Exception as dev_err:
+        print(f"[WARN] ZeroGPU device transfer note: {dev_err}")
+
+    model_inputs = tokenizer([text_input], return_tensors="pt").to(device)
 
     with torch.no_grad():
         generated_ids = model.generate(
