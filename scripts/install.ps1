@@ -63,7 +63,7 @@ New-Item -ItemType Directory -Force -Path $vajraApp | Out-Null
 
 Expand-Archive -Path $tempZip -DestinationPath $vajraHome -Force
 
-$extractedFolder = Get-ChildItem -Path $vajraHome -Directory | Where-Object { $_.Name -like "VAJRA-test-*" } | Select-Object -First 1
+$extractedFolder = Get-ChildItem -Path $vajraHome -Directory | Where-Object { $_.Name -like "VAJRA-*" } | Select-Object -First 1
 if ($extractedFolder) {
     Get-ChildItem -Path $extractedFolder.FullName | Move-Item -Destination $vajraApp -Force
     Remove-Item -Recurse -Force $extractedFolder.FullName

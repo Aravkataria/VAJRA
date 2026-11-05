@@ -1,4 +1,4 @@
-﻿# app/decision/risk_prioritizer.py
+# app/decision/risk_prioritizer.py
 
 """
 Section 6.5: Risk-Based Prioritization & Blast Radius Engine.

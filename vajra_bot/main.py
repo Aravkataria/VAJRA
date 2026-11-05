@@ -177,10 +177,18 @@ def run_action():
     highs = [f for f in findings if f.severity == "HIGH"]
 
     try:
-        reviewer.post_pr_comment(reply_md)
-        print("[OK] Posted VAJRA response to PR thread.")
+        if inline_comments:
+            reviewer.post_inline_review(event="COMMENT", summary=reply_md, comments=inline_comments)
+            print(f"[OK] Posted VAJRA review with {len(inline_comments)} inline suggestions to PR thread.")
+        else:
+            reviewer.post_pr_comment(reply_md)
+            print("[OK] Posted VAJRA audit response to PR thread.")
     except Exception as e:
-        print(f"[WARN] Could not post PR comment: {e}")
+        print(f"[WARN] Could not post PR review: {e}")
+        try:
+            reviewer.post_pr_comment(reply_md)
+        except Exception:
+            pass
 
     # Set final commit status
     if criticals:

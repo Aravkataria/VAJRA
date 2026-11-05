@@ -1,4 +1,4 @@
-﻿# app/model_independence.py
+# app/model_independence.py
 
 """
 3-Tier Sovereign Model Independence Invariant.

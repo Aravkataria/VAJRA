@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import hashlib
 import io
 import json
+import logging
 import os
 import shutil
 import threading
@@ -54,6 +55,7 @@ cache = get_cache()
 repo = RepositoryManager()
 patch_applier = PatchApplier()
 db = get_db()
+logger = logging.getLogger('vajra.api')
 
 
 @asynccontextmanager
@@ -842,6 +844,8 @@ def query_vajra_fine_tuned_model(
     # 2. Resilient Fallback: 2 vCPU Space (VAJRA_v2) - 24/7 unlimited queries, 0 GPU quota
     logger.info("ZeroGPU in standby or warming up; routing to 2 vCPU Space...")
     res_vcpu = _query_single_space_endpoint(VAJRA_HF_SPACE_URL, full_prompt, headers, timeout=85)
+    if res_vcpu and res_vcpu.get("reply") and "[VAJRA_SYSTEM_BUSY_OVERFLOW]" in str(res_vcpu.get("reply")):
+        res_vcpu = {"reply": None, "rate_limited": False, "retry_after": 0, "error": "Both 2 vCPU and ZeroGPU spaces busy"}
     if res_vcpu and res_vcpu.get("reply"):
         if not res_vcpu.get("tier"):
             res_vcpu["tier"] = "standard"

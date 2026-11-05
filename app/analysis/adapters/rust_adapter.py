@@ -1,4 +1,4 @@
-﻿# app/analysis/adapters/rust_adapter.py
+# app/analysis/adapters/rust_adapter.py
 
 """
 Rust High-Performance Core Analysis Adapter.

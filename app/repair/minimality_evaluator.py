@@ -1,4 +1,4 @@
-﻿# app/repair/minimality_evaluator.py
+# app/repair/minimality_evaluator.py
 
 """
 Section 6.13: Patch Minimality & Complexity Evaluator.

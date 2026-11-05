@@ -1,4 +1,4 @@
-﻿pub mod fuzzer;
+pub mod fuzzer;
 pub mod git_history;
 pub mod models;
 pub mod mutation;

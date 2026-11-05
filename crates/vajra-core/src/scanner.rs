@@ -1,4 +1,4 @@
-﻿use crate::models::Finding;
+use crate::models::Finding;
 use rayon::prelude::*;
 use regex::Regex;
 use std::fs;

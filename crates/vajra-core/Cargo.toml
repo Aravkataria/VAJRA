@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "vajra-core"
 version = "2.4.0"
 edition = "2021"

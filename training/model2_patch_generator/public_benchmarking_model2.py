@@ -530,8 +530,7 @@ def generate_public_benchmark_graphs(output_path: str = "public_benchmark_scorec
     ax2.set_ylim(40, 110)
     ax2.grid(True, linestyle='--', alpha=0.25)
 
-    ax2.text(1.5, 103, '100% LOCAL & FREE ($0.00)
-(VAJRA Model 2)', color='#10b981', fontsize=10, fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", fc="#064e3b", ec="#10b981", alpha=0.5))
+    ax2.text(1.5, 103, '100% LOCAL & FREE ($0.00)\n(VAJRA Model 2)', color='#10b981', fontsize=10, fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", fc="#064e3b", ec="#10b981", alpha=0.5))
 
     plt.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches='tight')

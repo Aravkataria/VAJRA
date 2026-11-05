@@ -23,7 +23,7 @@ from pathlib import Path
 
 __version__ = "2.4.0"
 REPO_OWNER = "Aravkataria"
-REPO_NAME = "VAJRA-test"
+REPO_NAME = "VAJRA"
 GITHUB_API_COMMITS = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/commits/main"
 GITHUB_ZIP_URL = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/archive/refs/heads/main.zip"
 
